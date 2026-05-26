@@ -20,7 +20,16 @@ Pour bosser sur un projet : ouvre son dossier, l'agent en charge le `CLAUDE.md` 
 
 Pour l'instant : copier `hello/` (template minimal). À terme : verbe cockpit `lab-new <nom>`.
 
-## Données & secrets (plan 2b)
+## Données
 
-Un projet qui a besoin de Postgres → base `<projet>_<env>` dans le Postgres central de `lab` ;
-Redis → namespace `<projet>:<env>:`. Secrets → projet Infisical `incubator`, dossier `<projet>`.
+Un projet déclare ses besoins dans **`lab.json`** :
+`{ "db": true, "redis": false, "migrate": "npm run migrate", "seed": "npm run seed" }`
+Au déploiement, `deploy.sh` crée la base `<projet>_<env>` dans le Postgres central, injecte
+`DATABASE_URL` (auto), lance `migrate` puis `seed` (hors prod) ; `redis: true` injecte
+`REDIS_URL` + `REDIS_PREFIX`. Preview = base vide + seed, droppée au teardown. Exemple : `counter/`.
+
+## Secrets (à venir)
+
+Backend de secrets robuste à définir (les secrets applicatifs — clés API… — y seront stockés
+par projet et injectés au déploiement). Les variables auto-fournies (`DATABASE_URL`,
+`REDIS_URL`) ne sont **pas** des secrets à gérer.
