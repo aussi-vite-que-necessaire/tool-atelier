@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   detect:
@@ -51,6 +51,7 @@ jobs:
           if [ "$ref" = "main" ]; then env=prod; else
             env="$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
           fi
+          [ -n "$env" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
           image="ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:$env"
           echo "env=$env"     >> "$GITHUB_OUTPUT"
           echo "image=$image" >> "$GITHUB_OUTPUT"
