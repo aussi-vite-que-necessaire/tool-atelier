@@ -78,6 +78,11 @@ jobs:
           $SSH "mkdir -p /opt/lab/apps/${PROJ}-${ENV}"
           $SCP scripts/deploy.sh "root@$LAB_HOST:/opt/lab/deploy.sh"
           $SCP "${PROJ}/compose.yml" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/compose.yml"
+          if [ -f "${PROJ}/lab.json" ]; then
+            $SCP "${PROJ}/lab.json" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/lab.json"
+          else
+            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/lab.json"
+          fi
           $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGE'"
 
   teardown:

@@ -12,6 +12,10 @@ if [ -f "$APPDIR/compose.yml" ]; then
 fi
 rm -f "/opt/lab/platform/sites/${PROJ}-${ENV}.caddy"
 docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile || true
+
+# Drop la base preview (jamais prod : garde déjà posée plus haut)
+DBNAME="${PROJ}_$(printf '%s' "$ENV" | tr '-' '_')"
+docker exec lab-platform-postgres-1 dropdb -U postgres --if-exists "${DBNAME}" || true
+
 rm -rf "$APPDIR"
-# plan 2b : drop de la base ${PROJ}_${ENV}
-echo "✓ teardown ${PROJ}-${ENV}"
+echo "✓ teardown ${PROJ}-${ENV} (base ${DBNAME} supprimée)"

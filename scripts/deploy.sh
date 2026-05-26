@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Déploie un projet sur lab. Exécuté SUR lab (copié par la CI). Le serveur ne build jamais :
-# il pull l'image construite par la CI, puis compose up + écrit la route Caddy.
+# il pull l'image construite par la CI, auto-provisionne les données déclarées dans lab.json,
+# puis compose up + écrit la route Caddy.
 # Usage: deploy.sh <projet> <env> <image-ref>
 set -euo pipefail
 
@@ -26,6 +27,39 @@ UPSTREAM=$UPSTREAM
 APP_ENV=$ENV
 EOF
 
+# Besoins déclarés par le projet (lab.json absent => projet sans base ni redis)
+DB=false; REDIS=false; MIGRATE=""; SEED=""
+if [ -f "$APPDIR/lab.json" ]; then
+  DB="$(jq -r '.db // false' "$APPDIR/lab.json")"
+  REDIS="$(jq -r '.redis // false' "$APPDIR/lab.json")"
+  MIGRATE="$(jq -r '.migrate // empty' "$APPDIR/lab.json")"
+  SEED="$(jq -r '.seed // empty' "$APPDIR/lab.json")"
+fi
+
+# Postgres central : base <projet>_<env> + DATABASE_URL injecté
+if [ "$DB" = "true" ]; then
+  # shellcheck disable=SC1091
+  . /opt/lab/platform/.env   # LAB_POSTGRES_PASSWORD
+  DBNAME="${PROJ}_$(printf '%s' "$ENV" | tr '-' '_')"
+  docker exec lab-platform-postgres-1 psql -U postgres -tAc \
+    "SELECT 1 FROM pg_database WHERE datname='${DBNAME}'" | grep -q 1 \
+    || docker exec lab-platform-postgres-1 createdb -U postgres "${DBNAME}"
+  printf 'DATABASE_URL=postgres://postgres:%s@postgres:5432/%s\n' "$LAB_POSTGRES_PASSWORD" "$DBNAME" >> "$APPDIR/.env"
+fi
+
+# Redis central : URL + préfixe de namespace
+if [ "$REDIS" = "true" ]; then
+  printf 'REDIS_URL=redis://redis:6379\nREDIS_PREFIX=%s:%s:\n' "$PROJ" "$ENV" >> "$APPDIR/.env"
+fi
+
+# Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab
+if [ -n "$MIGRATE" ]; then
+  docker run --rm --network lab --env-file "$APPDIR/.env" "$IMAGE" sh -c "$MIGRATE"
+fi
+if [ -n "$SEED" ] && [ "$ENV" != "prod" ]; then
+  docker run --rm --network lab --env-file "$APPDIR/.env" "$IMAGE" sh -c "$SEED"
+fi
+
 docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" up -d
 
 mkdir -p /opt/lab/platform/sites
@@ -34,6 +68,7 @@ ${HOST} {
 	reverse_proxy ${UPSTREAM}:8080
 }
 EOF
+docker exec lab-platform-caddy-1 caddy validate --config /etc/caddy/Caddyfile
 docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 
 echo "✓ déployé : https://${HOST}  (image ${IMAGE})"
