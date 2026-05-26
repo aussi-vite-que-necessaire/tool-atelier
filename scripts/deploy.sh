@@ -10,6 +10,9 @@ APPDIR="/opt/lab/apps/${PROJ}-${ENV}"
 UPSTREAM="${PROJ}-${ENV}"
 if [ "$ENV" = "prod" ]; then HOST="${PROJ}.lab.avqn.ch"; else HOST="${PROJ}-${ENV}.lab.avqn.ch"; fi
 
+# jq requis pour lire lab.json — auto-install si absent (serveur fraîchement provisionné)
+command -v jq >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq jq; }
+
 # Auth GHCR (images privées) si un token est posé sur le serveur
 if [ -f /opt/lab/ghcr.env ]; then
   # shellcheck disable=SC1091
