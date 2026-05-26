@@ -31,10 +31,11 @@ APP_ENV=$ENV
 EOF
 
 # Besoins déclarés par le projet (lab.json absent => projet sans base ni redis)
-DB=false; REDIS=false; MIGRATE=""; SEED=""
+DB=false; REDIS=false; EMAIL=false; MIGRATE=""; SEED=""
 if [ -f "$APPDIR/lab.json" ]; then
   DB="$(jq -r '.db // false' "$APPDIR/lab.json")"
   REDIS="$(jq -r '.redis // false' "$APPDIR/lab.json")"
+  EMAIL="$(jq -r '.email // false' "$APPDIR/lab.json")"
   MIGRATE="$(jq -r '.migrate // empty' "$APPDIR/lab.json")"
   SEED="$(jq -r '.seed // empty' "$APPDIR/lab.json")"
 fi
@@ -53,6 +54,18 @@ fi
 # Redis central : URL + préfixe de namespace
 if [ "$REDIS" = "true" ]; then
   printf 'REDIS_URL=redis://redis:6379\nREDIS_PREFIX=%s:%s:\n' "$PROJ" "$ENV" >> "$APPDIR/.env"
+fi
+
+# Email partagé (Resend) : clé de plateforme injectée si déclaré et disponible sur lab
+if [ "$EMAIL" = "true" ]; then
+  # /opt/lab/platform/.env porte RESEND_API_KEY (+ EMAIL_FROM) au niveau plateforme
+  RESEND_API_KEY=""; EMAIL_FROM=""
+  [ -f /opt/lab/platform/.env ] && . /opt/lab/platform/.env
+  if [ -n "${RESEND_API_KEY:-}" ]; then
+    printf 'RESEND_API_KEY=%s\nEMAIL_FROM=%s\n' "$RESEND_API_KEY" "${EMAIL_FROM:-onboarding@resend.dev}" >> "$APPDIR/.env"
+  else
+    echo "⚠ email: true mais RESEND_API_KEY absent de /opt/lab/platform/.env (skip) — poser la clé une fois pour activer."
+  fi
 fi
 
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab
