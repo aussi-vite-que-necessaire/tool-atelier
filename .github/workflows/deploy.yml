@@ -24,10 +24,12 @@ jobs:
       - id: changed
         run: |
           before='${{ github.event.before }}'
-          if [ -z "$before" ] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
-            base="$(git rev-list --max-parents=0 HEAD | tail -1)"
-          else
+          if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then
             base="$before"
+          else
+            # nouvelle branche (before=000…) : diffe depuis le tronc, pas la racine,
+            # pour ne (re)déployer que le(s) projet(s) réellement touché(s) par la branche
+            base="$(git merge-base origin/main HEAD 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)"
           fi
           changed="$(git diff --name-only "$base" '${{ github.sha }}')"
           projects="$(printf '%s\n' "$changed" | awk -F/ 'NF>1 && $1!=".github"{print $1}' | sort -u \

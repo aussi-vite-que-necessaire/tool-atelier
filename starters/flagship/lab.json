@@ -1,0 +1,1 @@
+{ "description": "Starter phare : Next.js (App Router) + Drizzle + BetterAuth + Tailwind, avec base Postgres.", "db": true, "migrate": "node scripts/migrate.mjs", "seed": "node scripts/seed.mjs" }
