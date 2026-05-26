@@ -1,0 +1,102 @@
+name: deploy
+on:
+  push:
+    branches: ["**"]
+  delete: {}
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.changed.outputs.projects }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: changed
+        run: |
+          before='${{ github.event.before }}'
+          if [ -z "$before" ] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
+            base="$(git rev-list --max-parents=0 HEAD | tail -1)"
+          else
+            base="$before"
+          fi
+          changed="$(git diff --name-only "$base" '${{ github.sha }}')"
+          projects="$(printf '%s\n' "$changed" | awk -F/ 'NF>1 && $1!=".github"{print $1}' | sort -u \
+            | while read -r d; do [ -f "$d/Dockerfile" ] && printf '%s\n' "$d"; done \
+            | jq -R . | jq -cs .)"
+          echo "projects=$projects" >> "$GITHUB_OUTPUT"
+          echo "projets changés: $projects"
+
+  deploy:
+    needs: detect
+    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.detect.outputs.projects) }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: vars
+        run: |
+          ref='${{ github.ref_name }}'
+          if [ "$ref" = "main" ]; then env=prod; else
+            env="$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
+          fi
+          image="ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:$env"
+          echo "env=$env"     >> "$GITHUB_OUTPUT"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+      - name: Login GHCR
+        run: printf '%s' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+      - name: Build + push
+        run: |
+          docker build -t '${{ steps.vars.outputs.image }}' '${{ matrix.project }}'
+          docker push '${{ steps.vars.outputs.image }}'
+      - name: Deploy to lab
+        env:
+          LAB_SSH_KEY: ${{ secrets.LAB_SSH_KEY }}
+          LAB_HOST: ${{ secrets.LAB_HOST }}
+          PROJ: ${{ matrix.project }}
+          ENV: ${{ steps.vars.outputs.env }}
+          IMAGE: ${{ steps.vars.outputs.image }}
+        run: |
+          install -m700 -d ~/.ssh
+          printf '%s\n' "$LAB_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$LAB_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes root@$LAB_HOST"
+          SCP="scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
+          $SSH "mkdir -p /opt/lab/apps/${PROJ}-${ENV}"
+          $SCP scripts/deploy.sh "root@$LAB_HOST:/opt/lab/deploy.sh"
+          $SCP "${PROJ}/compose.yml" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/compose.yml"
+          $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGE'"
+
+  teardown:
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Teardown previews de la branche
+        env:
+          LAB_SSH_KEY: ${{ secrets.LAB_SSH_KEY }}
+          LAB_HOST: ${{ secrets.LAB_HOST }}
+          REF: ${{ github.event.ref }}
+        run: |
+          env="$(printf '%s' "$REF" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
+          [ "$env" = "main" ] && { echo "jamais de teardown sur main"; exit 0; }
+          install -m700 -d ~/.ssh
+          printf '%s\n' "$LAB_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$LAB_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes root@$LAB_HOST"
+          SCP="scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
+          $SCP scripts/teardown.sh "root@$LAB_HOST:/opt/lab/teardown.sh"
+          $SSH "for d in /opt/lab/apps/*-$env; do [ -d \"\$d\" ] || continue; p=\"\$(basename \"\$d\")\"; p=\"\${p%-$env}\"; bash /opt/lab/teardown.sh \"\$p\" \"$env\"; done"
