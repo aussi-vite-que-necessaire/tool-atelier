@@ -12,7 +12,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    // healthz : sonde de liveness lab, doit rester accessible sans session.
-    '/((?!healthz|signin|verify|oauth|\\.well-known|api/auth|api/mcp|api/__test__|_next|favicon).*)',
+    // Exclus de la garde de session : healthz (sonde lab), signin, l'auto-login
+    // preview (doit être joignable sans session), les routes auth/MCP/OAuth et test.
+    '/((?!healthz|signin|oauth|\\.well-known|api/auth|api/mcp|api/preview-login|api/__test__|_next|favicon).*)',
   ],
 };
