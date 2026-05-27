@@ -1,0 +1,19 @@
+{
+  "name": "mcp",
+  "requires": ["auth", "db"],
+  "labJson": {},
+  "deps": { "mcp-handler": "^1.1.0", "@modelcontextprotocol/sdk": "^1.26.0", "zod": "^4.4.3" },
+  "devDeps": {},
+  "scripts": {},
+  "env": [],
+  "files": [
+    "src/lib/mcp/server.ts",
+    "src/lib/mcp/result.ts",
+    "src/lib/mcp/auth.ts",
+    "src/lib/mcp/tools/ping.ts",
+    "src/app/api/mcp/route.ts",
+    "src/app/.well-known/oauth-authorization-server/route.ts",
+    "src/app/.well-known/oauth-protected-resource/route.ts"
+  ],
+  "schemas": []
+}
