@@ -3,8 +3,13 @@ import { checkServiceKey } from "@/lib/service-auth";
 import { generateImage, editImage } from "@/lib/gemini";
 import { renderHtml } from "@/lib/render";
 import { getImageBytes, deleteObject } from "@/lib/storage";
-import { getImageRecord, deleteImageRow } from "@/lib/images/repository";
+import { getMediaRecord, deleteMediaRow } from "@/lib/media/repository";
 import { store } from "@/lib/store";
+import { getStyle } from "@/lib/styles/repository";
+import { composePrompt } from "@/lib/styles/compose";
+import { renderTemplate } from "@/lib/templates/render";
+import { aggregatePdf } from "@/lib/pdf/aggregate";
+import { validateUpload } from "@/lib/media/validate-upload";
 
 // Réponse JSON utilitaire.
 function jsonResponse(data: unknown, status = 200): Response {
@@ -22,6 +27,7 @@ const GenerateSchema = z.object({
   // de service, ex. ContentOS, ont leur propre palette : 1:1, 4:5, 16:9…).
   aspectRatio: z.string().min(1).default("1:1"),
   stylePrompt: z.string().optional(),
+  styleId: z.string().optional(),
 });
 
 const EditSchema = z.object({
@@ -33,6 +39,15 @@ const RenderHtmlSchema = z.object({
   html: z.string().min(1),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
+});
+
+const RenderTemplateSchema = z.object({
+  templateId: z.string().min(1),
+  vars: z.record(z.string(), z.unknown()).default({}),
+});
+
+const PdfSchema = z.object({
+  imageIds: z.array(z.string()).min(1),
 });
 
 // ── Handlers ───────────────────────────────────────────────────────────────────
@@ -48,16 +63,24 @@ async function handleGenerate(request: Request): Promise<Response> {
   if (!parsed.success) {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
-  const { prompt, aspectRatio, stylePrompt } = parsed.data;
-  const composed = stylePrompt ? `${prompt}\n\nStyle: ${stylePrompt}` : prompt;
+  const { prompt, aspectRatio, stylePrompt, styleId } = parsed.data;
+  // Résolution du style : stylePrompt explicite prioritaire, sinon résolution depuis l'id.
+  let stylePromptResolved: string | undefined = stylePrompt;
+  if (!stylePromptResolved && styleId) {
+    const st = await getStyle(styleId);
+    stylePromptResolved = st?.prompt;
+  }
+  const composed = composePrompt(prompt, stylePromptResolved);
   const { bytes, mimeType } = await generateImage(composed, aspectRatio);
   const rec = await store({
     bytes,
     mimeType,
+    kind: "image",
     prompt: composed,
     parent_id: null,
     source: "gemini_generate",
     tags: [],
+    style_id: styleId ?? null,
   });
   return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
 }
@@ -74,7 +97,7 @@ async function handleEdit(request: Request): Promise<Response> {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
   const { sourceId, prompt } = parsed.data;
-  const source = await getImageRecord(sourceId);
+  const source = await getMediaRecord(sourceId);
   if (!source) return jsonResponse({ error: `Image introuvable: ${sourceId}` }, 404);
   const src = await getImageBytes(source.r2_key);
   if (!src) return jsonResponse({ error: `Fichier source absent du bucket: ${source.r2_key}` }, 404);
@@ -82,6 +105,7 @@ async function handleEdit(request: Request): Promise<Response> {
   const rec = await store({
     bytes,
     mimeType,
+    kind: "image",
     prompt,
     parent_id: source.id,
     source: "gemini_edit",
@@ -106,6 +130,7 @@ async function handleRenderHtml(request: Request): Promise<Response> {
   const rec = await store({
     bytes,
     mimeType,
+    kind: "render",
     prompt: null,
     parent_id: null,
     source: "html_render",
@@ -116,13 +141,41 @@ async function handleRenderHtml(request: Request): Promise<Response> {
   return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
 }
 
+async function handleRenderTemplate(request: Request): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Corps JSON invalide" }, 400);
+  }
+  const parsed = RenderTemplateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
+  }
+  const { templateId, vars } = parsed.data;
+  try {
+    const rec = await renderTemplate(templateId, vars);
+    return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Échec du rendu du template";
+    // Template inexistant → 404 ; validation des variables ou autre → 400.
+    const status = message.includes("introuvable") ? 404 : 400;
+    return jsonResponse({ error: message }, status);
+  }
+}
+
 async function handleUpload(request: Request): Promise<Response> {
-  const mimeType = request.headers.get("content-type") ?? "application/octet-stream";
+  // Normalise le MIME : retire les paramètres éventuels (ex. "; charset=binary").
+  const rawContentType = request.headers.get("content-type") ?? "application/octet-stream";
+  const mime = rawContentType.split(";")[0].trim();
   const buffer = await request.arrayBuffer();
   const bytes = new Uint8Array(buffer);
+  const result = validateUpload(mime, bytes.byteLength);
+  if (!result.ok) return jsonResponse({ error: result.error }, 400);
   const rec = await store({
     bytes,
-    mimeType,
+    mimeType: mime,
+    kind: result.kind,
     prompt: null,
     parent_id: null,
     source: "upload",
@@ -131,10 +184,32 @@ async function handleUpload(request: Request): Promise<Response> {
   return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
 }
 
+async function handlePdf(request: Request): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Corps JSON invalide" }, 400);
+  }
+  const parsed = PdfSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
+  }
+  const { imageIds } = parsed.data;
+  try {
+    const rec = await aggregatePdf(imageIds);
+    return jsonResponse({ id: rec.id, url: rec.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Échec de la construction du PDF";
+    const status = message.includes("introuvable") ? 404 : 400;
+    return jsonResponse({ error: message }, status);
+  }
+}
+
 async function handleDelete(id: string): Promise<Response> {
-  const rec = await getImageRecord(id);
+  const rec = await getMediaRecord(id);
   if (!rec) return jsonResponse({ deleted: false });
-  const deleted = await deleteImageRow(id);
+  const deleted = await deleteMediaRow(id);
   if (deleted) {
     await deleteObject(rec.r2_key);
   }
@@ -161,8 +236,14 @@ export async function handleV1(request: Request): Promise<Response> {
   if (method === "POST" && pathname === "/v1/render-html") {
     return handleRenderHtml(request);
   }
+  if (method === "POST" && pathname === "/v1/render-template") {
+    return handleRenderTemplate(request);
+  }
   if (method === "POST" && pathname === "/v1/upload") {
     return handleUpload(request);
+  }
+  if (method === "POST" && pathname === "/v1/pdf") {
+    return handlePdf(request);
   }
 
   // DELETE /v1/object/:id

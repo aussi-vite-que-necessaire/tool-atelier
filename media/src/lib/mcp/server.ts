@@ -3,9 +3,16 @@ import { z } from "zod";
 import { generateImage, editImage } from "@/lib/gemini";
 import { renderHtml } from "@/lib/render";
 import { getImageBytes, deleteObject } from "@/lib/storage";
-import { getImageRecord, listImageRecords, deleteImageRow } from "@/lib/images/repository";
+import { getMediaRecord, listMediaRecords, deleteMediaRow } from "@/lib/media/repository";
 import { store } from "@/lib/store";
 import { jsonResult, imageResult } from "./result";
+import { registerStyleTools } from "./tools/styles";
+import { registerStyleGuideTools } from "./tools/style-guides";
+import { registerBrandTools } from "./tools/brand";
+import { registerTemplateTools } from "./tools/templates";
+import { registerPdfTools } from "./tools/pdf";
+import { getStyle } from "@/lib/styles/repository";
+import { composePrompt } from "@/lib/styles/compose";
 
 export const INSTRUCTIONS = `Image Studio génère, édite et rend des images pour illustrer documents, posts et présentations.
 
@@ -38,17 +45,25 @@ export function registerAllTools(server: McpServer): void {
           .array(z.string())
           .optional()
           .describe("Étiquettes libres pour retrouver l'image via list_images, ex: ['linkedin','tech']."),
+        style_id: z
+          .string()
+          .optional()
+          .describe("id d'un style visuel (list_visual_styles) à appliquer. Son prompt est ajouté en suffixe au prompt fourni."),
       },
     },
-    async ({ prompt, aspect_ratio, tags }) => {
-      const { bytes, mimeType } = await generateImage(prompt, aspect_ratio ?? "1:1");
+    async ({ prompt, aspect_ratio, tags, style_id }) => {
+      const st = style_id ? await getStyle(style_id) : undefined;
+      const finalPrompt = composePrompt(prompt, st?.prompt);
+      const { bytes, mimeType } = await generateImage(finalPrompt, aspect_ratio ?? "1:1");
       const rec = await store({
         bytes,
         mimeType,
-        prompt,
+        kind: "image",
+        prompt: finalPrompt,
         parent_id: null,
         source: "gemini_generate",
         tags: tags ?? [],
+        style_id: style_id ?? null,
       });
       return imageResult(bytes, mimeType, {
         id: rec.id,
@@ -81,7 +96,7 @@ export function registerAllTools(server: McpServer): void {
       },
     },
     async ({ image_id, edit_prompt, tags }) => {
-      const source = await getImageRecord(image_id);
+      const source = await getMediaRecord(image_id);
       if (!source) throw new Error(`Image introuvable: ${image_id}`);
       const src = await getImageBytes(source.r2_key);
       if (!src) throw new Error(`Fichier source absent du bucket: ${source.r2_key}`);
@@ -90,6 +105,7 @@ export function registerAllTools(server: McpServer): void {
       const rec = await store({
         bytes,
         mimeType,
+        kind: "image",
         prompt: edit_prompt,
         parent_id: source.id,
         source: "gemini_edit",
@@ -154,6 +170,7 @@ export function registerAllTools(server: McpServer): void {
       const rec = await store({
         bytes,
         mimeType,
+        kind: "render",
         prompt: null,
         parent_id: null,
         source: "html_render",
@@ -182,9 +199,9 @@ export function registerAllTools(server: McpServer): void {
           .optional()
           .describe("Filtre par tags : toutes les tags fournies doivent être présentes (intersection)."),
         source: z
-          .enum(["gemini_generate", "gemini_edit", "html_render", "upload"])
+          .enum(["gemini_generate", "gemini_edit", "html_render", "template_render", "upload", "pdf_aggregate"])
           .optional()
-          .describe("Filtre par origine : gemini_generate, gemini_edit, html_render ou upload."),
+          .describe("Filtre par origine : gemini_generate, gemini_edit, html_render, template_render, upload ou pdf_aggregate."),
         limit: z
           .number()
           .int()
@@ -195,7 +212,7 @@ export function registerAllTools(server: McpServer): void {
       },
     },
     async ({ query, tags, source, limit }) => {
-      const records = await listImageRecords({ query, tags, source, limit });
+      const records = await listMediaRecords({ query, tags, source, limit });
       return jsonResult(records);
     },
   );
@@ -207,7 +224,7 @@ export function registerAllTools(server: McpServer): void {
       inputSchema: { image_id: z.string().min(1).describe("id de l'image à récupérer.") },
     },
     async ({ image_id }) => {
-      const rec = await getImageRecord(image_id);
+      const rec = await getMediaRecord(image_id);
       return jsonResult(rec);
     },
   );
@@ -219,14 +236,20 @@ export function registerAllTools(server: McpServer): void {
       inputSchema: { image_id: z.string().min(1).describe("id de l'image à supprimer définitivement.") },
     },
     async ({ image_id }) => {
-      const rec = await getImageRecord(image_id);
+      const rec = await getMediaRecord(image_id);
       if (!rec) return jsonResult({ deleted: false });
       // Ligne d'abord : si l'objet R2 échoue ensuite, on a au pire un orphelin inoffensif.
-      const deleted = await deleteImageRow(image_id);
+      const deleted = await deleteMediaRow(image_id);
       if (deleted) {
         await deleteObject(rec.r2_key);
       }
       return jsonResult({ deleted });
     },
   );
+
+  registerStyleTools(server);
+  registerStyleGuideTools(server);
+  registerBrandTools(server);
+  registerTemplateTools(server);
+  registerPdfTools(server);
 }
