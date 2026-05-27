@@ -20,6 +20,8 @@ const envSchema = z.object({
   // qu'environ 12 mois ; bumper si "NONEXISTENT_VERSION" au moment de publier.
   LINKEDIN_API_VERSION: z.string().default('202604'),
   E2E_TESTING: z.string().optional(),
+  // Injecté par deploy.sh : 'prod' en prod, sinon le slug de branche (preview).
+  APP_ENV: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
