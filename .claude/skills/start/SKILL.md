@@ -12,13 +12,10 @@ repasser.
 
 Demande à Manu ce qu'il veut faire, puis oriente :
 
-1. **Bosser sur un projet existant** → `/lab-list`, demande lequel, puis `/lab-work <projet>`.
-2. **Créer un projet** → `/lab-new`.
-3. **Plomberie de l'atelier** (CLAUDE.md, skills, hooks, scripts, `Atelier.command`) → tu es
-   déjà dans une session worktree isolée, travaille directement ici.
-4. **Lister les projets** → `/lab-list`.
-5. **Infra / plateforme** → gérée **hors de l'atelier** ; les secrets applicatifs, eux, via `/lab-secret`.
-6. **Autre** → demande en prose.
+1. **Lancer une tâche (feature-work)** — nouveau projet, évolution d'un projet, ou plomberie de l'atelier → **`/lab-ship`**. Décris l'idée ; il pose la vague de questions de cadrage, puis enchaîne spec → plan → implémentation (sub-agents) → PR prévisualisable **en autonomie**, sans autre validation. `/lab-ship` met en place l'isolation et appelle `/lab-new` (nouveau) ou `/lab-work` (existant) selon le cas.
+2. **Lister les projets** → `/lab-list`.
+3. **Infra / plateforme** → gérée **hors de l'atelier** ; les secrets applicatifs via `/lab-secret`.
+4. **Autre** → demande en prose.
 
 Pose la question via `AskUserQuestion`. **En session cloud** (où l'UI de question peut ne pas
 s'afficher), si l'outil n'est pas disponible, pose la même question **en prose** et attends la

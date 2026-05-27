@@ -13,10 +13,13 @@ Le lanceur ne décide d'aucune tâche : **ce qu'on fait dans la session, c'est `
 décide**, à l'intérieur. Skills disponibles :
 
 - **`/start`** — entrée de session : demande quoi faire et oriente.
+- **`/lab-ship`** — flow autonome de feature-work : questions de cadrage, puis spec → plan → implémentation (sub-agents) → PR prévisualisable, sans validation intermédiaire. Orchestre `/lab-new` ou `/lab-work` selon le cas.
 - **`/lab-list`** — liste les projets + leur état (régénère `PROJECTS.md`).
 - **`/lab-new`** — crée un projet depuis un starter (`static`/`api`/`flagship`) ou vierge.
 - **`/lab-work <projet>`** — focalise la session sur un projet (branche dédiée).
 - **`/lab-deploy`** — déploie le projet courant (preview/prod).
+
+Le feature-work passe par **`/lab-ship`** (autonome de bout en bout) ; son seul point d'arrêt humain est la vague de questions de cadrage.
 
 `PROJECTS.md` = carte vivante (projets, stack, état, URL). **Artefact généré (gitignoré), jamais édité à la main** : régénéré au démarrage de chaque session et par `/lab-list`.
 
