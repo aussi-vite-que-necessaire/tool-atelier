@@ -59,3 +59,5 @@ Resend, le code OTP est **loggé dans la console du serveur** (`[OTP] <email> ->
 reader (`app/(public)/r/[slug]/`) adapte sa grille selon le nombre de pages / sections
 (`components/reader/reader-shell.tsx`). Admin sous `app/admin/*` ; MCP sous
 `app/api/[transport]/route.ts`.
+
+<!-- redeploy: email réel (Resend) -->
