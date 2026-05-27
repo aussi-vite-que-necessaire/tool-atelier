@@ -17,7 +17,9 @@ export const auth = betterAuth({
       otpLength: 6,
       expiresIn: 600, // 10 minutes
       // En preview : code déterministe + aucun email (permet l'auto-login).
-      generateOTP: isPreview ? () => PREVIEW_OTP : undefined,
+      // Clé incluse uniquement en preview : passer `generateOTP: undefined`
+      // écraserait le générateur par défaut de better-auth (merge `...options`).
+      ...(isPreview ? { generateOTP: () => PREVIEW_OTP } : {}),
       sendVerificationOTP: async ({ email, otp }) => {
         if (isPreview) return;
         await sendEmail({
