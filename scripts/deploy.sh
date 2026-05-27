@@ -12,6 +12,8 @@ if [ "$ENV" = "prod" ]; then HOST="${PROJ}.lab.avqn.ch"; else HOST="${PROJ}-${EN
 
 # jq requis pour lire lab.json — auto-install si absent (serveur fraîchement provisionné)
 command -v jq >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq jq; }
+# age requis pour déchiffrer les secrets — auto-install si absent
+command -v age >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq age; }
 
 # Auth GHCR (images privées) si un token est posé sur le serveur
 if [ -f /opt/lab/ghcr.env ]; then
@@ -68,10 +70,13 @@ if [ "$EMAIL" = "true" ]; then
   fi
 fi
 
-# Secrets applicatifs par projet (mécanisme intérimaire : fichier root-only sur lab ;
-# backend robuste à venir). Injectés dans l'env partagé (web + worker + migrate one-shot).
-if [ -f "/opt/lab/secrets/${PROJ}.env" ]; then
-  cat "/opt/lab/secrets/${PROJ}.env" >> "$APPDIR/.env"
+# Secrets applicatifs chiffrés (age) : global puis projet, déchiffrés avec la clé posée sur lab
+# (/opt/lab/secrets-key) et injectés dans l'env partagé (web + worker + migrate one-shot).
+# Ordre : global d'abord, projet ensuite → le projet peut surcharger une valeur globale.
+# sysadmin n'est JAMAIS injecté. Fichiers copiés par la CI dans $APPDIR (déjà chiffrés).
+if [ -f /opt/lab/secrets-key ]; then
+  [ -f "$APPDIR/global.env.age" ]          && age -d -i /opt/lab/secrets-key "$APPDIR/global.env.age"          >> "$APPDIR/.env"
+  [ -f "$APPDIR/${PROJ}.env.age" ]         && age -d -i /opt/lab/secrets-key "$APPDIR/${PROJ}.env.age"         >> "$APPDIR/.env"
 fi
 
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab

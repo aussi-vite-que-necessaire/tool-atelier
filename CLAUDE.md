@@ -27,7 +27,7 @@ créer / lister / infra / autre) et oriente. Skills disponibles :
 
 `git push` → GitHub Action build l'image du/des projet(s) modifié(s) → **GHCR** → SSH vers `lab`
 → `scripts/deploy.sh`. Le serveur **ne build jamais** : il *pull* l'image déjà construite. Suivre
-avec `gh run watch`. Logs d'un projet : `docker logs <projet>-<env>-app-1` (surface SSH cockpit).
+avec `gh run watch`. Logs d'un projet : `docker logs <projet>-<env>-app-1` (accès SSH au serveur `lab`).
 
 ## Données — `lab.json`
 
@@ -38,12 +38,15 @@ Au déploiement, `deploy.sh` crée la base `<projet>_<env>` (Postgres central), 
 `REDIS_PREFIX` ; `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` (Resend, clé de plateforme).
 Preview = base vide + seed, droppée au teardown. Exemples : `hello/` (rien), `counter/` (db).
 
-## Secrets applicatifs (à venir)
+## Secrets applicatifs — `/lab-secret`
 
-Backend de secrets robuste à définir (clés API par projet). Les variables auto-fournies
-(`DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY`) **ne sont pas** à gérer à la main.
+Les clés API et variables sensibles par projet se gèrent avec la skill **`/lab-secret`** :
+secrets `age`-chiffrés versionnés dans `secrets/`, déverrouillés par l'unique variable
+`LAB_SECRETS_KEY`, par scope (`global` partagé / `sysadmin` opérateur / `<projet>`). Au
+déploiement, `deploy.sh` déchiffre et injecte `global` + le scope du projet. Les variables
+auto-fournies (`DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY`) **ne sont pas** à gérer à la main.
 
 ## Infra / plateforme
 
-Serveurs, DNS, Postgres/Redis centraux, firewall, secrets de plateforme : pilotés depuis
-**cockpit** (repo séparé), pas ici.
+Serveurs, DNS, Postgres/Redis centraux, firewall : l'infra bas niveau est gérée **hors de
+l'atelier**, pas ici. L'atelier est autonome pour ses secrets (`/lab-secret`) et son déploiement.
