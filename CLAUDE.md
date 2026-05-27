@@ -6,15 +6,11 @@ Monorepo incubateur des projets de Manu, **pilotable par agents**. **Un dossier 
 ## Au démarrage : qu'est-ce qu'on fait ?
 
 L'entrée de l'atelier est le lanceur **`Atelier.command`** (double-clic macOS, ou exécuté au
-terminal). Il ne fait qu'une chose : **sandboxer le dev**. Il pose une seule question — **local
-ou cloud** — et ouvre la session isolée correspondante :
-
-- **local** → worktree isolé sur ta machine (`claude --worktree`).
-- **cloud** → session sur claude.ai (`claude --remote` si le CLI le supporte, sinon le
-  lanceur ouvre `claude.ai/code`), pilotée au navigateur ou sur mobile.
+terminal). Il ne fait qu'une chose : **sandboxer le dev**. Il ouvre une session isolée sur ta
+machine — worktree natif de Claude Code (`claude --worktree`) — et y lance **`/start`**.
 
 Le lanceur ne décide d'aucune tâche : **ce qu'on fait dans la session, c'est `/start` qui le
-décide**, à l'intérieur (local comme cloud). Skills disponibles :
+décide**, à l'intérieur. Skills disponibles :
 
 - **`/start`** — entrée de session : demande quoi faire et oriente.
 - **`/lab-list`** — liste les projets + leur état (régénère `PROJECTS.md`).
@@ -35,9 +31,9 @@ décide**, à l'intérieur (local comme cloud). Skills disponibles :
 
 **Étoile polaire : deux agents ne touchent jamais la même ressource mutable au même instant.** Le code et la branche s'isolent ; la prod (singleton) se sérialise.
 
-- **Construire = cloud.** Chaque tâche autonome tourne en session cloud (isolée, sa branche, sa preview, sa PR). Le deploy est CI-piloté (`git push`), donc une session cloud n'a pas besoin de SSH. On n'y met ni la clé SSH du lab ni `LAB_SECRETS_KEY`.
+- **Construire = cloud.** Chaque tâche autonome tourne en session cloud (ouverte sur `claude.ai/code`, isolée, sa branche, sa preview, sa PR). Le deploy est CI-piloté (`git push`), donc une session cloud n'a pas besoin de SSH. On n'y met ni la clé SSH du lab ni `LAB_SECRETS_KEY`.
 - **Opérer = local de confiance.** Logs, diagnostic (`/lab-ssh`), secrets (`/lab-secret`), dev hands-on : sur ta machine, qui détient les clés.
-- **Sessions locales isolées.** Une session = un worktree sous `.claude/worktrees/` + sa branche, ouverte par **`Atelier.command`** (mode local) ou directement `claude --worktree` (worktree auto-nommé, auto-nettoyé s'il n'a rien produit). Jamais deux sessions d'écriture dans le checkout principal : il sert de base de lancement et pour la plomberie de l'atelier (CLAUDE.md, skills, scripts), pas pour le dev projet.
+- **Sessions locales isolées.** Une session = un worktree sous `.claude/worktrees/` + sa branche, ouverte par **`Atelier.command`** ou directement `claude --worktree` (worktree auto-nommé, auto-nettoyé s'il n'a rien produit). Jamais deux sessions d'écriture dans le checkout principal : il sert de base de lancement et pour la plomberie de l'atelier (CLAUDE.md, skills, scripts), pas pour le dev projet.
 - **Prod sérialisée.** La prod ne change que par l'entonnoir PR → merge → CI (un seul déploiement à la fois). Pas de mutation de prod en SSH ad-hoc ; la lecture/diagnostic SSH reste libre.
 - **Frameworks invités.** superpowers et consorts accélèrent mais défèrent à ce contrat : leurs skills de worktree utilisent le worktree natif (`claude --worktree`), leur « fin de branche » défère à `/lab-deploy` + PR.
 - **Amorçage cloud.** Une fois : connecter GitHub (`/web-setup`). L'environnement cloud lance `scripts/cloud-setup.sh` au démarrage (installe les deps par projet). Les secrets cloud sont des variables d'environnement (visibles) : on n'y met que ce qu'une session de build doit voir.
