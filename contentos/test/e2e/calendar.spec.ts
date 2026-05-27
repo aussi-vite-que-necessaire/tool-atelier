@@ -65,10 +65,18 @@ function pad(n: number): string {
 test.describe('Calendrier', () => {
   test.describe.configure({ timeout: 180_000 });
 
-  test('planifier un post puis le voir dans le calendrier', async ({ page }) => {
+  test('planifier un post puis le prévisualiser en modale LinkedIn', async ({ page }) => {
     await signup(page, `pw-cal-${Date.now()}@test.invalid`);
     await connectLinkedIn(page);
     const postId = await createPost(page, 'Idée calendrier');
+
+    // Contenu long (multi-lignes) pour déclencher le « voir plus ».
+    const longContent = Array.from({ length: 12 }, (_, i) => `Ligne ${i + 1} du post de test`).join(
+      '\n',
+    );
+    const textarea = page.locator('textarea.font-mono');
+    await textarea.fill(longContent);
+    await textarea.blur();
 
     // Planifie le 15 du mois prochain à 10:00 (mi-journée → robuste aux fuseaux).
     const now = new Date();
@@ -80,11 +88,24 @@ test.describe('Calendrier', () => {
     await page.getByRole('button', { name: 'Planifier' }).click();
     await expect(page.getByText(/Planifié pour le/)).toBeVisible({ timeout: 10_000 });
 
-    // Le calendrier (mois cible) affiche une chip liée au post.
+    // Le calendrier affiche une vignette liant vers la modale d'aperçu.
     await page.goto(`/calendar?month=${monthParam}`);
-    const chip = page.locator(`a[href="/posts/${postId}"]`);
+    const chip = page.locator(`a[href="/calendar/preview/${postId}"]`);
     await expect(chip.first()).toBeVisible({ timeout: 10_000 });
     await chip.first().click();
+
+    // La modale s'ouvre (URL interceptée) et montre le skin LinkedIn.
+    await expect(page).toHaveURL(new RegExp(`/calendar/preview/${postId}`));
+    await expect(page.getByText('Ligne 1 du post de test')).toBeVisible({ timeout: 10_000 });
+
+    // « voir plus » déplie le texte.
+    const seeMore = page.getByRole('button', { name: /voir plus/ });
+    await expect(seeMore).toBeVisible();
+    await seeMore.click();
+    await expect(page.getByText('Ligne 12 du post de test')).toBeVisible();
+
+    // Bouton Modifier → page d'édition du post.
+    await page.getByRole('link', { name: 'Modifier' }).click();
     await expect(page).toHaveURL(new RegExp(`/posts/${postId}`));
   });
 });
