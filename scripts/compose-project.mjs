@@ -90,12 +90,16 @@ export async function compose({ name, description, modules = [], authMethods = [
     }
   }
 
-  // barrel Drizzle (si db)
+  // barrel Drizzle (si db). Ré-exporte les tables au niveau racine (drizzle-kit
+  // les y cherche pour générer les migrations) ET les regroupe dans `schema`
+  // (consommé par le client drizzle-orm).
   if (resolved.includes("db")) {
     const frags = manifests.flatMap((m) => m.schemas ?? []);
+    const all = frags.flatMap((f) => f.exports);
     const body = frags.length
       ? frags.map((f) => `import { ${f.exports.join(", ")} } from "${f.import}";`).join("\n") +
-        `\n\nexport const schema = { ${frags.flatMap((f) => f.exports).join(", ")} };\n`
+        `\n\nexport { ${all.join(", ")} };\n\n` +
+        `export const schema = { ${all.join(", ")} };\n`
       : `export const schema = {};\n`;
     await fs.writeFile(path.join(dst, "src/db/schema.ts"), body);
   }
