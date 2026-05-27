@@ -1,6 +1,4 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { buttonVariants } from '@/components/ui/button';
 import { requireUserId } from '@/lib/auth/session';
 import { getCarouselSlides } from '@/lib/db/repositories/carousels';
 import { listStandaloneImages } from '@/lib/db/repositories/image-assets';
@@ -13,7 +11,6 @@ import { getAuthorIdentity } from '@/lib/linkedin/identity';
 import { buildBrandContext } from '@/lib/visual-templates/brand';
 import { buildPreviewHtml } from '@/lib/visual-templates/preview';
 import { PostEditor } from './_components/post-editor';
-import { PublishPanel } from './_components/publish-panel';
 import type { TemplatePreview } from './_components/template-thumbnail';
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -80,20 +77,15 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   }
 
   return (
-    <div className="space-y-4">
-      <Link href="/posts" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-        ← Tous les posts
-      </Link>
-      <PostEditor
-        post={post}
-        templates={templates}
-        templatePreviews={templatePreviews}
-        styles={styles.map((s) => ({ id: s.id, name: s.name }))}
-        galleryImages={galleryImages}
-        mediaInfo={mediaInfo}
-        author={author}
-      />
-      <PublishPanel postId={post.id} publication={latestPub ?? null} />
-    </div>
+    <PostEditor
+      post={post}
+      templates={templates}
+      templatePreviews={templatePreviews}
+      styles={styles.map((s) => ({ id: s.id, name: s.name }))}
+      galleryImages={galleryImages}
+      mediaInfo={mediaInfo}
+      author={author}
+      publication={latestPub ?? null}
+    />
   );
 }

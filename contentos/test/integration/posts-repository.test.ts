@@ -1,12 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it, test } from 'vitest';
 import { db } from '@/lib/db/client';
+import { createMedia } from '@/lib/db/repositories/media';
 import {
   createPost,
   deletePost,
   getPost,
   getPostByGenerationJobId,
   listPosts,
+  listPostsWithMedia,
   updatePost,
 } from '@/lib/db/repositories/posts';
 import { user } from '@/lib/db/schema';
@@ -86,6 +88,44 @@ describe('listPosts ordering + generationJobId', () => {
     await expect(
       createPost(userId, { title: 'T', content: 'dup', generationJobId: jobKey }),
     ).rejects.toThrow();
+  });
+});
+
+describe('listPostsWithMedia', () => {
+  it('joint le visuel : url = assetKey + kind quand mediaId présent', async () => {
+    const userId = await createTestUser('lpwm-media');
+    const m = await createMedia(userId, {
+      kind: 'image',
+      assetKey: 'https://engine.test/img-abc.png',
+      previewKey: 'prev-abc',
+      width: 1200,
+      height: 1200,
+    });
+    const post = await createPost(userId, { title: 'T', content: 'c', mediaId: m.id });
+
+    const rows = await listPostsWithMedia(userId);
+    const found = rows.find((r) => r.id === post.id);
+    expect(found?.thumbnail).toEqual({ url: 'https://engine.test/img-abc.png', kind: 'image' });
+  });
+
+  it('thumbnail null quand le post n’a pas de média', async () => {
+    const userId = await createTestUser('lpwm-nomedia');
+    const post = await createPost(userId, { title: 'T', content: 'c' });
+
+    const rows = await listPostsWithMedia(userId);
+    expect(rows.find((r) => r.id === post.id)?.thumbnail).toBeNull();
+  });
+
+  it('ne retourne que les posts du user et trie par updated_at DESC', async () => {
+    const me = await createTestUser('lpwm-me');
+    const other = await createTestUser('lpwm-other');
+    const p1 = await createPost(me, { title: 'T', content: 'first' });
+    await new Promise((r) => setTimeout(r, 10));
+    const p2 = await createPost(me, { title: 'T', content: 'second' });
+    await createPost(other, { title: 'T', content: 'leak?' });
+
+    const rows = await listPostsWithMedia(me);
+    expect(rows.map((r) => r.id)).toEqual([p2.id, p1.id]);
   });
 });
 

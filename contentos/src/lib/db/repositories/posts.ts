@@ -1,7 +1,10 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../client';
 import { createId } from '../id';
-import { type Post, posts } from '../schema';
+import { media, type Post, posts } from '../schema';
+
+export type PostThumbnail = { url: string; kind: 'image' | 'carousel' | 'video' };
+export type PostWithThumbnail = Post & { thumbnail: PostThumbnail | null };
 
 export type CreatePostInput = {
   title: string;
@@ -46,6 +49,32 @@ export async function getPost(userId: string, id: string): Promise<Post | undefi
 
 export async function listPosts(userId: string): Promise<Post[]> {
   return db.select().from(posts).where(eq(posts.userId, userId)).orderBy(desc(posts.updatedAt));
+}
+
+/**
+ * Comme listPosts, mais joint le visuel attaché pour la vignette du listing.
+ * `thumbnail.url` est une URL publique engine affichable telle quelle :
+ * assetKey pour une image, previewKey (= 1re slide) pour un carrousel. Pour une
+ * vidéo, assetKey est le fichier mp4 (pas une image) : l'UI affiche un repère.
+ */
+export async function listPostsWithMedia(userId: string): Promise<PostWithThumbnail[]> {
+  const rows = await db
+    .select({
+      post: posts,
+      mediaKind: media.kind,
+      mediaAssetKey: media.assetKey,
+      mediaPreviewKey: media.previewKey,
+    })
+    .from(posts)
+    .leftJoin(media, eq(posts.mediaId, media.id))
+    .where(eq(posts.userId, userId))
+    .orderBy(desc(posts.updatedAt));
+
+  return rows.map(({ post, mediaKind, mediaAssetKey, mediaPreviewKey }) => {
+    if (!mediaKind) return { ...post, thumbnail: null };
+    const url = mediaKind === 'carousel' ? mediaPreviewKey! : mediaAssetKey!;
+    return { ...post, thumbnail: { url, kind: mediaKind } };
+  });
 }
 
 export async function updatePost(

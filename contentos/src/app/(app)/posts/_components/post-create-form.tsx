@@ -1,5 +1,6 @@
 'use client';
 
+import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type React from 'react';
 import { useState, useTransition } from 'react';
@@ -24,16 +25,21 @@ export function PostCreateForm() {
   };
 
   return (
-    <form onSubmit={submit} className="flex items-center gap-3 rounded-lg border p-4">
+    <form
+      onSubmit={submit}
+      className="flex flex-col gap-3 rounded-xl bg-card p-2 ring-1 ring-foreground/10 sm:flex-row sm:items-center"
+    >
       <Input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Titre du post"
+        placeholder="Le titre de ton prochain post…"
         maxLength={200}
         disabled={pending}
+        className="border-0 bg-transparent shadow-none focus-visible:ring-0 sm:text-base"
       />
-      <Button type="submit" disabled={pending || !title.trim()}>
-        {pending ? 'Création…' : 'Créer un post'}
+      <Button type="submit" disabled={pending || !title.trim()} className="shrink-0">
+        <Plus className="mr-1.5 h-4 w-4" />
+        {pending ? 'Création…' : 'Nouveau post'}
       </Button>
     </form>
   );
