@@ -1,0 +1,1 @@
+{ "description": "Plateforme de lead magnets (ressources.avqn.ch) — copie lab.", "db": true, "email": true, "migrate": "node scripts/migrate.mjs" }
