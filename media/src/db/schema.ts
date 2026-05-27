@@ -3,6 +3,9 @@ import {
   text,
   timestamp,
   boolean,
+  integer,
+  jsonb,
+  index,
 } from "drizzle-orm/pg-core";
 
 // Schéma cœur attendu par BetterAuth (user / session / account / verification).
@@ -59,4 +62,26 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const schema = { user, session, account, verification };
+// Métadonnées des images (octets stockés sur R2). tags en jsonb → filtrage en SQL.
+export const images = pgTable(
+  "images",
+  {
+    id: text("id").primaryKey(),
+    r2Key: text("r2_key").notNull(),
+    url: text("url").notNull(),
+    prompt: text("prompt"),
+    parentId: text("parent_id"),
+    source: text("source").notNull(),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    width: integer("width"),
+    height: integer("height"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_images_created").on(t.createdAt),
+    index("idx_images_parent").on(t.parentId),
+    index("idx_images_source").on(t.source),
+  ],
+);
+
+export const schema = { user, session, account, verification, images };
