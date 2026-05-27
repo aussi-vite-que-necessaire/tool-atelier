@@ -27,6 +27,9 @@ ENV APP_URL=${APP_URL}
 ENV DATABASE_URL=postgres://build:build@localhost:5432/build \
     REDIS_URL=redis://localhost:6379 \
     BETTER_AUTH_SECRET=build-placeholder-secret-build-placeholder-secret
+# Clé de chiffrement des Server Actions — DOIT être identique build + runtime, sinon
+# « Failed to find Server Action » en self-hosted. Faible sensibilité (réfs d'action).
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=ZrqnC0+LuoOYOSt6hNb9QbxgGFK7Taktm7DIPJeEj9U=
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
@@ -38,6 +41,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
+# Même clé qu'au build (cohérence des Server Actions).
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=ZrqnC0+LuoOYOSt6hNb9QbxgGFK7Taktm7DIPJeEj9U=
 
 # Sortie standalone de Next : serveur web + node_modules tracés (web).
 COPY --from=build --chown=node:node /app/.next/standalone ./

@@ -21,6 +21,9 @@ ENV DATABASE_URL=postgres://placeholder:placeholder@localhost:5432/placeholder
 ENV BETTER_AUTH_SECRET=build-placeholder-secret-build-placeholder-secret
 ENV BETTER_AUTH_URL=https://ressources.lab.avqn.ch
 ENV APP_URL=https://ressources.lab.avqn.ch
+# Clé de chiffrement des Server Actions — DOIT être identique build + runtime, sinon
+# « Failed to find Server Action » en self-hosted. Faible sensibilité (réfs d'action).
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=Uh/a226WHYYubDLev4Kg4PMV+YnbcyyHbaW6rSD+o/U=
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
@@ -38,6 +41,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
+# Même clé qu'au build (cohérence des Server Actions).
+ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=Uh/a226WHYYubDLev4Kg4PMV+YnbcyyHbaW6rSD+o/U=
 
 # Sortie standalone de Next : serveur + node_modules tracés + fichiers du skill
 # (next.config.ts : outputFileTracingIncludes pour /api/admin/skill).
