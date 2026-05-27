@@ -11,11 +11,26 @@ par agent via un serveur **MCP** sur `/api/mcp` (OAuth via better-auth, `.well-k
 
 - **web** : serveur Next standalone (`server.js`, port 8080). CMD par défaut de l'image.
 - **worker** : consumers BullMQ (`src/worker/index.ts`, lancé via `worker-runner.mjs`) pour
-  les files `dummy`, `render-visual`, `generate-image`, `publish-linkedin`. Service `worker`
-  du `compose.yml`, même image, commande overridée.
+  les files `dummy` et `publish-linkedin`. Service `worker` du `compose.yml`, même image,
+  commande overridée.
 
 Les files BullMQ sont **préfixées** (`QUEUE_PREFIX`, défaut `contentos`) car le Redis lab est
 central/multi-tenant — enqueue (web) et consume (worker) partagent le même préfixe.
+
+## Média — délégué à `media`
+
+ContentOS **ne crée aucun média** (pas de génération, templates, styles, chartes, PDF, upload) :
+tout ça vit dans le service **media** (`https://media.lab.avqn.ch`). Un post **référence** un média
+via des colonnes (`mediaUrl`, `mediaKind`, `mediaWidth`, `mediaHeight`, `mediaId` optionnel). On
+attache un média :
+
+- **UI** : le picker (`posts/[id]/_components/media-picker.tsx`) liste les médias de `media`
+  (`GET /v1/media`, via `src/lib/media-catalog/`) et appelle `setPostMedia`.
+- **MCP** : `attach_media_to_post` (par `media_id` du service, ou n'importe quelle `media_url`) et
+  `detach_media`. L'agent trouve les médias via le connecteur MCP de `media`.
+
+La publication LinkedIn récupère les octets par `fetch(mediaUrl)` (`src/lib/media-catalog/fetch-bytes.ts`)
+et mappe `mediaKind → LinkedIn` (`pdf→document`, `video→video`, `image|render→image`).
 
 ## Stack
 
@@ -51,9 +66,10 @@ dépôt, jamais committé) :
 - `RESEND_API_KEY`, `RESEND_FROM` — email (sinon OTP loggé côté serveur)
 - `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_API_VERSION` — publication LinkedIn
 - `TOKEN_ENCRYPTION_KEY` — chiffrement des tokens LinkedIn stockés
-- `MEDIA_ENGINE_URL`, `MEDIA_ENGINE_SERVICE_KEY` — moteur média (render PNG + génération image)
+- `MEDIA_ENGINE_URL`, `MEDIA_ENGINE_SERVICE_KEY` — service **media** (`https://media.lab.avqn.ch`) :
+  lecture du catalogue (`GET /v1/media`) pour le picker, et fetch des octets pour la publication
 - `QUEUE_PREFIX` — défaut `contentos` (à laisser tel quel sauf collision)
-- stubs CI/dev : `CONTENT_OS_AI_STUB`, `CONTENT_OS_MEDIA_STUB`, `CONTENT_OS_LINKEDIN_STUB`
+- stubs CI/dev : `CONTENT_OS_AI_STUB`, `CONTENT_OS_LINKEDIN_STUB`
 
 Faire évoluer le schéma : éditer `src/lib/db/schema.ts` / `src/lib/db/schemas/`,
 `npm run db:generate`, committer — le prochain déploiement applique la migration.
