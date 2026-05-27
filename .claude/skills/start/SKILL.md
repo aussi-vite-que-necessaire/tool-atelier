@@ -1,13 +1,14 @@
 ---
 name: start
-description: Entrée de session de l'atelier — demande à Manu ce qu'il veut faire dans cette session et l'oriente vers la bonne skill. À lancer au début de toute session ouverte via Atelier.command (local ou cloud).
+description: Entrée de session de l'atelier — demande à Manu ce qu'il veut faire dans cette session et l'oriente vers la bonne skill. Le lanceur Atelier.command la déclenche automatiquement à l'ouverture d'une session locale ; en session cloud (web), lance-la toi-même.
 ---
 
 # /start — entrée de session
 
-Entrée **principale** de toute session de l'atelier. Le lanceur `Atelier.command` ne fait que
-sandboxer (local ou cloud) ; c'est ici qu'on décide quoi faire. Une session déjà focalisée sur
-un projet n'a pas besoin d'y repasser.
+Entrée **principale** de toute session de l'atelier. Le lanceur `Atelier.command` ouvre une
+session isolée locale et déclenche cette skill ; en session cloud (web), on la lance soi-même.
+C'est ici qu'on décide quoi faire. Une session déjà focalisée sur un projet n'a pas besoin d'y
+repasser.
 
 Demande à Manu ce qu'il veut faire, puis oriente :
 

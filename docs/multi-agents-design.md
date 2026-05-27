@@ -39,7 +39,7 @@ CI-piloté : `git push` suffit, l'agent n'a pas besoin de SSH pour livrer.
   code ni de runtime entre agents, par construction.
 - **Local** : chaque session = un worktree git isolé + sa branche. Le harness le fait
   nativement (`claude --worktree` ; sessions d'arrière-plan / vue agents, chacune dans son
-  worktree). Le lanceur de l'atelier choisit local/cloud et défère au worktree natif ; le
+  worktree). Le lanceur de l'atelier ouvre une session locale et défère au worktree natif ; le
   garde-fou protège le checkout principal.
 - **Règle dure** : jamais deux sessions d'écriture dans le **checkout principal**. Le
   checkout principal est une **base** d'où l'on lance des sessions et d'où l'on touche la
@@ -49,16 +49,14 @@ CI-piloté : `git push` suffit, l'agent n'a pas besoin de SSH pour livrer.
 
 Un point d'entrée unique, **double-cliquable** (`Atelier.command` à la racine) et
 **relocalisable** (se localise via son propre chemin ; survit à un déplacement du dossier).
-Il ne fait qu'une chose : **sandboxer le dev**. Il pose une seule question — **local ou
-cloud** — et ouvre la session isolée correspondante :
-
-| Mode | Effet |
-|---|---|
-| `local` | `claude --worktree` — worktree isolé natif sous `.claude/worktrees/`, branche auto-nommée, auto-nettoyé s'il n'a rien produit |
-| `cloud` | session sur claude.ai (`claude --remote "<amorçage>"` si le CLI le supporte, sinon ouvre `claude.ai/code`), pilotée au navigateur/mobile |
+Il ne fait qu'une chose : **sandboxer le dev**. Il ouvre une session isolée sur ta machine —
+`claude --worktree`, worktree isolé natif sous `.claude/worktrees/`, branche auto-nommée,
+auto-nettoyé s'il n'a rien produit — et y lance `/start` (prompt séparé par `--` pour ne pas
+être pris comme nom de worktree).
 
 Le lanceur ne décide d'aucune tâche : tout le « quoi faire » se décide dans la session via
-`/start`. Pour le cloud, l'amorçage ne fait que déclencher `/start` (aucune tâche pré-choisie).
+`/start`. Les sessions cloud s'ouvrent sur `claude.ai/code` (navigateur/mobile) et y lancent
+`/start` à la main.
 
 L'isolation worktree s'appuie entièrement sur le worktree natif de Claude Code (`claude
 --worktree`), sans plomberie maison. Worktrees sous `.claude/worktrees/<nom>/`, dans
@@ -125,9 +123,8 @@ Brancher un autre framework demain ne demande que de lui faire lire le même `CL
 
 - `CLAUDE.md` : section « Collaboration multi-agents » (étoile polaire, le découpage
   construire/opérer, le contrat, la cohabitation des invités).
-- `Atelier.command` : lanceur double-cliquable et relocalisable, une seule question
-  (local/cloud), appuyé sur le worktree natif de Claude Code (`claude --worktree` /
-  `claude --remote`).
+- `Atelier.command` : lanceur double-cliquable et relocalisable ; ouvre une session locale
+  isolée appuyée sur le worktree natif de Claude Code (`claude --worktree`) et y lance `/start`.
 - `.gitignore` : ajout de `.claude/worktrees/`.
 - Hook `PreToolUse` garde-fou + zone d'exemption (extension de `branch-guard`).
 - Script de setup d'environnement cloud + doc `/web-setup`.
