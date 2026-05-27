@@ -1,109 +1,90 @@
-# Gate CI « artefact unique » — design
+# Gate CI rapide — design
 
 ## Objectif
 
-Accélérer le pipeline `deploy.yml` (partagé par tous les projets) en supprimant le **double
-`next build`** et en faisant du **deploy un simple pull**. Cible : ~5,5 min → ~3 min par push.
-Conçu **remote-first** : tout tourne en CI, le local n'est qu'un accélérateur optionnel.
+Réduire la latence du pipeline `deploy.yml` (partagé par tous les projets) : on attend trop
+longtemps entre un push et la preview/prod. Conçu **remote-first** : tout tourne en CI, le local
+n'est qu'un accélérateur optionnel.
 
 ## Constat (mesuré)
 
-- `next build` tourne **deux fois** par push : dans le job `test` (`npm run build` pour le smoke
-  e2e) **et** dans `docker build` du job `deploy`.
-- Le job `deploy` rebuild l'image complète (~3-3,5 min) alors qu'il pourrait juste la pull.
-- Pas de cache de couches Docker ; navigateurs Playwright réinstallés à chaque run.
-- Bug : le teardown d'une preview est annulé quand la suppression de branche coïncide avec un
-  deploy prod (même groupe de concurrence `deploy-refs/heads/main`).
+L'ancien pipeline était **séquentiel** : `test` (~130 s, inclut un `next build` pour le smoke
+e2e) **puis** `deploy` (~190-215 s, refait un `docker build` complet = `npm ci` + `next build` +
+push, puis SSH). Total ~330-367 s. Le `next build` tournait deux fois, mais surtout **bout à
+bout** : c'est le séquençage, pas le double build, qui coûte la latence.
 
-## Architecture cible
+Autres points : pas de cache de couches Docker ; navigateurs Playwright réinstallés à chaque run ;
+le teardown d'une preview annulé quand la suppression de branche coïncide avec un deploy prod
+(même groupe de concurrence).
 
-L'**image Docker est l'unité de vérité** : construite une fois, testée, puis pull au deploy.
+## Architecture
+
+Le levier est le **parallélisme** : le build de l'image et la suite de tests n'ont aucune
+dépendance entre eux, donc ils tournent en parallèle. Le deploy ne fait plus que *pull* l'image.
 
 ```
-detect ──┬── build (buildx + cache GHA → push :<env>)
-         └── test  (host : unit + integration + worker)
-                     │
-build ────────────── e2e (docker run web+worker de l'image, e2e contre le conteneur)
-                     │
-build + test + e2e ── deploy (ssh deploy.sh → pull la même image)
+detect ──┬── build  (docker buildx + cache GHA → push :<env>)
+         └── test   (host : unit + integration + worker + smoke e2e)
+                          │
+build + test ───────────── deploy  (ssh deploy.sh → pull l'image)
 ```
 
-Jobs (tous en matrice par projet changé, comme aujourd'hui) :
+Jobs (matrice par projet changé) :
 
-- **detect** — inchangé.
-- **build** — `docker buildx build` avec `cache-from/to: type=gha`, **push** `ghcr.io/<owner>/atelier-<projet>:<env>`. Le seul `next build`. Tag `<env>` calculé dans le job (prod sur `main`, slug de branche sinon).
-- **test** (host, parallèle de build) — `npm ci` (cache npm) → `npm test` (unit + integration + worker via vitest). **Aucun `next build`.**
-- **e2e** (needs build ; seulement si `playwright.config.ts` présent) — `npm ci` + `db:test:prepare` (crée+migre `<projet>_test` sur le service Postgres) + cache navigateurs Playwright + pull l'image + `docker run` web et worker (réseau host, env de test) → `E2E_BASE_URL=… npm run test:e2e` (Playwright sur le host contre le conteneur).
-- **deploy** (needs build + test + e2e) — `ssh deploy.sh <projet> <env> <image>` ; `deploy.sh` **pull** l'image déjà poussée (inchangé, il prend déjà l'image en argument). Affiche l'URL déployée dans le résumé GitHub.
-- **teardown** — inchangé, **mais** sorti du groupe de concurrence qui collisionne (voir plus bas).
+- **detect** — liste les projets changés (Dockerfile présent) ; sort aussi `env` (prod sur `main`,
+  slug de branche sinon).
+- **build** — `docker buildx build` avec `cache-from/to: type=gha` (la couche `npm ci` est
+  réutilisée tant que le lockfile ne bouge pas) → **push** `ghcr.io/<owner>/atelier-<projet>:<env>`.
+- **test** (parallèle de build) — `npm ci` + `db:test:prepare` + unit/integration/worker + `next
+  build` + smoke e2e (Playwright, navigateurs cachés). Le build host ne sert qu'au smoke e2e.
+- **deploy** (needs build + test) — `ssh deploy.sh <projet> <env> <image>` ; `deploy.sh` fait un
+  `docker pull` de l'image déjà poussée (inchangé). Affiche l'URL déployée dans le résumé GitHub.
+- **teardown** (event delete) — inchangé.
 
-## Mode « serveur externe » pour Playwright
+Chemin critique ≈ `max(build, test) + deploy(pull)`. Le `next build` du job `test` chevauche le
+`docker build` du job `build` : la latence ne le paie qu'une fois.
 
-Pour que l'e2e teste le conteneur au lieu de lancer son propre serveur (et éviter un 2e build),
-deux petits ajouts dans contentos, pilotés par `E2E_BASE_URL` :
+## Concurrence
 
-- `playwright.config.ts` : `baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'` ; le
-  bloc `webServer` n'est inclus **que si `E2E_BASE_URL` est absent** (en local, Playwright lance
-  encore son serveur).
-- `test/e2e/global-setup.ts` : si `E2E_BASE_URL` est défini, ne **pas** spawn le worker (il tourne
-  comme conteneur en CI) ; sinon comportement actuel.
+```yaml
+concurrency:
+  group: deploy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+```
 
-Aucune autre modification des specs.
+- `event_name` dans la clé : un event `delete` (`github.ref = refs/heads/main`) ne partage plus le
+  groupe d'un push prod → le teardown ne se fait plus annuler.
+- `cancel-in-progress` vrai hors `main` : repousser une branche annule le run de preview précédent
+  (on ne build pas deux previews de la même branche en même temps). Jamais sur `main` : on
+  n'interrompt ni un deploy prod ni un teardown.
 
-## Orchestration e2e en CI (conteneur)
+## Quick wins additifs
 
-Services GitHub `postgres:17` + `redis:7` (ports mappés sur l'hôte). Étapes du job `e2e` :
-
-1. `npm ci` puis `npm run db:test:prepare` (crée + migre `<projet>_test`).
-2. Cache + `npx playwright install --with-deps chromium`.
-3. `docker login ghcr.io` + `docker pull <image>`.
-4. **web** : `docker run -d --network host -e PORT=3000 -e E2E_TESTING=true -e RESEND_API_KEY= -e CONTENT_OS_MEDIA_STUB=fs -e CONTENT_OS_LINKEDIN_STUB=1 -e DATABASE_URL=postgres://app:app@localhost:5432/<projet>_test -e REDIS_URL=redis://localhost:6379 -e APP_URL=http://localhost:3000 -e BETTER_AUTH_SECRET=ci-placeholder-secret-ci-placeholder <image>`.
-5. **worker** : même chose avec `node worker-runner.mjs` en commande.
-6. Attendre `GET http://localhost:3000/healthz` = 200 (timeout 60 s).
-7. `E2E_BASE_URL=http://localhost:3000 npm run test:e2e`.
-8. En cas d'échec : dump `docker logs` web + worker (diagnostic).
-
-`--network host` : le conteneur joint les services Postgres/Redis via `localhost:5432/6379` (mappés
-par GitHub). Le web écoute alors sur `localhost:3000` côté hôte ; Playwright (hôte) le joint.
-
-L'image runner contient déjà `scripts/migrate.mjs`, `worker-runner.mjs` et la route
-`__test__/emails` (gated `E2E_TESTING`) ; avec `RESEND_API_KEY` vide → inbox in-memory dans le
-process web (le même qui sert la route de test), donc l'e2e récupère bien le code OTP.
-
-## Quick wins additifs (inclus)
-
-- **Cache Docker `type=gha`** (couche `npm ci` réutilisée tant que le lockfile ne bouge pas).
-- **Cache navigateurs Playwright** (`actions/cache` sur `~/.cache/ms-playwright`, clé = version Playwright).
-- **`cancel-in-progress` par branche** : `true` pour les branches (un nouveau push annule le run de
-  preview précédent), `false` pour `main` (jamais annuler un deploy prod). Groupe :
-  `deploy-${{ github.ref }}` + `cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}`.
-- **Fix concurrence teardown** : le job `teardown` (event `delete`) reçoit `github.ref = refs/heads/main`,
-  donc collisionne avec le deploy prod. Le sortir du groupe partagé en lui donnant un groupe propre
-  (`teardown-${{ github.event.ref }}`) au niveau job, ou en neutralisant la concurrence pour les
-  events delete.
-- **URL déployée dans le résumé GitHub** (`$GITHUB_STEP_SUMMARY`) côté deploy : un clic depuis le run.
+- **Cache Docker `type=gha`** (couche `npm ci` réutilisée).
+- **Cache navigateurs Playwright** (`actions/cache` sur `~/.cache/ms-playwright`).
+- **URL déployée dans le résumé GitHub** (`$GITHUB_STEP_SUMMARY`) : un clic depuis le run.
 
 ## Sécurité / erreurs
 
-- `deploy` gated sur `build + test + e2e` verts → une image qui rate les tests n'est jamais
-  déployée. Un tag `:<env>` poussé puis recalé est inerte (seul `deploy.sh`, gated, le pull).
-- Aucune fuite de secret : les valeurs CI sont des placeholders (`BETTER_AUTH_SECRET` factice),
-  Postgres/Redis sont éphémères.
+- `deploy` gated sur `build + test` verts → une image qui rate les tests n'est jamais déployée.
+- Valeurs CI = placeholders (`BETTER_AUTH_SECRET` factice) ; Postgres/Redis éphémères.
+
+## Coût / arbitrage
+
+Le job `test` refait un `next build` (host) que le deploy n'utilise pas (il pull l'image du job
+`build`). C'est un coût **compute** (deux builds), assumé pour gagner en **latence** : les deux
+builds tournent en parallèle au lieu de bout à bout. Priorité explicite : réduire l'attente.
 
 ## Validation (cycle complet jusqu'à prod)
 
-`detect` ne déclenche `build/test/e2e/deploy` que si un **projet** change. La branche de validation
-inclut donc un changement **réel mais trivial** dans `contentos/` (commentaire) pour exercer tout
-le pipeline : preview déployée via le nouveau flux + e2e contre conteneur, puis mesure des temps.
-Le merge en `main` déclenche un **deploy prod** de contentos via le nouveau pipeline (comportement
-applicatif inchangé — l'image est identique fonctionnellement). Avant push, on prouve l'e2e en
-conteneur **en local** (build image + run web/worker + `E2E_BASE_URL`) pour minimiser les
-itérations CI.
+`detect` ne déclenche le pipeline que si un **projet** change. La branche de validation touche
+`contentos/` pour l'exercer de bout en bout (preview déployée + smoke e2e), mesurer les durées par
+job (cache froid puis chaud), puis le merge en `main` déclenche un **deploy prod** de contentos via
+le nouveau pipeline. Le cache GHA est froid au premier build (export des couches) : le gain de
+latence se mesure à **cache chaud**, régime permanent.
 
 ## Périmètre
 
-- `.github/workflows/deploy.yml` — refonte des jobs.
-- `contentos/playwright.config.ts` + `contentos/test/e2e/global-setup.ts` — mode serveur externe.
-- `contentos/` — un commentaire trivial pour exercer le pipeline (déployé en prod, sans effet).
-- **Pas** de changement à `Dockerfile` ni `deploy.sh`.
+- `.github/workflows/deploy.yml` — refonte des jobs (parallélisme + cache + concurrence + résumé).
+- **Pas** de changement à `Dockerfile`, `deploy.sh`, ni au harnais de tests des projets.
 - Branche dédiée `work/ci-fast-gate`, PR.
