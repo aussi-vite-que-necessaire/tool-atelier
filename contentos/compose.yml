@@ -1,0 +1,25 @@
+services:
+  # Web : serveur Next standalone (CMD image par défaut). Pas de port hôte ;
+  # le reverse-proxy lab joint le service via son alias réseau ${UPSTREAM}.
+  app:
+    image: ${IMAGE:?IMAGE manquant}
+    restart: unless-stopped
+    env_file: [.env]
+    networks:
+      lab:
+        aliases: ["${UPSTREAM:?UPSTREAM manquant}"]
+
+  # Worker : mêmes image et env (DATABASE_URL, REDIS_URL, secrets injectés).
+  # Consume les files BullMQ — aucun port, aucun alias (pas joignable en HTTP).
+  worker:
+    image: ${IMAGE:?IMAGE manquant}
+    restart: unless-stopped
+    env_file: [.env]
+    command: ["node", "worker-runner.mjs"]
+    networks:
+      - lab
+
+networks:
+  lab:
+    name: lab
+    external: true
