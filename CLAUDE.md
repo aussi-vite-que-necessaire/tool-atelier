@@ -18,7 +18,7 @@ décide**, à l'intérieur. Skills disponibles :
 - **`/lab-work <projet>`** — focalise la session sur un projet (branche dédiée).
 - **`/lab-deploy`** — déploie le projet courant (preview/prod).
 
-`PROJECTS.md` = carte vivante (projets, stack, état, URL). **Régénérée, jamais éditée à la main.**
+`PROJECTS.md` = carte vivante (projets, stack, état, URL). **Artefact généré (gitignoré), jamais édité à la main** : régénéré au démarrage de chaque session et par `/lab-list`.
 
 ## Workflow & isolation — RÈGLE ABSOLUE
 
@@ -30,14 +30,14 @@ décide**, à l'intérieur. Skills disponibles :
 
 ## Collaboration multi-agents
 
-**Étoile polaire : deux agents ne touchent jamais la même ressource mutable au même instant.** Le code et la branche s'isolent ; la prod (singleton) se sérialise.
+**Étoile polaire : deux agents ne touchent jamais la même ressource mutable au même instant.** Le code et la branche s'isolent par session ; la prod (singleton) se sérialise.
 
-- **Construire = cloud.** Chaque tâche autonome tourne en session cloud (ouverte sur `claude.ai/code`, isolée, sa branche, sa preview, sa PR). Le deploy est CI-piloté (`git push`), donc une session cloud n'a pas besoin de SSH. On n'y met ni la clé SSH du lab ni `LAB_SECRETS_KEY`.
-- **Opérer = local de confiance.** Logs, diagnostic (`/lab-ssh`), secrets (`/lab-secret`), dev hands-on : sur ta machine, qui détient les clés.
-- **Sessions locales isolées.** Une session = un worktree sous `.claude/worktrees/` + sa branche, ouverte par **`Atelier.command`** ou directement `claude --worktree` (worktree auto-nommé, auto-nettoyé s'il n'a rien produit). Jamais deux sessions d'écriture dans le checkout principal : il sert de base de lancement et pour la plomberie de l'atelier (CLAUDE.md, skills, scripts), pas pour le dev projet.
-- **Prod sérialisée.** La prod ne change que par l'entonnoir PR → merge → CI (un seul déploiement à la fois). Pas de mutation de prod en SSH ad-hoc ; la lecture/diagnostic SSH reste libre.
+- **Une session = un worktree isolé + une branche.** Ouverte par **`Atelier.command`** ou directement `claude --worktree` (worktree auto-nommé, auto-nettoyé s'il n'a rien produit), en local comme en cloud (`claude.ai/code`). Jamais deux sessions d'écriture dans le checkout principal : il sert de base de lancement et pour la plomberie de l'atelier (CLAUDE.md, skills, scripts), pas pour le dev projet. Le hook `branch-guard` bloque les commits/push sur `main` et le dev projet dans le checkout principal partagé.
+- **Construire = en session isolée.** Chaque tâche autonome tourne dans sa session (sa branche, sa preview, sa PR). Le deploy est CI-piloté (`git push`) : aucune session n'a besoin de SSH pour déployer.
+- **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opérateur de plein droit : SSH lecture/diagnostic (`/lab-ssh`), secrets (`/lab-secret`), logs. La clé SSH du lab n'est pas « locale » — elle est tirée du store (`sysadmin/LAB_SSH_KEY_B64`), déchiffrée en mémoire, utilisée, effacée. Le local n'a aucun privilège que le cloud n'ait pas.
+- **Prod sérialisée.** La prod ne change que par l'entonnoir PR → merge → CI (un seul déploiement à la fois). Pas de mutation de prod en SSH ad hoc ; la lecture/diagnostic SSH reste libre depuis n'importe quelle session.
 - **Frameworks invités.** superpowers et consorts accélèrent mais défèrent à ce contrat : leurs skills de worktree utilisent le worktree natif (`claude --worktree`), leur « fin de branche » défère à `/lab-deploy` + PR.
-- **Amorçage cloud.** Une fois : connecter GitHub (`/web-setup`). L'environnement cloud lance `scripts/cloud-setup.sh` au démarrage (installe les deps par projet). Les secrets cloud sont des variables d'environnement (visibles) : on n'y met que ce qu'une session de build doit voir.
+- **Amorçage cloud.** Une fois : connecter GitHub (`/web-setup`). L'environnement cloud lance `scripts/cloud-setup.sh` au démarrage (installe les deps par projet). `LAB_SECRETS_KEY` est une variable d'environnement de l'environnement cloud — visible, assumé : c'est elle qui fait d'une session cloud un opérateur de plein droit.
 
 ## Déployer (build sur la CI uniquement)
 
