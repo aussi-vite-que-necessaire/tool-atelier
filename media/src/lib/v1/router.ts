@@ -3,7 +3,9 @@ import { checkServiceKey } from "@/lib/service-auth";
 import { generateImage, editImage } from "@/lib/gemini";
 import { renderHtml } from "@/lib/render";
 import { getImageBytes, deleteObject } from "@/lib/storage";
-import { getMediaRecord, deleteMediaRow } from "@/lib/media/repository";
+import { getMediaRecord, deleteMediaRow, listMediaRecords, countMediaRecords } from "@/lib/media/repository";
+import type { Orientation } from "@/lib/media/repository";
+import type { MediaKind } from "@/lib/media/types";
 import { store } from "@/lib/store";
 import { getStyle } from "@/lib/styles/repository";
 import { composePrompt } from "@/lib/styles/compose";
@@ -206,6 +208,26 @@ async function handlePdf(request: Request): Promise<Response> {
   }
 }
 
+async function handleListMedia(url: URL): Promise<Response> {
+  const p = url.searchParams;
+  const kindParam = p.get("kind");
+  const kind = (kindParam === "image" || kindParam === "video" || kindParam === "pdf" || kindParam === "render") ? (kindParam as MediaKind) : undefined;
+  const oParam = p.get("orientation");
+  const orientation = (oParam === "landscape" || oParam === "portrait" || oParam === "square") ? (oParam as Orientation) : undefined;
+  const limit = Math.min(Math.max(Number(p.get("limit") ?? 30) || 30, 1), 100);
+  const offset = Math.max(Number(p.get("offset") ?? 0) || 0, 0);
+  const params = { query: p.get("q") || undefined, tags: p.get("tag") ? [p.get("tag")!] : undefined, kind, orientation, limit, offset };
+  const [items, total] = await Promise.all([listMediaRecords(params), countMediaRecords(params)]);
+  const view = items.map((r) => ({ id: r.id, url: r.url, kind: r.kind, width: r.width, height: r.height, prompt: r.prompt, tags: r.tags, created_at: r.created_at }));
+  return jsonResponse({ items: view, total, limit, offset });
+}
+
+async function handleGetMedia(id: string): Promise<Response> {
+  const rec = await getMediaRecord(id);
+  if (!rec) return jsonResponse({ error: "Média introuvable" }, 404);
+  return jsonResponse({ id: rec.id, url: rec.url, kind: rec.kind, width: rec.width, height: rec.height, prompt: rec.prompt, tags: rec.tags, created_at: rec.created_at });
+}
+
 async function handleDelete(id: string): Promise<Response> {
   const rec = await getMediaRecord(id);
   if (!rec) return jsonResponse({ deleted: false });
@@ -251,6 +273,10 @@ export async function handleV1(request: Request): Promise<Response> {
   if (method === "DELETE" && deleteMatch) {
     return handleDelete(deleteMatch[1]);
   }
+
+  if (method === "GET" && pathname === "/v1/media") return handleListMedia(url);
+  const getMatch = pathname.match(/^\/v1\/media\/([^/]+)$/);
+  if (method === "GET" && getMatch) return handleGetMedia(getMatch[1]);
 
   return jsonResponse({ error: "Not found" }, 404);
 }
