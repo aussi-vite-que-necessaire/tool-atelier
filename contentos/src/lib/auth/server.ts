@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { magicLink, mcp } from 'better-auth/plugins';
+import { emailOTP, mcp } from 'better-auth/plugins';
+import { PREVIEW_OTP, isPreview } from '@/lib/auth/preview';
 import { db } from '@/lib/db/client';
 import { seedUserDefaults } from '@/lib/db/seeds/user-defaults';
 import { sendEmail } from '@/lib/email/send';
@@ -12,13 +13,17 @@ export const auth = betterAuth({
   baseURL: env.APP_URL,
   trustedOrigins: [env.APP_URL],
   plugins: [
-    magicLink({
-      expiresIn: 600,
-      sendMagicLink: async ({ email, url }) => {
+    emailOTP({
+      otpLength: 6,
+      expiresIn: 600, // 10 minutes
+      // En preview : code déterministe + aucun email (permet l'auto-login).
+      generateOTP: isPreview ? () => PREVIEW_OTP : undefined,
+      sendVerificationOTP: async ({ email, otp }) => {
+        if (isPreview) return;
         await sendEmail({
           to: email,
-          subject: 'Connexion à content-os',
-          html: `<p>Clique ici pour te connecter : <a href="${url}">${url}</a></p><p>Lien valable 10 minutes.</p>`,
+          subject: 'Ton code de connexion à content-os',
+          html: otpEmailHtml(otp),
         });
       },
     }),
@@ -43,3 +48,12 @@ export const auth = betterAuth({
 });
 
 export type Session = typeof auth.$Infer.Session;
+
+function otpEmailHtml(code: string): string {
+  return `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111">
+  <h1 style="font-size:20px;font-weight:700">Ton code de connexion</h1>
+  <p>Saisis ce code pour te connecter à content-os :</p>
+  <p style="font-size:32px;font-weight:800;letter-spacing:8px;margin:16px 0">${code}</p>
+  <p style="color:#666">Ce code expire dans 10 minutes.</p>
+</div>`;
+}
