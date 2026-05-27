@@ -52,7 +52,7 @@ export function MonthCalendar({
         {weeks.flat().map((day) => (
           <div
             key={day.date.toISOString()}
-            className={`min-h-[6rem] space-y-1 p-1.5 ${
+            className={`min-h-[150px] space-y-1 p-1.5 ${
               day.inMonth ? 'bg-white' : 'bg-neutral-50 text-muted-foreground'
             }`}
           >
@@ -60,15 +60,26 @@ export function MonthCalendar({
             {day.items.slice(0, 3).map((it) => (
               <Link
                 key={it.publicationId}
-                href={`/posts/${it.postId}`}
-                className={`block truncate rounded px-1 py-0.5 text-xs ${
-                  it.status === 'published'
-                    ? 'bg-green-100 text-green-900'
-                    : 'bg-blue-100 text-blue-900'
+                href={`/calendar/preview/${it.postId}`}
+                className={`flex gap-2 rounded p-1 ${
+                  it.status === 'published' ? 'bg-green-50' : 'bg-blue-50'
                 }`}
-                title={it.title}
+                title={it.excerpt}
               >
-                {it.title}
+                {it.thumbnailUrl ? (
+                  <img
+                    src={it.thumbnailUrl}
+                    alt=""
+                    className="h-10 w-10 flex-none rounded object-cover"
+                  />
+                ) : (
+                  <div
+                    className={`h-10 w-10 flex-none rounded ${
+                      it.status === 'published' ? 'bg-green-200' : 'bg-blue-200'
+                    }`}
+                  />
+                )}
+                <span className="line-clamp-2 text-xs leading-tight">{it.excerpt}</span>
               </Link>
             ))}
             {day.items.length > 3 ? (
