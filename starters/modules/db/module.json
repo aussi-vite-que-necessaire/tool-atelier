@@ -1,0 +1,16 @@
+{
+  "name": "db",
+  "requires": [],
+  "labJson": { "db": true, "migrate": "node scripts/migrate.mjs", "seed": "node scripts/seed.mjs" },
+  "deps": { "drizzle-orm": "^0.45.2", "postgres": "^3.4.9" },
+  "devDeps": { "drizzle-kit": "^0.31.10" },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "migrate": "node scripts/migrate.mjs",
+    "seed": "node scripts/seed.mjs"
+  },
+  "env": [],
+  "files": ["src/db/index.ts", "drizzle.config.ts", "scripts/migrate.mjs", "scripts/seed.mjs"],
+  "schemas": []
+}
