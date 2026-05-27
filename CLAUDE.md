@@ -14,7 +14,7 @@ décide**, à l'intérieur. Skills disponibles :
 
 - **`/start`** — entrée de session : demande quoi faire et oriente.
 - **`/lab-list`** — liste les projets + leur état (régénère `PROJECTS.md`).
-- **`/lab-new`** — crée un projet depuis un starter (`static`/`api`/`flagship`) ou vierge.
+- **`/lab-new`** — crée un projet en composant une base Next.js + des capacités (`db`/`redis`/`auth`/`mcp`), avec thème écrit par l'IA, et le déploie jusqu'en prod.
 - **`/lab-work <projet>`** — focalise la session sur un projet (branche dédiée).
 - **`/lab-deploy`** — déploie le projet courant (preview/prod).
 
