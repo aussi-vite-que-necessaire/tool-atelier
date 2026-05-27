@@ -15,7 +15,8 @@ function clean(v: string | null | undefined): string | undefined {
 
 // Pur : reconstitue l'identité affichée à partir des sources disponibles.
 export function resolveAuthor(input: ResolveInput): LinkedInAuthor {
-  const name = clean(input.displayName) ?? clean(input.brandName) ?? clean(input.userName) ?? 'Vous';
+  const name =
+    clean(input.displayName) ?? clean(input.brandName) ?? clean(input.userName) ?? 'Vous';
   const author: LinkedInAuthor = { name };
   const headline = clean(input.brandSignature);
   if (headline) author.headline = headline;
