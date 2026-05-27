@@ -79,6 +79,11 @@ if [ -f /opt/lab/secrets-key ]; then
   [ -f "$APPDIR/${PROJ}.env.age" ]         && age -d -i /opt/lab/secrets-key "$APPDIR/${PROJ}.env.age"         >> "$APPDIR/.env"
 fi
 
+# APP_URL = origine effectivement servie par Caddy (preview ou prod). Écrit en dernier pour
+# primer sur toute valeur héritée d'un secret : better-auth (baseURL/trustedOrigins) et les
+# liens publics (MCP, lien magique) doivent correspondre au host réel, sinon « Invalid origin ».
+printf 'APP_URL=https://%s\n' "$HOST" >> "$APPDIR/.env"
+
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab
 if [ -n "$MIGRATE" ]; then
   docker run --rm --network lab --env-file "$APPDIR/.env" "$IMAGE" sh -c "$MIGRATE"
