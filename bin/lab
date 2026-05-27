@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# lab — lanceur de l'atelier : une session = un worktree isolé + une branche.
+# Relocalisable : se situe via son propre chemin. Pur git, sans dépendance.
+set -euo pipefail
+
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd -P)"
+ROOT="$(cd "$SELF/.." && (git rev-parse --show-toplevel 2>/dev/null || pwd -P))"
+WT_DIR="$ROOT/.claude/worktrees"
+
+usage() {
+  cat >&2 <<'EOF'
+lab — sessions isolées de l'atelier
+  lab new <projet> [libellé]   crée work/<projet>-<libellé> + worktree, imprime le chemin
+  lab ls                       liste les worktrees et leur branche
+  lab cd <nom>                 imprime le chemin d'un worktree (via la fonction shell)
+  lab rm <nom>                 retire un worktree (refuse si non propre)
+EOF
+  exit 2
+}
+
+slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//'; }
+
+cmd_new() {
+  local proj="${1:-}" label="${2:-session}"
+  [ -n "$proj" ] || usage
+  { [ -d "$ROOT/$proj" ] && [ -f "$ROOT/$proj/Dockerfile" ]; } \
+    || { echo "lab: projet inconnu: $proj" >&2; exit 1; }
+  local name; name="$(slug "$proj")-$(slug "$label")"
+  local branch="work/$name" path="$WT_DIR/$name"
+  [ -e "$path" ] && { echo "lab: worktree déjà présent: $path" >&2; exit 1; }
+  git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch" \
+    && { echo "lab: branche déjà prise: $branch" >&2; exit 1; }
+  git -C "$ROOT" worktree add -q -b "$branch" "$path" >/dev/null
+  echo "session prête : $proj sur $branch" >&2
+  echo "$path"
+}
+
+cmd_ls() {
+  local d n b s
+  for d in "$WT_DIR"/*/; do
+    [ -d "$d" ] || continue
+    n="$(basename "$d")"
+    b="$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+    if [ -n "$(git -C "$d" status --porcelain 2>/dev/null)" ]; then s="sale"; else s="propre"; fi
+    printf '%-32s %-32s %s\n' "$n" "$b" "$s"
+  done
+}
+
+cmd_cd() {
+  local name="${1:-}"; [ -n "$name" ] || usage
+  local path="$WT_DIR/$name"
+  [ -d "$path" ] || { echo "lab: worktree introuvable: $name" >&2; exit 1; }
+  echo "$path"
+}
+
+cmd_rm() {
+  local name="${1:-}"; [ -n "$name" ] || usage
+  local path="$WT_DIR/$name"
+  [ -d "$path" ] || { echo "lab: worktree introuvable: $name" >&2; exit 1; }
+  [ -n "$(git -C "$path" status --porcelain 2>/dev/null)" ] \
+    && { echo "lab: refus — worktree non propre (travail en cours): $name" >&2; exit 1; }
+  git -C "$ROOT" worktree remove "$path"
+  echo "retiré: $name (branche conservée ; après merge : git branch -d work/$name)" >&2
+}
+
+cmd_menu() {
+  local projects=() d
+  for d in "$ROOT"/*/; do [ -f "$d/Dockerfile" ] && projects+=("$(basename "$d")"); done
+  [ "${#projects[@]}" -gt 0 ] || { echo "aucun projet dans l'atelier" >&2; exit 1; }
+  echo "Projets de l'atelier :" >&2
+  local i=1 p
+  for p in "${projects[@]}"; do printf '  %d) %s\n' "$i" "$p" >&2; i=$((i+1)); done
+  printf 'Projet (numéro) ? ' >&2; read -r choice
+  local proj="${projects[$((choice-1))]:-}"
+  [ -n "$proj" ] || { echo "choix invalide" >&2; exit 1; }
+  printf 'Libellé (ex: apercu-linkedin) ? ' >&2; read -r label
+  local path; path="$(cmd_new "$proj" "${label:-session}")"
+  cd "$path" && exec claude
+}
+
+sub="${1:-menu}"; shift 2>/dev/null || true
+case "$sub" in
+  new)  cmd_new "$@" ;;
+  ls)   cmd_ls ;;
+  cd)   cmd_cd "$@" ;;
+  rm)   cmd_rm "$@" ;;
+  menu) cmd_menu ;;
+  *)    usage ;;
+esac

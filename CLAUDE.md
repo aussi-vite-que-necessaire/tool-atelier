@@ -21,7 +21,18 @@ créer / lister / infra / autre) et oriente. Skills disponibles :
 - **Jamais de commit sur `main`.** On code sur une **branche**, on ouvre une **PR**.
 - **Push de branche → preview** : `https://<projet>-<branche>.lab.avqn.ch` (détruite à la suppression de la branche).
 - **Merge de PR → prod** : `https://<projet>.lab.avqn.ch`.
-- Plusieurs agents en parallèle : chaque session d'arrière-plan a son **worktree isolé** + sa branche → aucun conflit. Un hook `branch-guard` rappelle/bloque les commits sur main (en CLI).
+- **Une session = un worktree isolé + une branche.** Voir « Collaboration multi-agents ». Le hook `branch-guard` bloque les commits/push sur `main` et le dev projet dans le checkout principal partagé.
+
+## Collaboration multi-agents
+
+**Étoile polaire : deux agents ne touchent jamais la même ressource mutable au même instant.** Le code et la branche s'isolent ; la prod (singleton) se sérialise.
+
+- **Construire = cloud.** Chaque tâche autonome tourne en session cloud (isolée, sa branche, sa preview, sa PR). Le deploy est CI-piloté (`git push`), donc une session cloud n'a pas besoin de SSH. On n'y met ni la clé SSH du lab ni `LAB_SECRETS_KEY`.
+- **Opérer = local de confiance.** Logs, diagnostic (`/lab-ssh`), secrets (`/lab-secret`), dev hands-on : sur ta machine, qui détient les clés.
+- **Sessions locales isolées.** Une session = un worktree sous `.claude/worktrees/` + sa branche `work/<projet>-<libellé>`. Lance-les avec **`lab new <projet> <libellé>`** (ou le menu double-clic `Atelier.command`). Jamais deux sessions d'écriture dans le checkout principal : il sert de base de lancement et pour la plomberie de l'atelier (CLAUDE.md, skills, scripts), pas pour le dev projet.
+- **Prod sérialisée.** La prod ne change que par l'entonnoir PR → merge → CI (un seul déploiement à la fois). Pas de mutation de prod en SSH ad-hoc ; la lecture/diagnostic SSH reste libre.
+- **Frameworks invités.** superpowers et consorts accélèrent mais défèrent à ce contrat : leurs skills de worktree utilisent `lab`, leur « fin de branche » défère à `/lab-deploy` + PR.
+- **Amorçage cloud.** Une fois : connecter GitHub (`/web-setup`). L'environnement cloud lance `scripts/cloud-setup.sh` au démarrage (installe les deps par projet). Les secrets cloud sont des variables d'environnement (visibles) : on n'y met que ce qu'une session de build doit voir.
 
 ## Déployer (build sur la CI uniquement)
 
