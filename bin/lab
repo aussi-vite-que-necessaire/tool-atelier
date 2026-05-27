@@ -20,6 +20,18 @@ EOF
 
 slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//'; }
 
+# Best-effort : aligne le checkout principal sur origin/main pour voir les projets
+# créés/mergés ailleurs (autre session, autre agent) et brancher depuis une base à jour.
+# N'échoue jamais le lancement (hors-ligne, modifs locales, divergence → on prévient et on continue).
+sync_main() {
+  [ "$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)" = "main" ] || return 0
+  git -C "$ROOT" fetch --quiet origin main 2>/dev/null \
+    || { echo "lab: fetch impossible (hors-ligne ?) — liste éventuellement pas à jour." >&2; return 0; }
+  git -C "$ROOT" merge --ff-only origin/main 2>/dev/null \
+    || echo "lab: 'main' non fast-forwardable (modifs locales/divergence) — liste éventuellement pas à jour." >&2
+  return 0
+}
+
 cmd_new() {
   local proj="${1:-}" label="${2:-session}"
   [ -n "$proj" ] || usage
@@ -89,6 +101,7 @@ cmd_meta() {
 }
 
 cmd_menu() {
+  sync_main
   echo "Atelier — qu'est-ce qu'on fait ?" >&2
   echo "  1) Bosser sur un projet" >&2
   echo "  2) Créer un projet" >&2
@@ -119,9 +132,9 @@ cmd_menu() {
 
 sub="${1:-menu}"; shift 2>/dev/null || true
 case "$sub" in
-  new)    cmd_new "$@" ;;
-  create) cmd_create "$@" ;;
-  meta)   cmd_meta "$@" ;;
+  new)    sync_main; cmd_new "$@" ;;
+  create) sync_main; cmd_create "$@" ;;
+  meta)   sync_main; cmd_meta "$@" ;;
   ls)     cmd_ls ;;
   cd)     cmd_cd "$@" ;;
   rm)     cmd_rm "$@" ;;
