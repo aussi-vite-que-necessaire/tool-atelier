@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# lab — lanceur de l'atelier : une session = un worktree isolé + une branche.
+# Relocalisable : se situe via son propre chemin. Pur git, sans dépendance.
+set -euo pipefail
+
+SELF="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd -P)"
+ROOT="$(cd "$SELF/.." && (git rev-parse --show-toplevel 2>/dev/null || pwd -P))"
+WT_DIR="$ROOT/.claude/worktrees"
+
+usage() {
+  cat >&2 <<'EOF'
+lab — sessions isolées de l'atelier
+  lab new <projet> [libellé]   crée work/<projet>-<libellé> + worktree, imprime le chemin
+  lab ls                       liste les worktrees et leur branche
+  lab cd <nom>                 imprime le chemin d'un worktree (via la fonction shell)
+  lab rm <nom>                 retire un worktree (refuse si non propre)
+EOF
+  exit 2
+}
+
+slug() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//'; }
+
+cmd_new() {
+  local proj="${1:-}" label="${2:-session}"
+  [ -n "$proj" ] || usage
+  { [ -d "$ROOT/$proj" ] && [ -f "$ROOT/$proj/Dockerfile" ]; } \
+    || { echo "lab: projet inconnu: $proj" >&2; exit 1; }
+  local name; name="$(slug "$proj")-$(slug "$label")"
+  local branch="work/$name" path="$WT_DIR/$name"
+  [ -e "$path" ] && { echo "lab: worktree déjà présent: $path" >&2; exit 1; }
+  git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch" \
+    && { echo "lab: branche déjà prise: $branch" >&2; exit 1; }
+  git -C "$ROOT" worktree add -q -b "$branch" "$path" >/dev/null
+  echo "session prête : $proj sur $branch" >&2
+  echo "$path"
+}
+
+sub="${1:-menu}"; shift 2>/dev/null || true
+case "$sub" in
+  new) cmd_new "$@" ;;
+  *)   usage ;;
+esac
