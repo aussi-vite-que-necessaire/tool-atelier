@@ -41,7 +41,7 @@ test.describe('Auth flow', () => {
     // 4. Visiter le magic link → arrive sur le dashboard
     await page.goto(magicUrl);
     await expect(page).toHaveURL('/');
-    await expect(page.getByText(/Bienvenue/)).toBeVisible();
+    await expect(page.getByText(/Bonjour/)).toBeVisible();
     await expect(page.getByText(TEST_EMAIL).first()).toBeVisible();
 
     // 5. Logout

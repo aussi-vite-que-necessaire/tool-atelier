@@ -17,7 +17,7 @@ export const auth = betterAuth({
       sendMagicLink: async ({ email, url }) => {
         await sendEmail({
           to: email,
-          subject: 'Connexion à content-os',
+          subject: 'Connexion à Contentos',
           html: `<p>Clique ici pour te connecter : <a href="${url}">${url}</a></p><p>Lien valable 10 minutes.</p>`,
         });
       },
