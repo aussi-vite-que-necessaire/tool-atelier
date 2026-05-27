@@ -3,11 +3,13 @@
 import { Image as ImageIcon, Trash2 } from 'lucide-react';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
+import { LinkedInPostPreview } from '@/components/linkedin/post-preview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import type { Post, VisualTemplate } from '@/lib/db/schema';
+import type { LinkedInAuthor } from '@/lib/linkedin/identity';
 import { updatePostAction } from '../../actions';
 import { AddVisualDialog } from './add-visual-dialog';
 import { DeletePostDialog } from './delete-post-dialog';
@@ -36,6 +38,7 @@ type Props = {
   styles: { id: string; name: string }[];
   galleryImages: GalleryImage[];
   mediaInfo: MediaInfo | null;
+  author: LinkedInAuthor;
 };
 
 export function PostEditor({
@@ -45,6 +48,7 @@ export function PostEditor({
   styles,
   galleryImages,
   mediaInfo,
+  author,
 }: Props) {
   const [title, setTitle] = useState(post.title);
   const [content, setContent] = useState(post.content);
@@ -129,6 +133,15 @@ export function PostEditor({
         disabled={saving}
         className="font-mono"
       />
+
+      <section className="space-y-2">
+        <h2 className="font-semibold text-muted-foreground text-sm">Aperçu LinkedIn</h2>
+        <LinkedInPostPreview
+          author={author}
+          content={content}
+          image={mediaInfo && mediaInfo.kind === 'image' ? { url: mediaInfo.url } : null}
+        />
+      </section>
 
       <footer className="flex items-center justify-between gap-3">
         <Button onClick={toggleStatus} disabled={toggling}>
