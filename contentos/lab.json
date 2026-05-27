@@ -1,1 +1,7 @@
-{ "description": "ContentOS (contentos.avqn.ch) — copie lab, web + worker.", "db": true, "redis": true, "email": true, "migrate": "node scripts/migrate.mjs", "worker": "node worker-runner.mjs" }
+{
+  "description": "ContentOS (contentos.avqn.ch) — copie lab, web + worker.",
+  "db": true,
+  "redis": true,
+  "email": true,
+  "worker": "node worker-runner.mjs"
+}
