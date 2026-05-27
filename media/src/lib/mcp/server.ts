@@ -8,6 +8,7 @@ import { store } from "@/lib/store";
 import { jsonResult, imageResult } from "./result";
 import { registerStyleTools } from "./tools/styles";
 import { registerStyleGuideTools } from "./tools/style-guides";
+import { registerBrandTools } from "./tools/brand";
 import { getStyle } from "@/lib/styles/repository";
 import { composePrompt } from "@/lib/styles/compose";
 
@@ -246,4 +247,5 @@ export function registerAllTools(server: McpServer): void {
 
   registerStyleTools(server);
   registerStyleGuideTools(server);
+  registerBrandTools(server);
 }
