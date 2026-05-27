@@ -5,10 +5,14 @@ import { auth } from '@/lib/auth/server';
 
 export async function GET(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const target = url.searchParams.get('redirect') || '/';
+  // Cible interne relative uniquement : le host public est reconstruit par le
+  // navigateur (derrière le reverse-proxy, req.url a pour origine le bind
+  // interne du conteneur). Garde anti-open-redirect.
+  const raw = url.searchParams.get('redirect') || '/';
+  const target = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 
   if (!isPreview) {
-    return Response.redirect(new URL('/signin', url.origin), 302);
+    return new Response(null, { status: 302, headers: { Location: '/signin' } });
   }
 
   // 1. Génère/stocke le code fixe (sendVerificationOTP ne fait rien en preview).
@@ -22,10 +26,10 @@ export async function GET(req: Request): Promise<Response> {
     asResponse: true,
   });
 
-  // 3. Recopie les cookies de session sur une redirection vers la cible.
+  // 3. Recopie les cookies de session sur une redirection (relative) vers la cible.
   const res = new Response(null, {
     status: 302,
-    headers: { Location: new URL(target, url.origin).toString() },
+    headers: { Location: target },
   });
   for (const cookie of signInRes.headers.getSetCookie()) {
     res.headers.append('Set-Cookie', cookie);
