@@ -33,8 +33,9 @@ Jobs (matrice par projet changé) :
 
 - **detect** — liste les projets changés (Dockerfile présent) ; sort aussi `env` (prod sur `main`,
   slug de branche sinon).
-- **build** — `docker buildx build` avec `cache-from/to: type=gha` (la couche `npm ci` est
-  réutilisée tant que le lockfile ne bouge pas) → **push** `ghcr.io/<owner>/atelier-<projet>:<env>`.
+- **build** — `docker build` + push `ghcr.io/<owner>/atelier-<projet>:<env>`. Pas de cache de
+  couches GHA : son export (toutes les couches, dont `node_modules`) pèse plus que le `npm ci`
+  qu'il économise, surtout sur le chemin froid (1er push d'une branche, chaque prod).
 - **test** (parallèle de build) — `npm ci` + `db:test:prepare` + unit/integration/worker + `next
   build` + smoke e2e (Playwright, navigateurs cachés). Le build host ne sert qu'au smoke e2e.
 - **deploy** (needs build + test) — `ssh deploy.sh <projet> <env> <image>` ; `deploy.sh` fait un
@@ -60,7 +61,6 @@ concurrency:
 
 ## Quick wins additifs
 
-- **Cache Docker `type=gha`** (couche `npm ci` réutilisée).
 - **Cache navigateurs Playwright** (`actions/cache` sur `~/.cache/ms-playwright`).
 - **URL déployée dans le résumé GitHub** (`$GITHUB_STEP_SUMMARY`) : un clic depuis le run.
 

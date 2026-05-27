@@ -51,9 +51,9 @@ jobs:
           [ -n "$e" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
           echo "env=$e" >> "$GITHUB_OUTPUT"
 
-  # Build de l'image (buildx + cache GHA → npm ci réutilisé tant que le lockfile
-  # ne bouge pas) et push sur GHCR. Tourne EN PARALLÈLE du job `test` : le deploy
-  # ne fait que pull cette image, il ne rebuild jamais.
+  # Build + push de l'image. Tourne EN PARALLÈLE du job `test` : le deploy ne fait
+  # que pull cette image, il ne rebuild jamais. (Pas de cache de couches GHA : son
+  # export pèse plus que le npm ci qu'il économise, surtout sur le chemin froid.)
   build:
     needs: detect
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
@@ -64,19 +64,13 @@ jobs:
         project: ${{ fromJson(needs.detect.outputs.projects) }}
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.project }}
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:${{ needs.detect.outputs.env }}
-          cache-from: type=gha,scope=${{ matrix.project }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.project }}
+      - name: Login GHCR
+        run: printf '%s' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+      - name: Build + push
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:${{ needs.detect.outputs.env }}"
+          docker build -t "$IMAGE" "${{ matrix.project }}"
+          docker push "$IMAGE"
 
   # Gate de tests (host) : unit + integration + worker + smoke e2e. Tourne en
   # parallèle du build ; le build host ici sert uniquement au smoke e2e.
