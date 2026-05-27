@@ -15,14 +15,14 @@ un **front-end d'admin** (derrière le login). Prod : `https://media.lab.avqn.ch
 
 - **Next.js 16** en sortie `standalone` → image Docker slim, écoute `:8080`.
 - **Drizzle ORM** (Postgres) : schéma `src/db/schema.ts`, client paresseux `src/db/index.ts`.
-- **BetterAuth** : `src/lib/auth.ts` (plugins `mcp()` + `magicLink()`), routes `app/api/auth/[...all]`.
+- **BetterAuth** : `src/lib/auth.ts` (plugins `mcp()` + `emailOTP()`), routes `app/api/auth/[...all]`.
 - **Tailwind 4**.
 - **Handlebars** (compilation des templates) + **pdf-lib** (construction de PDF).
 
 ## Besoins déclarés (`lab.json`)
 
 - `db: true` → `DATABASE_URL` auto (tables BetterAuth + `media`, `visual_styles`, `style_guides`, `visual_templates`, `brand`).
-- `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` auto (login magic-link).
+- `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` auto (connexion par code OTP). Sans clé Resend (dev/test), le code est loggé côté serveur (`[OTP] <email> -> <code>`).
 - `browser: true` → `BROWSER_URL` auto (Chromium partagé browserless, réseau `lab`).
 
 `migrate` (`node scripts/migrate.mjs`) applique les migrations `drizzle/` avant le démarrage.
