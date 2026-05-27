@@ -2,6 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../client';
 import { createId } from '../id';
 import { media, type Post, posts } from '../schema';
+import type { MediaRef } from '@/lib/media-link/resolve';
 
 export type PostThumbnail = { url: string; kind: 'image' | 'carousel' | 'video' };
 export type PostWithThumbnail = Post & { thumbnail: PostThumbnail | null };
@@ -92,6 +93,45 @@ export async function updatePost(
 
 export async function deletePost(userId: string, id: string): Promise<void> {
   await db.delete(posts).where(and(eq(posts.id, id), eq(posts.userId, userId)));
+}
+
+export async function setPostMedia(
+  userId: string,
+  postId: string,
+  ref: MediaRef,
+): Promise<Post | undefined> {
+  const rows = await db
+    .update(posts)
+    .set({
+      mediaId: ref.media_id,
+      mediaUrl: ref.media_url,
+      mediaKind: ref.media_kind,
+      mediaWidth: ref.media_width,
+      mediaHeight: ref.media_height,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(posts.id, postId), eq(posts.userId, userId)))
+    .returning();
+  return rows[0];
+}
+
+export async function clearPostMedia(
+  userId: string,
+  postId: string,
+): Promise<Post | undefined> {
+  const rows = await db
+    .update(posts)
+    .set({
+      mediaId: null,
+      mediaUrl: null,
+      mediaKind: null,
+      mediaWidth: null,
+      mediaHeight: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(posts.id, postId), eq(posts.userId, userId)))
+    .returning();
+  return rows[0];
 }
 
 /**

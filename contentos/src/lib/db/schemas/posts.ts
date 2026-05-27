@@ -1,4 +1,4 @@
-import { index, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 import { media } from './media';
 
@@ -13,6 +13,10 @@ export const posts = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
     mediaId: text('media_id').references(() => media.id, { onDelete: 'set null' }),
+    mediaUrl: text('media_url'),
+    mediaKind: text('media_kind'),
+    mediaWidth: integer('media_width'),
+    mediaHeight: integer('media_height'),
     content: text('content').notNull(),
     status: postStatus('status').notNull().default('draft'),
     generationJobId: text('generation_job_id').unique(),
