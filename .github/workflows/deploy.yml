@@ -9,8 +9,12 @@ permissions:
   packages: write
 
 concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
+  # event_name dans la clé : un event `delete` (github.ref = refs/heads/main) ne
+  # partage plus le groupe d'un push prod, sinon le teardown se fait annuler.
+  group: deploy-${{ github.event_name }}-${{ github.ref }}
+  # Annule un run de preview précédent quand on repousse la même branche ; jamais
+  # sur main (on n'interrompt pas un deploy prod ni un teardown).
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   detect:
@@ -18,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       projects: ${{ steps.changed.outputs.projects }}
+      env: ${{ steps.env.outputs.env }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -37,7 +42,38 @@ jobs:
             | jq -R . | jq -cs .)"
           echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "projets changés: $projects"
+      - id: env
+        run: |
+          ref='${{ github.ref_name }}'
+          if [ "$ref" = "main" ]; then e=prod; else
+            e="$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
+          fi
+          [ -n "$e" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
+          echo "env=$e" >> "$GITHUB_OUTPUT"
 
+  # Build + push de l'image. Tourne EN PARALLÈLE du job `test` : le deploy ne fait
+  # que pull cette image, il ne rebuild jamais. (Pas de cache de couches GHA : son
+  # export pèse plus que le npm ci qu'il économise, surtout sur le chemin froid.)
+  build:
+    needs: detect
+    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.detect.outputs.projects) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login GHCR
+        run: printf '%s' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+      - name: Build + push
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:${{ needs.detect.outputs.env }}"
+          docker build -t "$IMAGE" "${{ matrix.project }}"
+          docker push "$IMAGE"
+
+  # Gate de tests (host) : unit + integration + worker + smoke e2e. Tourne en
+  # parallèle du build ; le build host ici sert uniquement au smoke e2e.
   test:
     needs: detect
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
@@ -66,12 +102,10 @@ jobs:
       run:
         working-directory: ${{ matrix.project }}
     env:
-      # Variables requises par src/lib/env.ts (vitest, build, serveur e2e).
-      # .env.test (committé) force DATABASE_URL sur la base de test localhost.
       APP_URL: http://localhost:3000
       REDIS_URL: redis://localhost:6379
       BETTER_AUTH_SECRET: ci-placeholder-secret-ci-placeholder
-      DATABASE_URL: postgres://app:app@localhost:5432/contentos_test
+      DATABASE_URL: postgres://app:app@localhost:5432/${{ matrix.project }}_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -92,6 +126,12 @@ jobs:
         run: npm test --if-present
       - name: Build (requis pour le smoke e2e)
         run: npm run build --if-present
+      - name: Cache navigateurs Playwright
+        if: hashFiles(format('{0}/playwright.config.ts', matrix.project)) != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles(format('{0}/package-lock.json', matrix.project)) }}
       - name: Smoke e2e (si playwright configuré)
         run: |
           if [ -f playwright.config.ts ]; then
@@ -101,39 +141,26 @@ jobs:
             echo "pas d'e2e — skip"
           fi
 
+  # Deploy = pull (l'image est déjà construite par le job `build` et testée par
+  # `test`). Aucun build ici → ~45s.
   deploy:
-    needs: [detect, test]
+    needs: [detect, build, test]
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         project: ${{ fromJson(needs.detect.outputs.projects) }}
+    env:
+      PROJ: ${{ matrix.project }}
+      ENV: ${{ needs.detect.outputs.env }}
+      IMAGE: ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:${{ needs.detect.outputs.env }}
     steps:
       - uses: actions/checkout@v4
-      - id: vars
-        run: |
-          ref='${{ github.ref_name }}'
-          if [ "$ref" = "main" ]; then env=prod; else
-            env="$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
-          fi
-          [ -n "$env" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
-          image="ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:$env"
-          echo "env=$env"     >> "$GITHUB_OUTPUT"
-          echo "image=$image" >> "$GITHUB_OUTPUT"
-      - name: Login GHCR
-        run: printf '%s' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
-      - name: Build + push
-        run: |
-          docker build -t '${{ steps.vars.outputs.image }}' '${{ matrix.project }}'
-          docker push '${{ steps.vars.outputs.image }}'
       - name: Deploy to lab
         env:
           LAB_SSH_KEY: ${{ secrets.LAB_SSH_KEY }}
           LAB_HOST: ${{ secrets.LAB_HOST }}
-          PROJ: ${{ matrix.project }}
-          ENV: ${{ steps.vars.outputs.env }}
-          IMAGE: ${{ steps.vars.outputs.image }}
         run: |
           install -m700 -d ~/.ssh
           printf '%s\n' "$LAB_SSH_KEY" > ~/.ssh/id_ed25519
@@ -162,6 +189,10 @@ jobs:
             $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/${PROJ}.env.age"
           fi
           $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGE'"
+      - name: Résumé
+        run: |
+          if [ "$ENV" = "prod" ]; then host="${PROJ}.lab.avqn.ch"; else host="${PROJ}-${ENV}.lab.avqn.ch"; fi
+          echo "🚀 **${PROJ}** (\`${ENV}\`) déployé → https://${host}" >> "$GITHUB_STEP_SUMMARY"
 
   teardown:
     if: github.event_name == 'delete' && github.event.ref_type == 'branch'
