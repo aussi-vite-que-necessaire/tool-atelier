@@ -9,6 +9,7 @@ import { getPost } from '@/lib/db/repositories/posts';
 import { getLatestPublicationForPost } from '@/lib/db/repositories/publications';
 import { listVisualStyles } from '@/lib/db/repositories/visual-styles';
 import { listVisualTemplates } from '@/lib/db/repositories/visual-templates';
+import { getAuthorIdentity } from '@/lib/linkedin/identity';
 import { buildBrandContext } from '@/lib/visual-templates/brand';
 import { buildPreviewHtml } from '@/lib/visual-templates/preview';
 import { PostEditor } from './_components/post-editor';
@@ -21,12 +22,13 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
   const post = await getPost(userId, id);
   if (!post) notFound();
 
-  const [templates, styles, galleryImagesRaw, latestPub, brand] = await Promise.all([
+  const [templates, styles, galleryImagesRaw, latestPub, brand, author] = await Promise.all([
     listVisualTemplates(userId),
     listVisualStyles(userId),
     listStandaloneImages(userId),
     getLatestPublicationForPost(userId, post.id),
     buildBrandContext(userId),
+    getAuthorIdentity(userId),
   ]);
 
   const templatePreviews: TemplatePreview[] = templates.map((t) => ({
@@ -89,6 +91,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
         styles={styles.map((s) => ({ id: s.id, name: s.name }))}
         galleryImages={galleryImages}
         mediaInfo={mediaInfo}
+        author={author}
       />
       <PublishPanel postId={post.id} publication={latestPub ?? null} />
     </div>
