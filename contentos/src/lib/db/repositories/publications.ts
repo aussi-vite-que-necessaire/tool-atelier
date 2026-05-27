@@ -5,13 +5,12 @@ import { createId } from '../id';
 import { media, type Publication, posts, publications } from '../schema';
 
 type PublicationStatus = 'scheduled' | 'queued' | 'publishing' | 'published' | 'failed';
-type MediaKindValue = 'image' | 'carousel' | 'video';
 
 export type CreatePublicationInput = {
   postId: string;
   contentSnapshot: string;
   platform: string;
-  mediaKind?: MediaKindValue | null;
+  mediaKind?: string | null;
   snapshotKeys?: string[] | null;
   socialAccountId?: string | null;
   status?: PublicationStatus;
@@ -33,7 +32,7 @@ export type UpdatePublicationPatch = Partial<{
   lastError: string | null;
   socialAccountId: string | null;
   contentSnapshot: string;
-  mediaKind: MediaKindValue | null;
+  mediaKind: string | null;
   snapshotKeys: string[] | null;
 }>;
 

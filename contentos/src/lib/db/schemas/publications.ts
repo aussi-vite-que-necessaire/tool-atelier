@@ -1,6 +1,5 @@
 import { index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { user } from './auth';
-import { mediaKind } from './media';
 import { posts } from './posts';
 
 export const publicationStatus = pgEnum('publication_status', [
@@ -22,7 +21,7 @@ export const publications = pgTable(
       .notNull()
       .references(() => posts.id, { onDelete: 'cascade' }),
     contentSnapshot: text('content_snapshot').notNull(),
-    mediaKind: mediaKind('media_kind'),
+    mediaKind: text('media_kind'),
     snapshotKeys: text('snapshot_keys').array(),
     socialAccountId: text('social_account_id'), // FK ajoutée en Spec 6
     platform: text('platform').notNull(),

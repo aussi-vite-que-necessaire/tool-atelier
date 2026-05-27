@@ -1,8 +1,9 @@
 import type { Job } from 'bullmq';
 import { getPublication, updatePublication } from '@/lib/db/repositories/publications';
 import { getSocialAccount } from '@/lib/db/repositories/social-accounts';
+import { fetchBytes } from '@/lib/media-catalog/fetch-bytes';
+import { toLinkedInMediaKind } from '@/lib/linkedin/media-kind';
 import { LinkedInPublishError, type PublishFn, type PublishMedia } from '@/lib/linkedin/publish';
-import { getMediaEngine } from '@/lib/media-engine';
 import type { PublishLinkedinJob, PublishLinkedinResult } from '@/lib/queue/client';
 
 const TRANSIENT = new Set(['rate_limit', 'platform_5xx', 'network']);
@@ -27,11 +28,12 @@ export function makeProcessPublishLinkedin(deps: Deps) {
 
     let media: PublishMedia | null = null;
     if (pub.snapshotKeys && pub.snapshotKeys.length > 0) {
-      // snapshotKeys[0] est l'assetKey = URL publique engine → download direct
-      const bytes = await getMediaEngine().download(pub.snapshotKeys[0]!);
-      if (pub.mediaKind === 'carousel') {
-        media = { kind: 'document', bytes, filename: 'carrousel.pdf' };
-      } else if (pub.mediaKind === 'video') {
+      // snapshotKeys[0] est l'URL publique du média → fetch direct
+      const bytes = await fetchBytes(pub.snapshotKeys[0]!);
+      const lk = toLinkedInMediaKind(pub.mediaKind);
+      if (lk === 'document') {
+        media = { kind: 'document', bytes, filename: 'document.pdf' };
+      } else if (lk === 'video') {
         media = { kind: 'video', bytes };
       } else {
         media = { kind: 'image', bytes };
