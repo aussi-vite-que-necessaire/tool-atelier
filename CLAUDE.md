@@ -5,10 +5,11 @@ Monorepo incubateur des projets de Manu, **pilotable par agents**. **Un dossier 
 
 ## Au démarrage : qu'est-ce qu'on fait ?
 
-À l'ouverture, lance la skill **`/start`** : elle demande quoi faire (bosser sur un projet /
-créer / lister / infra / autre) et oriente. Skills disponibles :
+L'entrée de l'atelier est le launcher **`lab`** (ou double-clic **`Atelier.command`**) : il
+demande quoi faire et prépare le bon contexte (worktree isolé) avant de lancer `claude`. Si tu
+ouvres `claude` brut dans le checkout principal, lance **`/start`** (routeur de secours). Skills disponibles :
 
-- **`/start`** — routeur d'entrée.
+- **`/start`** — routeur de secours (dans claude).
 - **`/lab-list`** — liste les projets + leur état (régénère `PROJECTS.md`).
 - **`/lab-new`** — crée un projet depuis un starter (`static`/`api`/`flagship`) ou vierge.
 - **`/lab-work <projet>`** — focalise la session sur un projet (branche dédiée).

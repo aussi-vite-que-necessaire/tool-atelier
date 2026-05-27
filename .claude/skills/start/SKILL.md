@@ -1,17 +1,21 @@
 ---
 name: start
-description: Routeur d'entrée de l'atelier — demande à Manu ce qu'il veut faire et l'oriente vers le bon process. À utiliser à l'ouverture du repo tool-atelier, ou quand on ne sait pas par où commencer.
+description: Routeur de secours de l'atelier (dans claude) — demande à Manu ce qu'il veut faire et l'oriente. À utiliser quand on ouvre claude brut dans le checkout principal ; l'entrée normale est le launcher `lab`.
 ---
 
-# /start — qu'est-ce qu'on fait ?
+# /start — routeur de secours dans claude
 
-Tu es dans **l'atelier** (monorepo `tool-atelier`). Accueille Manu et demande ce qu'il veut faire
-(via `AskUserQuestion`), puis oriente :
+Routeur **de secours** : utilisé quand tu ouvres `claude` brut dans le checkout principal de
+l'atelier (l'entrée normale est le launcher `lab` / `Atelier.command`). Les sessions déjà
+focalisées sur un projet ne passent pas par ici.
 
-1. **Bosser sur un projet existant** → lance `/lab-list` (montre les projets + leur état), demande lequel, puis `/lab-work <projet>`.
-2. **Créer un projet** → lance `/lab-new`.
-3. **Lister les projets** → lance `/lab-list`.
-4. **Infra / plateforme** → l'infra bas niveau (serveurs, DNS, Postgres/Redis centraux, firewall) est gérée **hors de l'atelier**, pas ici. Préviens Manu. (Les secrets applicatifs, eux, se gèrent ici avec `/lab-secret`.)
-5. **Autre** → demande en prose ce qu'il veut.
+Demande à Manu ce qu'il veut faire (via `AskUserQuestion`), puis oriente :
 
-**Règle transverse, toujours :** jamais de commit sur `main`. On code sur une **branche** (un push de branche déploie une **preview** `<projet>-<branche>.lab.avqn.ch`), on ouvre une **PR**, et **merger la PR déploie la prod** `<projet>.lab.avqn.ch`.
+1. **Bosser sur un projet existant** → `/lab-list`, demande lequel, puis `/lab-work <projet>` (ou rappelle que `lab new <projet> <libellé>` ouvre une session isolée).
+2. **Créer un projet** → `/lab-new`.
+3. **Plomberie de l'atelier** (CLAUDE.md, skills, hooks) → rappelle d'isoler le travail (`lab meta <libellé>`).
+4. **Lister les projets** → `/lab-list`.
+5. **Infra / plateforme** → gérée **hors de l'atelier** ; les secrets applicatifs, eux, via `/lab-secret`.
+6. **Autre** → demande en prose.
+
+**Règle transverse :** jamais de commit sur `main`. Branche → push = preview ; PR mergée = prod.
