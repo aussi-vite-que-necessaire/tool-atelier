@@ -9,6 +9,7 @@ import { getStyle } from "@/lib/styles/repository";
 import { composePrompt } from "@/lib/styles/compose";
 import { renderTemplate } from "@/lib/templates/render";
 import { aggregatePdf } from "@/lib/pdf/aggregate";
+import { validateUpload } from "@/lib/media/validate-upload";
 
 // Réponse JSON utilitaire.
 function jsonResponse(data: unknown, status = 200): Response {
@@ -164,13 +165,17 @@ async function handleRenderTemplate(request: Request): Promise<Response> {
 }
 
 async function handleUpload(request: Request): Promise<Response> {
-  const mimeType = request.headers.get("content-type") ?? "application/octet-stream";
+  // Normalise le MIME : retire les paramètres éventuels (ex. "; charset=binary").
+  const rawContentType = request.headers.get("content-type") ?? "application/octet-stream";
+  const mime = rawContentType.split(";")[0].trim();
   const buffer = await request.arrayBuffer();
   const bytes = new Uint8Array(buffer);
+  const result = validateUpload(mime, bytes.byteLength);
+  if (!result.ok) return jsonResponse({ error: result.error }, 400);
   const rec = await store({
     bytes,
-    mimeType,
-    kind: "image",
+    mimeType: mime,
+    kind: result.kind,
     prompt: null,
     parent_id: null,
     source: "upload",
