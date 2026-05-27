@@ -95,7 +95,7 @@ de scoping par tenant) — déjà au backlog (`docs/ROADMAP.md`).
 
 ## Déploiement Coolify (phase B)
 
-Délégué à l'assistant via **cockpit** (`/Users/ManuAVQN/Code/cockpit`, skill `coolify`, verbes
+Délégué à l'assistant via **l'outillage d'infra** (skill `coolify`, verbes
 `coolify-*` / `db-*` / `secret-*`). Coolify : `deploy.avqn.ch`, serveur **Prod**
 (`46.62.162.135`). Le wildcard `*.avqn.ch → Prod` couvre `contentos.avqn.ch` : aucun record
 DNS à créer.
@@ -107,17 +107,17 @@ DNS à créer.
 - Déploiement en **Docker Compose** dans Coolify, depuis le repo : services `web`
   (`next start`) et `worker` (`npm run worker`) bâtis sur la même image, plus un `redis`
   (l'infra n'a pas encore de Redis ; bullmq en a besoin).
-- **Postgres** : base `contentos` sur le Postgres centralisé de Prod (créée via cockpit
-  `db-*`).
+- **Postgres** : base `contentos` sur le Postgres centralisé de Prod (créée via l'outillage
+  d'infra `db-*`).
 
 ### Prérequis
 
 1. **Repo accessible à Coolify.** Le remote est `github.com/ManuAVQN/content-os-v2` (perso) ;
    la GitHub App Coolify est sur l'org `aussi-vite-que-necessaire`. On transfère le repo dans
-   l'org (cockpit `repo-transfer`, convention `product-*`) pour que la GitHub App le couvre.
+   l'org (`repo-transfer`, convention `product-*`) pour que la GitHub App le couvre.
 2. **Création de l'app Coolify** : `POST /api/v1/applications/private-github-app` selon la
-   recette du skill `coolify` ; on la formalise en verbe `bin/coolify-app-create` dans cockpit
-   (déjà flaggé « à formaliser » par le skill).
+   recette du skill `coolify` ; on la formalise en verbe `bin/coolify-app-create` dans l'outillage
+   d'infra (déjà flaggé « à formaliser » par le skill).
 
 ### Secrets (Bitwarden → `secret-set`, puis `coolify-secret-push`)
 

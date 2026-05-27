@@ -66,12 +66,11 @@ valeur → chiffrée + commitée. Une commande. La valeur ne transite jamais par
 `/opt/lab/secrets-key`), clé publique committée. Procédure : la valeur est écrite dans le `.env`
 local ; tu la copies-colles dans l'env Claude cloud depuis ce fichier (jamais via le chat).
 
-## 7. Découplage de cockpit
+## 7. Autonomie — l'atelier ne dépend de rien d'externe pour ses secrets
 
-Une fois `lab-secret` en place, l'atelier ne dépend plus de rien d'externe pour ses secrets. On
-**retire toute dépendance et toute mention de cockpit** du repo de l'atelier (CLAUDE.md, skills,
-`deploy.sh`, docs des projets). L'atelier devient **autonome** : ses secrets, son déploiement
-(clé SSH dédiée déjà dans les secrets GitHub), son outillage. Il ne parle de cockpit **nulle part**.
+Une fois `lab-secret` en place, l'atelier ne dépend plus de rien d'externe pour ses secrets.
+L'atelier est **autonome** : ses secrets (`lab-secret`), son déploiement (clé SSH dédiée déjà
+dans les secrets GitHub), son outillage.
 
 ## 8. Garde-fous
 

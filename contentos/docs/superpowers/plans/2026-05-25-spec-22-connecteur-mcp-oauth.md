@@ -4,9 +4,9 @@
 
 **Goal:** Exposer le serveur MCP comme connecteur distant installable via OAuth (better-auth), puis le déployer en prod sur Coolify (`contentos.avqn.ch`) et le tester en réel.
 
-**Architecture:** `better-auth` devient le serveur OAuth 2.1 via son plugin `mcp` (sur `oidc-provider`). La route `/api/mcp` garde le wrapper `withMcpAuth` de `mcp-handler` ; seule la fonction `verifyMcpToken` change pour valider un access token OAuth (`auth.api.getMcpSession`). Les tools restent intacts. Deux routes `.well-known` portent la découverte. Le token statique est retiré. Déploiement en Docker Compose (web + worker + redis) piloté par cockpit.
+**Architecture:** `better-auth` devient le serveur OAuth 2.1 via son plugin `mcp` (sur `oidc-provider`). La route `/api/mcp` garde le wrapper `withMcpAuth` de `mcp-handler` ; seule la fonction `verifyMcpToken` change pour valider un access token OAuth (`auth.api.getMcpSession`). Les tools restent intacts. Deux routes `.well-known` portent la découverte. Le token statique est retiré. Déploiement en Docker Compose (web + worker + redis) piloté par l'outillage d'infra.
 
-**Tech Stack:** Next.js 16 (App Router), better-auth 1.6.11 (plugins `mcp` + `oidc-provider`), `mcp-handler`, drizzle-orm + drizzle-kit, vitest, Docker, Coolify (via cockpit).
+**Tech Stack:** Next.js 16 (App Router), better-auth 1.6.11 (plugins `mcp` + `oidc-provider`), `mcp-handler`, drizzle-orm + drizzle-kit, vitest, Docker, Coolify (via l'outillage d'infra).
 
 Spec : `docs/superpowers/specs/2026-05-25-spec-22-connecteur-mcp-oauth-design.md`.
 
@@ -360,9 +360,9 @@ Expected : tout vert. Si un test d'outil casse, c'est une régression d'import (
 
 ---
 
-## Phase B — Déploiement Coolify (via cockpit)
+## Phase B — Déploiement Coolify (via l'outillage d'infra)
 
-> Outillage : `/Users/ManuAVQN/Code/cockpit` (skill `coolify`, verbes `bin/coolify-*`, `bin/db-*`, `bin/repo-*`, `bin/secret-set`, `bin/coolify-secret-push`). Coolify : `deploy.avqn.ch`, serveur Prod `46.62.162.135`. Wildcard `*.avqn.ch → Prod` → `contentos.avqn.ch` sans record DNS.
+> Outillage d'infra (skill `coolify`, verbes `bin/coolify-*`, `bin/db-*`, `bin/repo-*`, `bin/secret-set`, `bin/coolify-secret-push`). Coolify : `deploy.avqn.ch`, serveur Prod `46.62.162.135`. Wildcard `*.avqn.ch → Prod` → `contentos.avqn.ch` sans record DNS.
 
 ### Task 6 : Image de prod (Dockerfile + standalone + compose)
 
@@ -469,9 +469,8 @@ git commit -m "🤖 build(spec-22): image de prod (Next standalone) + compose we
 
 - [ ] **Step 1 : Transférer le repo vers l'org (convention `product-*`)**
 
-Depuis cockpit :
+Depuis l'outillage d'infra :
 ```bash
-cd /Users/ManuAVQN/Code/cockpit
 bin/repo-transfer ManuAVQN/content-os-v2 aussi-vite-que-necessaire --rename product-content-os
 ```
 > Adapter à la signature réelle de `repo-transfer` (`bin/repo-transfer --help`). But : `aussi-vite-que-necessaire/product-content-os`, couvert par la GitHub App Coolify (uuid `dsgcg48wcck4ogko0www4wwk`, repos=all).
@@ -489,7 +488,7 @@ git remote -v && git fetch origin
 ```bash
 git push origin HEAD
 ```
-Expected : push OK sur l'org. Vérifier via cockpit `bin/registry-sync` que le repo apparaît.
+Expected : push OK sur l'org. Vérifier via `bin/registry-sync` que le repo apparaît.
 
 ---
 
@@ -498,7 +497,6 @@ Expected : push OK sur l'org. Vérifier via cockpit `bin/registry-sync` que le r
 - [ ] **Step 1 : Créer la base `contentos` sur le Postgres centralisé de Prod**
 
 ```bash
-cd /Users/ManuAVQN/Code/cockpit
 bin/db-list
 bin/db-exec "<postgres-centralisé>" "CREATE DATABASE contentos;"
 ```
@@ -526,12 +524,11 @@ printf '%s' "redis://redis:6379"          | bin/secret-set CONTENTOS_REDIS_URL
 
 - [ ] **Step 1 : Créer la ressource Coolify (Docker Compose, GitHub App)**
 
-Suivre la recette du skill `coolify` (`POST /api/v1/applications/private-github-app`), build pack **Docker Compose** pointant `docker/prod.compose.yml`, repo `aussi-vite-que-necessaire/product-content-os`, branche `main`, domaine `https://contentos.avqn.ch`, projet `04-Applications`, serveur Prod. Formaliser en `bin/coolify-app-create` dans cockpit (flaggé « à formaliser » par le skill).
+Suivre la recette du skill `coolify` (`POST /api/v1/applications/private-github-app`), build pack **Docker Compose** pointant `docker/prod.compose.yml`, repo `aussi-vite-que-necessaire/product-content-os`, branche `main`, domaine `https://contentos.avqn.ch`, projet `04-Applications`, serveur Prod. Formaliser en `bin/coolify-app-create` dans l'outillage d'infra (flaggé « à formaliser » par le skill).
 
 - [ ] **Step 2 : Pousser les variables d'environnement**
 
 ```bash
-cd /Users/ManuAVQN/Code/cockpit
 bin/coolify-secret-push content-os CONTENTOS_DATABASE_URL
 # … répéter pour chaque secret de la matrice (Task 8 Step 3).
 ```
@@ -548,7 +545,6 @@ DATABASE_URL=<url prod> npm run db:migrate
 - [ ] **Step 4 : Déployer**
 
 ```bash
-cd /Users/ManuAVQN/Code/cockpit
 bin/coolify-deploy content-os --force
 bin/coolify-status content-os
 ```
