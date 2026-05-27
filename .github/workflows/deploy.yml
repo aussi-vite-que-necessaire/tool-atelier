@@ -43,6 +43,7 @@ jobs:
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         project: ${{ fromJson(needs.detect.outputs.projects) }}
     steps:
