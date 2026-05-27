@@ -24,7 +24,7 @@ export const auth = betterAuth({
         if (isPreview) return;
         await sendEmail({
           to: email,
-          subject: 'Ton code de connexion à content-os',
+          subject: 'Ton code de connexion à Contentos',
           html: otpEmailHtml(otp),
         });
       },
@@ -54,7 +54,7 @@ export type Session = typeof auth.$Infer.Session;
 function otpEmailHtml(code: string): string {
   return `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#111">
   <h1 style="font-size:20px;font-weight:700">Ton code de connexion</h1>
-  <p>Saisis ce code pour te connecter à content-os :</p>
+  <p>Saisis ce code pour te connecter à Contentos :</p>
   <p style="font-size:32px;font-weight:800;letter-spacing:8px;margin:16px 0">${code}</p>
   <p style="color:#666">Ce code expire dans 10 minutes.</p>
 </div>`;

@@ -43,7 +43,7 @@ test.describe('Auth flow', () => {
 
     // 5. Arrive sur le dashboard
     await expect(page).toHaveURL('/');
-    await expect(page.getByText(/Bienvenue/)).toBeVisible();
+    await expect(page.getByText(/Bonjour/)).toBeVisible();
     await expect(page.getByText(TEST_EMAIL).first()).toBeVisible();
 
     // 6. Logout
