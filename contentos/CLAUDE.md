@@ -56,3 +56,5 @@ Faire évoluer le schéma : éditer `src/lib/db/schema.ts` / `src/lib/db/schemas
 `npm run db:generate`, committer — le prochain déploiement applique la migration.
 
 <!-- redeploy: clés réelles (email + média) -->
+
+<!-- go-live: APP_URL → contentos.avqn.ch -->
