@@ -397,10 +397,10 @@ git add -A && git commit -m "test: vérification locale lot 7 (découverte OAuth
 git push origin main
 ```
 
-- [ ] **Step 2: Appliquer la migration sur la base de prod** (nouvelles tables OAuth) via cockpit, puis GRANT (piège connu)
+- [ ] **Step 2: Appliquer la migration sur la base de prod** (nouvelles tables OAuth) via l'outillage d'infra, puis GRANT (piège connu)
 
 ```bash
-cd ~/Code/cockpit && set -a && . ./.env && set +a
+cd ~/Code/infra && set -a && . ./.env && set +a
 ./bin/db-exec ressources < ~/Code/lab-ressources/drizzle/00XX_<nouvelle>.sql   # la migration du lot 7
 ./bin/db-exec ressources <<'SQL'
 GRANT ALL ON ALL TABLES IN SCHEMA public TO ressources_app;

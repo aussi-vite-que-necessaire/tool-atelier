@@ -700,7 +700,7 @@ Expected : PASS. Puis supprimer le fichier jetable : `rm lib/resources/lot9.smok
 
 ```bash
 git push origin main
-cd ~/Code/cockpit && set -a && . ./.env && set +a
+cd ~/Code/infra && set -a && . ./.env && set +a
 URL="$(bin/secret-get COOLIFY_URL)"; TOK="$(bin/secret-get COOLIFY_TOKEN)"
 DEP=$(curl -fsS -H "Authorization: Bearer $TOK" "$URL/api/v1/deploy?uuid=m88ck0gg4sgcs0kkggwgoggs" | jq -r '.deployments[0].deployment_uuid')
 # poll jusqu'à finished, puis :

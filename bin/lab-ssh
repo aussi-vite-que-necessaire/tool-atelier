@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# lab-ssh : exécute une commande sur le serveur lab, en autonomie.
+# La clé SSH dédiée de l'agent est récupérée (chiffrée) depuis le store de secrets
+# (scope sysadmin, clé LAB_SSH_KEY_B64), déchiffrée en mémoire, écrite dans un
+# fichier temporaire le temps de la connexion, puis effacée.
+# Usage : bin/lab-ssh <commande à exécuter sur lab>
+# Pré-requis : LAB_SECRETS_KEY dans l'env (déverrouille le store).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+HOST="root@178.105.243.250"
+
+KEY="$("$ROOT/bin/lab-secret" get sysadmin LAB_SSH_KEY_B64)"
+if [ -z "$KEY" ]; then
+  echo "lab-ssh : LAB_SECRETS_KEY manquant ou clé absente" >&2
+  exit 1
+fi
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+printf '%s' "$KEY" | base64 -d > "$tmp"
+chmod 600 "$tmp"
+
+ssh -i "$tmp" \
+  -o IdentitiesOnly=yes \
+  -o StrictHostKeyChecking=accept-new \
+  -o ConnectTimeout=10 \
+  "$HOST" "$@"

@@ -216,7 +216,7 @@ Expected : PASS (`contexte` présent, href `/r/guide-ia#contexte`). Puis `rm lib
 
 ```bash
 git push origin main
-cd ~/Code/cockpit && set -a && . ./.env && set +a
+cd ~/Code/infra && set -a && . ./.env && set +a
 URL="$(bin/secret-get COOLIFY_URL)"; TOK="$(bin/secret-get COOLIFY_TOKEN)"
 DEP=$(curl -fsS -H "Authorization: Bearer $TOK" "$URL/api/v1/deploy?uuid=m88ck0gg4sgcs0kkggwgoggs" | jq -r '.deployments[0].deployment_uuid')
 # poll jusqu'à finished, puis : curl -s -o /dev/null -w "%{http_code}" https://ressources.avqn.ch/

@@ -27,7 +27,11 @@ créer / lister / infra / autre) et oriente. Skills disponibles :
 
 `git push` → GitHub Action build l'image du/des projet(s) modifié(s) → **GHCR** → SSH vers `lab`
 → `scripts/deploy.sh`. Le serveur **ne build jamais** : il *pull* l'image déjà construite. Suivre
-avec `gh run watch`. Logs d'un projet : `docker logs <projet>-<env>-app-1` (accès SSH au serveur `lab`).
+avec `gh run watch`. Logs d'un projet : `lab-ssh "docker logs <projet>-<env>-app-1"` (skill `/lab-ssh`).
+
+**DNS — à venir.** Le schéma de sous-domaines plat sous `*.lab.avqn.ch` (wildcard) ne demande
+**aucun enregistrement DNS par projet**. Une compétence DNS (domaines personnalisés) pourra être
+ajoutée plus tard si le besoin se présente.
 
 ## Données — `lab.json`
 
