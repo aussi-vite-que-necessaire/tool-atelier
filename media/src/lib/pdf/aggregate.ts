@@ -5,7 +5,8 @@ import { store } from "@/lib/store";
 import type { MediaRecord } from "@/lib/media/types";
 
 // Agrège une liste ordonnée d'images (par id) en un PDF (une image par page).
-export async function aggregatePdf(imageIds: string[]): Promise<MediaRecord> {
+// `tags` est appliqué au média PDF produit (pour le retrouver dans la galerie).
+export async function aggregatePdf(imageIds: string[], tags: string[] = []): Promise<MediaRecord> {
   if (imageIds.length === 0) throw new Error("Au moins une image requise");
 
   const images: PdfImage[] = [];
@@ -32,6 +33,6 @@ export async function aggregatePdf(imageIds: string[]): Promise<MediaRecord> {
     prompt: null,
     parent_id: null,
     source: "pdf_aggregate",
-    tags: [],
+    tags,
   });
 }

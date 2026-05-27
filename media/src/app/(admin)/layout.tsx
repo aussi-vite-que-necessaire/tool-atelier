@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 const navLinks = [
   { href: "/gallery", label: "Galerie" },
+  { href: "/pdf", label: "PDF" },
   { href: "/templates", label: "Templates" },
   { href: "/styles", label: "Styles" },
   { href: "/style-guides", label: "Chartes" },
