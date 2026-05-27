@@ -96,7 +96,7 @@ table_rows="${table_rows%$'\n'}"
 cat > "$OUTPUT" <<MARKDOWN
 # Projets de l'atelier
 
-> Carte vivante régénérée par \`scripts/cartography.sh\` (skill \`/lab-list\`). **Ne pas éditer à la main.**
+> Carte vivante régénérée par \`scripts/cartography.sh\` (hook session-start + skill \`/lab-list\`). **Artefact généré, gitignoré, jamais édité à la main.**
 > Dernière génération : $DATE
 
 | Projet | Description | Stack | Besoins | URL prod | Statut |
