@@ -33,7 +33,7 @@ APP_ENV=$ENV
 EOF
 
 # Besoins déclarés par le projet (lab.json absent => projet sans base ni redis)
-DB=false; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""
+DB=false; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""; DOMAIN=""
 if [ -f "$APPDIR/lab.json" ]; then
   DB="$(jq -r '.db // false' "$APPDIR/lab.json")"
   REDIS="$(jq -r '.redis // false' "$APPDIR/lab.json")"
@@ -41,6 +41,7 @@ if [ -f "$APPDIR/lab.json" ]; then
   BROWSER="$(jq -r '.browser // false' "$APPDIR/lab.json")"
   MIGRATE="$(jq -r '.migrate // empty' "$APPDIR/lab.json")"
   SEED="$(jq -r '.seed // empty' "$APPDIR/lab.json")"
+  DOMAIN="$(jq -r '.domain // empty' "$APPDIR/lab.json")"
 fi
 
 # Postgres central : base <projet>_<env> + DATABASE_URL injecté
@@ -92,10 +93,13 @@ if [ -f /opt/lab/secrets-key ]; then
   [ -f "$APPDIR/${PROJ}.env.age" ]         && age -d -i /opt/lab/secrets-key "$APPDIR/${PROJ}.env.age"         >> "$APPDIR/.env"
 fi
 
-# Origine publique du déploiement : primitive générique connue de la plateforme seule
-# (elle attribue le host). Écrite APRÈS les secrets pour être autoritative — en --env-file
-# la dernière occurrence d'une clé gagne, donc un secret périmé ne peut pas la masquer.
-printf 'APP_URL=https://%s\n' "$HOST" >> "$APPDIR/.env"
+# Origine publique injectée dans APP_URL. Par défaut = host déployé (juste pour les previews
+# et la prod lab par défaut). En prod, si lab.json déclare "domain" (domaine public custom dont
+# le DNS pointe vers le lab), l'identité publique est ce domaine. Écrite APRÈS les secrets pour
+# être autoritative — en --env-file la dernière occurrence d'une clé gagne.
+APP_ORIGIN="https://${HOST}"
+if [ "$ENV" = "prod" ] && [ -n "$DOMAIN" ]; then APP_ORIGIN="https://${DOMAIN}"; fi
+printf 'APP_URL=%s\n' "$APP_ORIGIN" >> "$APPDIR/.env"
 
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab
 if [ -n "$MIGRATE" ]; then
