@@ -25,7 +25,8 @@ décide**, à l'intérieur. Skills disponibles :
 - **Jamais de commit sur `main`.** On code sur une **branche**, on ouvre une **PR**.
 - **Push de branche → preview** : `https://<projet>-<branche>.lab.avqn.ch` (détruite à la suppression de la branche).
 - **Merge de PR → prod** : `https://<projet>.lab.avqn.ch`.
-- **Une session = un worktree isolé + une branche.** Le lanceur s'appuie sur le worktree natif de Claude Code (`claude --worktree`) ; voir « Collaboration multi-agents ». Le hook `branch-guard` bloque les commits/push sur `main` et le dev projet dans le checkout principal partagé.
+- **Merger** : `gh pr merge <#> --squash`. La branche distante se supprime seule (le dépôt a `delete_branch_on_merge`). Côté local, on retire le worktree : `git worktree remove <chemin>` puis `git branch -D <branche>`. Le drapeau `--delete-branch` est inutile et échoue en contexte worktree (gh tente de basculer le checkout sur `main`, déjà occupé).
+- **Une session = un worktree isolé + une branche.** Le lanceur s'appuie sur le worktree natif de Claude Code (`claude --worktree`) ; voir « Collaboration multi-agents ». Le hook `branch-guard` bloque les commits sur `main` et les push qui mettraient `main` à jour (la suppression d'une branche distante reste permise), ainsi que le dev projet dans le checkout principal partagé.
 
 ## Collaboration multi-agents
 
