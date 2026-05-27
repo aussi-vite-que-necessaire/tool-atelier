@@ -87,7 +87,9 @@ if [ -n "$SEED" ] && [ "$ENV" != "prod" ]; then
   docker run --rm --network lab --env-file "$APPDIR/.env" "$IMAGE" sh -c "$SEED"
 fi
 
-docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" up -d
+# --force-recreate : applique les changements de .env (secrets) même quand l'image est identique
+# (sinon une rotation de secret seule ne serait pas prise en compte).
+docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" up -d --force-recreate
 
 mkdir -p /opt/lab/platform/sites
 cat > "/opt/lab/platform/sites/${PROJ}-${ENV}.caddy" <<EOF
