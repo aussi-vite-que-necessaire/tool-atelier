@@ -1,63 +1,30 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { authClient } from '@/lib/auth/client';
+import { isPreview } from '@/lib/auth/preview';
+import { auth } from '@/lib/auth/server';
+import { OtpForm } from './otp-form';
 
-export default function SignInPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ redirect?: string; redirectTo?: string }>;
+}) {
+  const sp = await searchParams;
+  const target = sp.redirect || sp.redirectTo || '/';
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const { error } = await authClient.signIn.magicLink({
-        email,
-        callbackURL: '/',
-      });
-      if (error) {
-        setError(error.message ?? "Erreur lors de l'envoi du lien");
-      } else {
-        router.push(`/verify?email=${encodeURIComponent(email)}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (session) redirect(target);
+  if (isPreview) redirect(`/api/preview-login?redirect=${encodeURIComponent(target)}`);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Connexion</CardTitle>
-        <CardDescription>Reçois un lien magique par email pour te connecter.</CardDescription>
+        <CardDescription>Reçois un code par email pour te connecter.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="toi@exemple.com"
-              disabled={loading}
-            />
-          </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <Button type="submit" disabled={loading || !email} className="w-full">
-            {loading ? 'Envoi...' : 'Recevoir le lien'}
-          </Button>
-        </form>
+        <OtpForm redirectTo={target} />
       </CardContent>
     </Card>
   );

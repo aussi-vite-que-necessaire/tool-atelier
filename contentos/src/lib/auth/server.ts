@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP, mcp } from 'better-auth/plugins';
-import { PREVIEW_OTP, isPreview } from '@/lib/auth/preview';
+import { isPreview, PREVIEW_OTP } from '@/lib/auth/preview';
 import { db } from '@/lib/db/client';
 import { seedUserDefaults } from '@/lib/db/seeds/user-defaults';
 import { sendEmail } from '@/lib/email/send';
