@@ -6,6 +6,9 @@ import { getImageBytes, deleteObject } from "@/lib/storage";
 import { getMediaRecord, listMediaRecords, deleteMediaRow } from "@/lib/media/repository";
 import { store } from "@/lib/store";
 import { jsonResult, imageResult } from "./result";
+import { registerStyleTools } from "./tools/styles";
+import { getStyle } from "@/lib/styles/repository";
+import { composePrompt } from "@/lib/styles/compose";
 
 export const INSTRUCTIONS = `Image Studio génère, édite et rend des images pour illustrer documents, posts et présentations.
 
@@ -38,18 +41,25 @@ export function registerAllTools(server: McpServer): void {
           .array(z.string())
           .optional()
           .describe("Étiquettes libres pour retrouver l'image via list_images, ex: ['linkedin','tech']."),
+        style_id: z
+          .string()
+          .optional()
+          .describe("id d'un style visuel (list_visual_styles) à appliquer. Son prompt est ajouté en suffixe au prompt fourni."),
       },
     },
-    async ({ prompt, aspect_ratio, tags }) => {
-      const { bytes, mimeType } = await generateImage(prompt, aspect_ratio ?? "1:1");
+    async ({ prompt, aspect_ratio, tags, style_id }) => {
+      const st = style_id ? await getStyle(style_id) : undefined;
+      const finalPrompt = composePrompt(prompt, st?.prompt);
+      const { bytes, mimeType } = await generateImage(finalPrompt, aspect_ratio ?? "1:1");
       const rec = await store({
         bytes,
         mimeType,
         kind: "image",
-        prompt,
+        prompt: finalPrompt,
         parent_id: null,
         source: "gemini_generate",
         tags: tags ?? [],
+        style_id: style_id ?? null,
       });
       return imageResult(bytes, mimeType, {
         id: rec.id,
@@ -232,4 +242,6 @@ export function registerAllTools(server: McpServer): void {
       return jsonResult({ deleted });
     },
   );
+
+  registerStyleTools(server);
 }

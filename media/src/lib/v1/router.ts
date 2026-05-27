@@ -5,6 +5,8 @@ import { renderHtml } from "@/lib/render";
 import { getImageBytes, deleteObject } from "@/lib/storage";
 import { getMediaRecord, deleteMediaRow } from "@/lib/media/repository";
 import { store } from "@/lib/store";
+import { getStyle } from "@/lib/styles/repository";
+import { composePrompt } from "@/lib/styles/compose";
 
 // Réponse JSON utilitaire.
 function jsonResponse(data: unknown, status = 200): Response {
@@ -22,6 +24,7 @@ const GenerateSchema = z.object({
   // de service, ex. ContentOS, ont leur propre palette : 1:1, 4:5, 16:9…).
   aspectRatio: z.string().min(1).default("1:1"),
   stylePrompt: z.string().optional(),
+  styleId: z.string().optional(),
 });
 
 const EditSchema = z.object({
@@ -48,8 +51,14 @@ async function handleGenerate(request: Request): Promise<Response> {
   if (!parsed.success) {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
-  const { prompt, aspectRatio, stylePrompt } = parsed.data;
-  const composed = stylePrompt ? `${prompt}\n\nStyle: ${stylePrompt}` : prompt;
+  const { prompt, aspectRatio, stylePrompt, styleId } = parsed.data;
+  // Résolution du style : stylePrompt explicite prioritaire, sinon résolution depuis l'id.
+  let stylePromptResolved: string | undefined = stylePrompt;
+  if (!stylePromptResolved && styleId) {
+    const st = await getStyle(styleId);
+    stylePromptResolved = st?.prompt;
+  }
+  const composed = composePrompt(prompt, stylePromptResolved);
   const { bytes, mimeType } = await generateImage(composed, aspectRatio);
   const rec = await store({
     bytes,
@@ -59,6 +68,7 @@ async function handleGenerate(request: Request): Promise<Response> {
     parent_id: null,
     source: "gemini_generate",
     tags: [],
+    style_id: styleId ?? null,
   });
   return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
 }
