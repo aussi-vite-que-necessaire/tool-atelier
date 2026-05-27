@@ -10,6 +10,7 @@ import { registerStyleTools } from "./tools/styles";
 import { registerStyleGuideTools } from "./tools/style-guides";
 import { registerBrandTools } from "./tools/brand";
 import { registerTemplateTools } from "./tools/templates";
+import { registerPdfTools } from "./tools/pdf";
 import { getStyle } from "@/lib/styles/repository";
 import { composePrompt } from "@/lib/styles/compose";
 
@@ -250,4 +251,5 @@ export function registerAllTools(server: McpServer): void {
   registerStyleGuideTools(server);
   registerBrandTools(server);
   registerTemplateTools(server);
+  registerPdfTools(server);
 }

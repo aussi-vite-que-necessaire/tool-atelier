@@ -8,6 +8,7 @@ import { store } from "@/lib/store";
 import { getStyle } from "@/lib/styles/repository";
 import { composePrompt } from "@/lib/styles/compose";
 import { renderTemplate } from "@/lib/templates/render";
+import { aggregatePdf } from "@/lib/pdf/aggregate";
 
 // Réponse JSON utilitaire.
 function jsonResponse(data: unknown, status = 200): Response {
@@ -42,6 +43,10 @@ const RenderHtmlSchema = z.object({
 const RenderTemplateSchema = z.object({
   templateId: z.string().min(1),
   vars: z.record(z.string(), z.unknown()).default({}),
+});
+
+const PdfSchema = z.object({
+  imageIds: z.array(z.string()).min(1),
 });
 
 // ── Handlers ───────────────────────────────────────────────────────────────────
@@ -174,6 +179,28 @@ async function handleUpload(request: Request): Promise<Response> {
   return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
 }
 
+async function handlePdf(request: Request): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Corps JSON invalide" }, 400);
+  }
+  const parsed = PdfSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
+  }
+  const { imageIds } = parsed.data;
+  try {
+    const rec = await aggregatePdf(imageIds);
+    return jsonResponse({ id: rec.id, url: rec.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Échec de la construction du PDF";
+    const status = message.includes("introuvable") ? 404 : 400;
+    return jsonResponse({ error: message }, status);
+  }
+}
+
 async function handleDelete(id: string): Promise<Response> {
   const rec = await getMediaRecord(id);
   if (!rec) return jsonResponse({ deleted: false });
@@ -209,6 +236,9 @@ export async function handleV1(request: Request): Promise<Response> {
   }
   if (method === "POST" && pathname === "/v1/upload") {
     return handleUpload(request);
+  }
+  if (method === "POST" && pathname === "/v1/pdf") {
+    return handlePdf(request);
   }
 
   // DELETE /v1/object/:id
