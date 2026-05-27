@@ -20,20 +20,20 @@ export function MonthCalendar({
   const p = prevMonth(year, month);
   const n = nextMonth(year, month);
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="font-semibold text-lg capitalize">{label}</h1>
-        <div className="flex gap-1">
+        <h1 className="font-semibold text-2xl capitalize">{label}</h1>
+        <div className="flex gap-1.5">
           <Link
             href={`/calendar?month=${monthParam(p.year, p.month)}`}
-            className="rounded border px-2 py-1 text-sm"
+            className="rounded-md border px-3 py-1.5 hover:bg-neutral-100"
             aria-label="Mois précédent"
           >
             ‹
           </Link>
           <Link
             href={`/calendar?month=${monthParam(n.year, n.month)}`}
-            className="rounded border px-2 py-1 text-sm"
+            className="rounded-md border px-3 py-1.5 hover:bg-neutral-100"
             aria-label="Mois suivant"
           >
             ›
@@ -44,7 +44,7 @@ export function MonthCalendar({
         {DAYS.map((d) => (
           <div
             key={d}
-            className="bg-neutral-100 p-2 text-center font-medium text-muted-foreground text-xs"
+            className="bg-neutral-100 p-2.5 text-center font-medium text-muted-foreground text-xs"
           >
             {d}
           </div>
@@ -52,17 +52,19 @@ export function MonthCalendar({
         {weeks.flat().map((day) => (
           <div
             key={day.date.toISOString()}
-            className={`min-h-[150px] space-y-1 p-1.5 ${
+            className={`min-h-[160px] space-y-1.5 p-2 xl:min-h-[200px] ${
               day.inMonth ? 'bg-white' : 'bg-neutral-50 text-muted-foreground'
             }`}
           >
-            <div className="text-right text-xs">{day.date.getDate()}</div>
-            {day.items.slice(0, 3).map((it) => (
+            <div className="text-right text-sm">{day.date.getDate()}</div>
+            {day.items.slice(0, 4).map((it) => (
               <Link
                 key={it.publicationId}
                 href={`/calendar/preview/${it.postId}`}
-                className={`flex gap-2 rounded p-1 ${
-                  it.status === 'published' ? 'bg-green-50' : 'bg-blue-50'
+                className={`flex gap-2 rounded-md p-1.5 transition-colors ${
+                  it.status === 'published'
+                    ? 'bg-green-50 hover:bg-green-100'
+                    : 'bg-blue-50 hover:bg-blue-100'
                 }`}
                 title={it.excerpt}
               >
@@ -70,20 +72,20 @@ export function MonthCalendar({
                   <img
                     src={it.thumbnailUrl}
                     alt=""
-                    className="h-10 w-10 flex-none rounded object-cover"
+                    className="h-14 w-14 flex-none rounded object-cover"
                   />
                 ) : (
                   <div
-                    className={`h-10 w-10 flex-none rounded ${
+                    className={`h-14 w-14 flex-none rounded ${
                       it.status === 'published' ? 'bg-green-200' : 'bg-blue-200'
                     }`}
                   />
                 )}
-                <span className="line-clamp-2 text-xs leading-tight">{it.excerpt}</span>
+                <span className="line-clamp-3 text-xs leading-snug">{it.excerpt}</span>
               </Link>
             ))}
-            {day.items.length > 3 ? (
-              <div className="px-1 text-muted-foreground text-xs">+{day.items.length - 3}</div>
+            {day.items.length > 4 ? (
+              <div className="px-1 text-muted-foreground text-xs">+{day.items.length - 4}</div>
             ) : null}
           </div>
         ))}
