@@ -7,6 +7,7 @@ import { getMediaRecord, deleteMediaRow } from "@/lib/media/repository";
 import { store } from "@/lib/store";
 import { getStyle } from "@/lib/styles/repository";
 import { composePrompt } from "@/lib/styles/compose";
+import { renderTemplate } from "@/lib/templates/render";
 
 // Réponse JSON utilitaire.
 function jsonResponse(data: unknown, status = 200): Response {
@@ -36,6 +37,11 @@ const RenderHtmlSchema = z.object({
   html: z.string().min(1),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
+});
+
+const RenderTemplateSchema = z.object({
+  templateId: z.string().min(1),
+  vars: z.record(z.string(), z.unknown()).default({}),
 });
 
 // ── Handlers ───────────────────────────────────────────────────────────────────
@@ -129,6 +135,29 @@ async function handleRenderHtml(request: Request): Promise<Response> {
   return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
 }
 
+async function handleRenderTemplate(request: Request): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse({ error: "Corps JSON invalide" }, 400);
+  }
+  const parsed = RenderTemplateSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
+  }
+  const { templateId, vars } = parsed.data;
+  try {
+    const rec = await renderTemplate(templateId, vars);
+    return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Échec du rendu du template";
+    // Template inexistant → 404 ; validation des variables ou autre → 400.
+    const status = message.includes("introuvable") ? 404 : 400;
+    return jsonResponse({ error: message }, status);
+  }
+}
+
 async function handleUpload(request: Request): Promise<Response> {
   const mimeType = request.headers.get("content-type") ?? "application/octet-stream";
   const buffer = await request.arrayBuffer();
@@ -174,6 +203,9 @@ export async function handleV1(request: Request): Promise<Response> {
   }
   if (method === "POST" && pathname === "/v1/render-html") {
     return handleRenderHtml(request);
+  }
+  if (method === "POST" && pathname === "/v1/render-template") {
+    return handleRenderTemplate(request);
   }
   if (method === "POST" && pathname === "/v1/upload") {
     return handleUpload(request);

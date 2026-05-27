@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerAllTools } from "@/lib/mcp/server";
 
 describe("registerAllTools", () => {
-  it("enregistre les 17 outils attendus", () => {
+  it("enregistre les 23 outils attendus", () => {
     const server = new McpServer({ name: "media", version: "1" });
     registerAllTools(server);
     const names = Object.keys(
@@ -28,6 +28,12 @@ describe("registerAllTools", () => {
         "delete_style_guide",
         "get_brand",
         "update_brand",
+        "list_visual_templates",
+        "get_visual_template",
+        "create_visual_template",
+        "update_visual_template",
+        "delete_visual_template",
+        "render_template",
       ].sort(),
     );
   });
