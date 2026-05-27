@@ -3,7 +3,7 @@ import { z } from "zod";
 import { generateImage, editImage } from "@/lib/gemini";
 import { renderHtml } from "@/lib/render";
 import { getImageBytes, deleteObject } from "@/lib/storage";
-import { getImageRecord, listImageRecords, deleteImageRow } from "@/lib/images/repository";
+import { getMediaRecord, listMediaRecords, deleteMediaRow } from "@/lib/media/repository";
 import { store } from "@/lib/store";
 import { jsonResult, imageResult } from "./result";
 
@@ -45,6 +45,7 @@ export function registerAllTools(server: McpServer): void {
       const rec = await store({
         bytes,
         mimeType,
+        kind: "image",
         prompt,
         parent_id: null,
         source: "gemini_generate",
@@ -81,7 +82,7 @@ export function registerAllTools(server: McpServer): void {
       },
     },
     async ({ image_id, edit_prompt, tags }) => {
-      const source = await getImageRecord(image_id);
+      const source = await getMediaRecord(image_id);
       if (!source) throw new Error(`Image introuvable: ${image_id}`);
       const src = await getImageBytes(source.r2_key);
       if (!src) throw new Error(`Fichier source absent du bucket: ${source.r2_key}`);
@@ -90,6 +91,7 @@ export function registerAllTools(server: McpServer): void {
       const rec = await store({
         bytes,
         mimeType,
+        kind: "image",
         prompt: edit_prompt,
         parent_id: source.id,
         source: "gemini_edit",
@@ -154,6 +156,7 @@ export function registerAllTools(server: McpServer): void {
       const rec = await store({
         bytes,
         mimeType,
+        kind: "render",
         prompt: null,
         parent_id: null,
         source: "html_render",
@@ -195,7 +198,7 @@ export function registerAllTools(server: McpServer): void {
       },
     },
     async ({ query, tags, source, limit }) => {
-      const records = await listImageRecords({ query, tags, source, limit });
+      const records = await listMediaRecords({ query, tags, source, limit });
       return jsonResult(records);
     },
   );
@@ -207,7 +210,7 @@ export function registerAllTools(server: McpServer): void {
       inputSchema: { image_id: z.string().min(1).describe("id de l'image à récupérer.") },
     },
     async ({ image_id }) => {
-      const rec = await getImageRecord(image_id);
+      const rec = await getMediaRecord(image_id);
       return jsonResult(rec);
     },
   );
@@ -219,10 +222,10 @@ export function registerAllTools(server: McpServer): void {
       inputSchema: { image_id: z.string().min(1).describe("id de l'image à supprimer définitivement.") },
     },
     async ({ image_id }) => {
-      const rec = await getImageRecord(image_id);
+      const rec = await getMediaRecord(image_id);
       if (!rec) return jsonResult({ deleted: false });
       // Ligne d'abord : si l'objet R2 échoue ensuite, on a au pire un orphelin inoffensif.
-      const deleted = await deleteImageRow(image_id);
+      const deleted = await deleteMediaRow(image_id);
       if (deleted) {
         await deleteObject(rec.r2_key);
       }

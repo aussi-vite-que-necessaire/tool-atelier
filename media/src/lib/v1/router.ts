@@ -3,7 +3,7 @@ import { checkServiceKey } from "@/lib/service-auth";
 import { generateImage, editImage } from "@/lib/gemini";
 import { renderHtml } from "@/lib/render";
 import { getImageBytes, deleteObject } from "@/lib/storage";
-import { getImageRecord, deleteImageRow } from "@/lib/images/repository";
+import { getMediaRecord, deleteMediaRow } from "@/lib/media/repository";
 import { store } from "@/lib/store";
 
 // Réponse JSON utilitaire.
@@ -54,6 +54,7 @@ async function handleGenerate(request: Request): Promise<Response> {
   const rec = await store({
     bytes,
     mimeType,
+    kind: "image",
     prompt: composed,
     parent_id: null,
     source: "gemini_generate",
@@ -74,7 +75,7 @@ async function handleEdit(request: Request): Promise<Response> {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
   const { sourceId, prompt } = parsed.data;
-  const source = await getImageRecord(sourceId);
+  const source = await getMediaRecord(sourceId);
   if (!source) return jsonResponse({ error: `Image introuvable: ${sourceId}` }, 404);
   const src = await getImageBytes(source.r2_key);
   if (!src) return jsonResponse({ error: `Fichier source absent du bucket: ${source.r2_key}` }, 404);
@@ -82,6 +83,7 @@ async function handleEdit(request: Request): Promise<Response> {
   const rec = await store({
     bytes,
     mimeType,
+    kind: "image",
     prompt,
     parent_id: source.id,
     source: "gemini_edit",
@@ -106,6 +108,7 @@ async function handleRenderHtml(request: Request): Promise<Response> {
   const rec = await store({
     bytes,
     mimeType,
+    kind: "render",
     prompt: null,
     parent_id: null,
     source: "html_render",
@@ -123,6 +126,7 @@ async function handleUpload(request: Request): Promise<Response> {
   const rec = await store({
     bytes,
     mimeType,
+    kind: "image",
     prompt: null,
     parent_id: null,
     source: "upload",
@@ -132,9 +136,9 @@ async function handleUpload(request: Request): Promise<Response> {
 }
 
 async function handleDelete(id: string): Promise<Response> {
-  const rec = await getImageRecord(id);
+  const rec = await getMediaRecord(id);
   if (!rec) return jsonResponse({ deleted: false });
-  const deleted = await deleteImageRow(id);
+  const deleted = await deleteMediaRow(id);
   if (deleted) {
     await deleteObject(rec.r2_key);
   }
