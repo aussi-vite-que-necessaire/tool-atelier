@@ -49,22 +49,14 @@ export function PostComposer({
   onAddVisual,
 }: Props) {
   const taRef = useRef<HTMLTextAreaElement>(null);
-  const [foldTop, setFoldTop] = useState<number | null>(null);
 
-  // Auto-agrandit la textarea (pas de scroll interne) et recalcule le pli.
+  // Auto-agrandit la textarea pour qu'elle épouse le contenu (pas de scroll interne).
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-mesurer à chaque changement de contenu
   useLayoutEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
     ta.style.height = `${ta.scrollHeight}px`;
-
-    const cs = getComputedStyle(ta);
-    const lh = Number.parseFloat(cs.lineHeight) || Number.parseFloat(cs.fontSize) * 1.4;
-    const pt = Number.parseFloat(cs.paddingTop) || 0;
-    const pb = Number.parseFloat(cs.paddingBottom) || 0;
-    const textHeight = ta.scrollHeight - pt - pb;
-    setFoldTop(textHeight > 3 * lh + 1 ? pt + 3 * lh : null);
   }, [content]);
 
   return (
@@ -91,7 +83,7 @@ export function PostComposer({
         </div>
       </div>
 
-      <div className="relative px-3 pb-2">
+      <div className="px-3 pb-2">
         <textarea
           ref={taRef}
           value={content}
@@ -102,19 +94,6 @@ export function PostComposer({
           spellCheck
           className="block w-full resize-none whitespace-pre-wrap border-0 bg-transparent p-0 text-neutral-900 text-sm leading-snug outline-none placeholder:text-neutral-400 disabled:opacity-60"
         />
-        {foldTop !== null ? (
-          <div
-            className="pointer-events-none absolute right-3 left-3 flex items-center"
-            style={{ top: foldTop }}
-            title="Au-delà, LinkedIn masque le texte derrière « voir plus »"
-          >
-            <span className="flex-1 border-neutral-200 border-t border-dashed" />
-            <span className="rounded-full bg-white px-2 py-0.5 font-medium text-[10px] text-neutral-400 uppercase leading-none tracking-wider ring-1 ring-neutral-200">
-              ··· voir plus
-            </span>
-            <span className="flex-1 border-neutral-200 border-t border-dashed" />
-          </div>
-        ) : null}
       </div>
 
       <PostVisual postId={postId} mediaInfo={mediaInfo} onAddVisual={onAddVisual} />
