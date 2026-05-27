@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'vitest';
 import {
   buildMonthGrid,
+  type CalendarPublication,
   calendarDate,
   nextMonth,
   parseMonthParam,
   prevMonth,
 } from '@/lib/calendar/month-grid';
-import type { Publication } from '@/lib/db/schema';
 
-function pub(over: Partial<Publication>): Publication {
+function pub(over: Partial<CalendarPublication>): CalendarPublication {
   return {
     id: 'p1',
     userId: 'u',
@@ -31,8 +31,9 @@ function pub(over: Partial<Publication>): Publication {
     lastError: null,
     createdAt: new Date('2026-05-01T00:00:00Z'),
     updatedAt: new Date('2026-05-01T00:00:00Z'),
+    thumbnailUrl: null,
     ...over,
-  } as Publication;
+  } as CalendarPublication;
 }
 
 describe('calendarDate', () => {
@@ -82,13 +83,20 @@ describe('buildMonthGrid', () => {
     expect(may1).toBeDefined();
   });
 
-  test('place un item planifié au bon jour', () => {
+  test('place un item planifié au bon jour avec excerpt + miniature', () => {
     const grid = buildMonthGrid(2026, 5, [
-      pub({ status: 'scheduled', scheduledFor: new Date('2026-05-10T09:00:00Z'), postId: 'pA' }),
+      pub({
+        status: 'scheduled',
+        scheduledFor: new Date('2026-05-10T09:00:00Z'),
+        postId: 'pA',
+        contentSnapshot: 'Première ligne\nDeuxième ligne\nTroisième ligne',
+        thumbnailUrl: 'https://img/thumb.png',
+      }),
     ]);
     const day10 = grid.flat().find((d) => d.inMonth && d.date.getDate() === 10);
     expect(day10?.items).toHaveLength(1);
     expect(day10?.items[0]?.postId).toBe('pA');
-    expect(day10?.items[0]?.title).toBe('Mon titre');
+    expect(day10?.items[0]?.excerpt).toBe('Première ligne\nDeuxième ligne');
+    expect(day10?.items[0]?.thumbnailUrl).toBe('https://img/thumb.png');
   });
 });

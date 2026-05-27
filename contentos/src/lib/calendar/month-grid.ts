@@ -3,10 +3,12 @@ import type { Publication } from '@/lib/db/schema';
 export type CalendarItem = {
   publicationId: string;
   postId: string;
-  title: string;
+  excerpt: string;
+  thumbnailUrl: string | null;
   status: string;
 };
 export type CalendarDay = { date: Date; inMonth: boolean; items: CalendarItem[] };
+export type CalendarPublication = Publication & { thumbnailUrl: string | null };
 
 const SCHEDULED = new Set(['scheduled', 'queued', 'publishing']);
 
@@ -16,9 +18,14 @@ export function calendarDate(pub: Publication): Date | null {
   return null;
 }
 
-function title(snapshot: string): string {
-  const firstLine = snapshot.split('\n')[0] ?? '';
-  return firstLine.length > 40 ? `${firstLine.slice(0, 39)}…` : firstLine;
+// Deux premières lignes non vides du contenu (le rendu calendrier les borne en CSS).
+function excerpt(snapshot: string): string {
+  return snapshot
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .slice(0, 2)
+    .join('\n');
 }
 
 export function prevMonth(year: number, month: number): { year: number; month: number } {
@@ -49,7 +56,11 @@ function dayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-export function buildMonthGrid(year: number, month: number, pubs: Publication[]): CalendarDay[][] {
+export function buildMonthGrid(
+  year: number,
+  month: number,
+  pubs: CalendarPublication[],
+): CalendarDay[][] {
   const byDay = new Map<string, CalendarItem[]>();
   for (const p of pubs) {
     const d = calendarDate(p);
@@ -58,7 +69,8 @@ export function buildMonthGrid(year: number, month: number, pubs: Publication[])
     const item: CalendarItem = {
       publicationId: p.id,
       postId: p.postId,
-      title: title(p.contentSnapshot),
+      excerpt: excerpt(p.contentSnapshot),
+      thumbnailUrl: p.thumbnailUrl,
       status: p.status,
     };
     const arr = byDay.get(key);
@@ -76,7 +88,9 @@ export function buildMonthGrid(year: number, month: number, pubs: Publication[])
     const week: CalendarDay[] = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(cursor);
-      const items = (byDay.get(dayKey(date)) ?? []).sort((a, b) => a.title.localeCompare(b.title));
+      const items = (byDay.get(dayKey(date)) ?? []).sort((a, b) =>
+        a.excerpt.localeCompare(b.excerpt),
+      );
       week.push({ date, inMonth: date.getMonth() === month - 1, items });
       cursor.setDate(cursor.getDate() + 1);
     }
