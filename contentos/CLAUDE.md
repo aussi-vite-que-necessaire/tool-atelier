@@ -31,20 +31,20 @@ dans `drizzle/`, appliquées au déploiement par le one-shot `scripts/migrate.mj
 → prod lab `https://contentos.lab.avqn.ch`. Jamais de commit direct sur `main`. La CI de
 l'atelier build l'image (`docker build`) → GHCR → pull sur `lab` ; le serveur ne build jamais.
 
-L'URL publique du MCP/OAuth doit correspondre à l'origine déployée (`APP_URL` /
-`BETTER_AUTH_URL` = l'URL preview ou prod lab effective).
+L'URL publique du MCP/OAuth correspond à l'origine déployée : la plateforme injecte `APP_URL` =
+l'URL preview ou prod lab effective (cf. `deploy.sh`), et `better-auth` s'aligne dessus.
 
 ## Données & secrets
 
 `lab.json` déclare `"db": true` + `"redis": true` → la plateforme crée la base
 `<projet>_<env>` (Postgres central) + provisionne Redis et injecte **`DATABASE_URL`** et
-**`REDIS_URL`** automatiquement. Le one-shot `migrate` applique `drizzle/` avant le démarrage.
+**`REDIS_URL`** automatiquement. Elle injecte aussi **`APP_URL`** = l'origine déployée (preview
+ou prod lab), par environnement. Le one-shot `migrate` applique `drizzle/` avant le démarrage.
 
 Les autres secrets viennent de **`/opt/lab/secrets/contentos.env`** sur `lab` (posé hors
 dépôt, jamais committé) :
 
 - `BETTER_AUTH_SECRET` — signature des sessions (≥ 16 car. ; `openssl rand -base64 32`)
-- `APP_URL` — URL publique (MCP, liens) = l'origine déployée
 - `RESEND_API_KEY`, `RESEND_FROM` — email (sinon OTP loggé côté serveur)
 - `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_API_VERSION` — publication LinkedIn
 - `TOKEN_ENCRYPTION_KEY` — chiffrement des tokens LinkedIn stockés
