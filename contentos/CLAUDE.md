@@ -51,7 +51,8 @@ dépôt, jamais committé) :
 - `TOKEN_ENCRYPTION_KEY` — chiffrement des tokens LinkedIn stockés
 - `MEDIA_ENGINE_URL`, `MEDIA_ENGINE_SERVICE_KEY` — moteur média (render PNG + génération image)
 - `QUEUE_PREFIX` — défaut `contentos` (à laisser tel quel sauf collision)
-- stubs CI/dev : `CONTENT_OS_AI_STUB`, `CONTENT_OS_MEDIA_STUB`, `CONTENT_OS_LINKEDIN_STUB`
+- `CONTENT_OS_MEDIA_STUB=0` en lab → vrai moteur média (Image Studio, URLs publiques). Les stubs
+  (`=1`/`fs`, comme `CONTENT_OS_AI_STUB` / `CONTENT_OS_LINKEDIN_STUB`) sont réservés à la CI/dev.
 
 Faire évoluer le schéma : éditer `src/lib/db/schema.ts` / `src/lib/db/schemas/`,
 `npm run db:generate`, committer — le prochain déploiement applique la migration.
