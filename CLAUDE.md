@@ -32,6 +32,7 @@ créer / lister / infra / autre) et oriente. Skills disponibles :
 - **Sessions locales isolées.** Une session = un worktree sous `.claude/worktrees/` + sa branche `work/<projet>-<libellé>`. Lance-les avec **`lab new <projet> <libellé>`** (ou le menu double-clic `Atelier.command`). Jamais deux sessions d'écriture dans le checkout principal : il sert de base de lancement et pour la plomberie de l'atelier (CLAUDE.md, skills, scripts), pas pour le dev projet.
 - **Prod sérialisée.** La prod ne change que par l'entonnoir PR → merge → CI (un seul déploiement à la fois). Pas de mutation de prod en SSH ad-hoc ; la lecture/diagnostic SSH reste libre.
 - **Frameworks invités.** superpowers et consorts accélèrent mais défèrent à ce contrat : leurs skills de worktree utilisent `lab`, leur « fin de branche » défère à `/lab-deploy` + PR.
+- **Amorçage cloud.** Une fois : connecter GitHub (`/web-setup`). L'environnement cloud lance `scripts/cloud-setup.sh` au démarrage (installe les deps par projet). Les secrets cloud sont des variables d'environnement (visibles) : on n'y met que ce qu'une session de build doit voir.
 
 ## Déployer (build sur la CI uniquement)
 
