@@ -13,7 +13,6 @@ import {
   DEFAULT_VOICE_NAME,
   DEFAULT_WRITING_TEMPLATE,
 } from './user-defaults';
-import { seedVisualTemplates } from './visual-templates';
 
 const SAMPLE_IDEAS = [
   {
@@ -53,7 +52,6 @@ async function seedUserDefaultsIdempotent(userId: string): Promise<void> {
 
 export async function seedDev(userId: string): Promise<void> {
   await seedUserDefaultsIdempotent(userId);
-  await seedVisualTemplates(userId);
 
   const byText = new Map((await listIdeas(userId)).map((i) => [i.idea, i]));
   for (const s of SAMPLE_IDEAS) {

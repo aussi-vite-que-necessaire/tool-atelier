@@ -5,7 +5,6 @@ import { SettingsPage } from '@/components/settings/settings-page';
 import { auth } from '@/lib/auth/server';
 import { getSettings } from '@/lib/db/repositories/settings';
 import { BrandForm } from './brand-form';
-import { LogoField } from './logo-field';
 
 export default async function BrandPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -22,15 +21,12 @@ export default async function BrandPage() {
       description="Ces valeurs servent de défauts aux templates et signatures."
     >
       <SettingsCard>
-        <div className="space-y-6">
-          <BrandForm
-            initialValues={{
-              brandName: settings.brandName,
-              brandSignature: settings.brandSignature,
-            }}
-          />
-          <LogoField initialLogoUrl={settings.brandLogoUrl} />
-        </div>
+        <BrandForm
+          initialValues={{
+            brandName: settings.brandName,
+            brandSignature: settings.brandSignature,
+          }}
+        />
       </SettingsCard>
     </SettingsPage>
   );

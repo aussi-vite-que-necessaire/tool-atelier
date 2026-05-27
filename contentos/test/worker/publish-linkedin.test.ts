@@ -8,7 +8,6 @@ import {
 } from '@/lib/db/repositories/publications';
 import { upsertSocialAccount } from '@/lib/db/repositories/social-accounts';
 import { LinkedInPublishError } from '@/lib/linkedin/publish';
-import { getMediaEngine } from '@/lib/media-engine';
 import type { PublishLinkedinJob } from '@/lib/queue/client';
 import { makeProcessPublishLinkedin } from '@/worker/queues/publish-linkedin';
 import { createTestUser } from '../integration/helpers/seed';
@@ -50,29 +49,35 @@ describe('processPublishLinkedin', () => {
     expect(pub?.externalUrl).toBe('https://x/1');
   });
 
-  test('carrousel → publish reçoit un média document ; vidéo → video', async () => {
-    // Upload un objet dans l'engine pour avoir une URL valide comme snapshotKey.
-    const engineObj = await getMediaEngine().upload({
-      bytes: Buffer.from('BYTES'),
-      contentType: 'application/pdf',
-    });
+  test('pdf → publish reçoit un média document ; vidéo → video ; image → image', async () => {
+    // Le worker récupère les octets du média via fetch(snapshotKeys[0]) : on stub
+    // fetch pour renvoyer des octets quels que soient l'URL.
+    // mockImplementation (et non mockResolvedValue) : une Response neuve par appel,
+    // sinon le corps déjà lu au 1er fetch casse les appels suivants.
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
 
-    for (const [kind, expected] of [
-      ['carousel', 'document'],
-      ['video', 'video'],
-      ['image', 'image'],
-    ] as const) {
-      const { userId, pubId } = await makePub(`pub-${kind}`);
-      // snapshotKeys[0] = URL engine (memory://...) pointant vers un objet réel du stub
-      await updatePublication(userId, pubId, {
-        mediaKind: kind,
-        snapshotKeys: [engineObj.url],
-      });
-      const publish = vi.fn().mockResolvedValue({ id: 'urn:li:share:1', url: 'https://x/1' });
-      const process = makeProcessPublishLinkedin({ publish, decrypt });
-      await process(job(pubId, userId));
-      const arg = publish.mock.calls[0]![0] as { media: { kind: string } | null };
-      expect(arg.media?.kind).toBe(expected);
+    try {
+      for (const [kind, expected] of [
+        ['pdf', 'document'],
+        ['video', 'video'],
+        ['image', 'image'],
+      ] as const) {
+        const { userId, pubId } = await makePub(`pub-${kind}`);
+        // snapshotKeys[0] = URL publique du média
+        await updatePublication(userId, pubId, {
+          mediaKind: kind,
+          snapshotKeys: ['https://cdn.example/asset'],
+        });
+        const publish = vi.fn().mockResolvedValue({ id: 'urn:li:share:1', url: 'https://x/1' });
+        const process = makeProcessPublishLinkedin({ publish, decrypt });
+        await process(job(pubId, userId));
+        const arg = publish.mock.calls[0]![0] as { media: { kind: string } | null };
+        expect(arg.media?.kind).toBe(expected);
+      }
+    } finally {
+      fetchSpy.mockRestore();
     }
   });
 

@@ -1,6 +1,5 @@
-import { index, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 import { user } from './auth';
-import { media } from './media';
 
 export const postStatus = pgEnum('post_status', ['draft', 'validated']);
 
@@ -12,17 +11,18 @@ export const posts = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     title: text('title').notNull(),
-    mediaId: text('media_id').references(() => media.id, { onDelete: 'set null' }),
+    mediaId: text('media_id'),
+    mediaUrl: text('media_url'),
+    mediaKind: text('media_kind'),
+    mediaWidth: integer('media_width'),
+    mediaHeight: integer('media_height'),
     content: text('content').notNull(),
     status: postStatus('status').notNull().default('draft'),
     generationJobId: text('generation_job_id').unique(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
-  (table) => [
-    index('posts_user_id_idx').on(table.userId),
-    index('posts_media_id_idx').on(table.mediaId),
-  ],
+  (table) => [index('posts_user_id_idx').on(table.userId)],
 );
 
 export type Post = typeof posts.$inferSelect;

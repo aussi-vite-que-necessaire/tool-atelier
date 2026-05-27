@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it, test } from 'vitest';
 import { db } from '@/lib/db/client';
-import { createMedia } from '@/lib/db/repositories/media';
 import {
   createPost,
   deletePost,
@@ -9,6 +8,7 @@ import {
   getPostByGenerationJobId,
   listPosts,
   listPostsWithMedia,
+  setPostMedia,
   updatePost,
 } from '@/lib/db/repositories/posts';
 import { user } from '@/lib/db/schema';
@@ -92,16 +92,16 @@ describe('listPosts ordering + generationJobId', () => {
 });
 
 describe('listPostsWithMedia', () => {
-  it('joint le visuel : url = assetKey + kind quand mediaId présent', async () => {
+  it('expose le visuel : url = media_url + kind quand le post porte un média', async () => {
     const userId = await createTestUser('lpwm-media');
-    const m = await createMedia(userId, {
-      kind: 'image',
-      assetKey: 'https://engine.test/img-abc.png',
-      previewKey: 'prev-abc',
-      width: 1200,
-      height: 1200,
+    const post = await createPost(userId, { title: 'T', content: 'c' });
+    await setPostMedia(userId, post.id, {
+      media_id: 'media-abc',
+      media_url: 'https://engine.test/img-abc.png',
+      media_kind: 'image',
+      media_width: 1200,
+      media_height: 1200,
     });
-    const post = await createPost(userId, { title: 'T', content: 'c', mediaId: m.id });
 
     const rows = await listPostsWithMedia(userId);
     const found = rows.find((r) => r.id === post.id);

@@ -18,7 +18,6 @@
     "db:test:prepare": "tsx scripts/db-test-prepare.ts",
     "db:seed": "tsx --env-file-if-exists=.env scripts/seed-dev.ts",
     "seed:redaction": "tsx --env-file-if-exists=.env scripts/seed-redaction.ts",
-    "seed:visual": "tsx --env-file-if-exists=.env scripts/seed-visual.ts",
     "test": "vitest run",
     "test:unit": "vitest run --project=unit",
     "test:integration": "vitest run --project=integration",

@@ -16,64 +16,6 @@ export const dummyQueue = new Queue<{ message: string }, { ok: true; echoed: str
   prefix: queuePrefix,
 });
 
-export type RenderVisualJob = {
-  userId: string;
-  templateId: string;
-  vars: Record<string, unknown>;
-  mode: 'preview' | 'final';
-  // En mode final : 'post' attache au post (postId requis), 'gallery' crée une
-  // image standalone réutilisable (ex. slide de carrousel). Défaut : 'post'.
-  destination?: 'post' | 'gallery';
-  postId?: string;
-  jobKey: string;
-};
-
-export type RenderVisualResult =
-  | { mode: 'preview'; previewKey: string; url: string; width: number; height: number }
-  | { mode: 'final'; mediaId: string; url: string; width: number; height: number };
-
-export const renderVisualQueue = new Queue<RenderVisualJob, RenderVisualResult>('render-visual', {
-  connection: redisConnection,
-  prefix: queuePrefix,
-  defaultJobOptions: {
-    attempts: 2,
-    backoff: { type: 'fixed', delay: 5_000 },
-    removeOnComplete: { age: 24 * 3600, count: 1000 },
-    removeOnFail: { age: 7 * 24 * 3600 },
-  },
-});
-
-export type GenerateImageJob = {
-  userId: string;
-  prompt: string;
-  aspectRatio?: string;
-  styleId?: string;
-  sourceMediaId?: string;
-  postId?: string;
-  jobKey: string;
-};
-
-export type GenerateImageResult = {
-  mediaId: string;
-  url: string;
-  width: number;
-  height: number;
-};
-
-export const generateImageQueue = new Queue<GenerateImageJob, GenerateImageResult>(
-  'generate-image',
-  {
-    connection: redisConnection,
-    prefix: queuePrefix,
-    defaultJobOptions: {
-      attempts: 2,
-      backoff: { type: 'fixed', delay: 5_000 },
-      removeOnComplete: { age: 24 * 3600, count: 1000 },
-      removeOnFail: { age: 7 * 24 * 3600 },
-    },
-  },
-);
-
 export type PublishLinkedinJob = { publicationId: string; userId: string };
 export type PublishLinkedinResult = { externalUrl: string };
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { db } from '@/lib/db/client';
-import { createPost } from '@/lib/db/repositories/posts';
+import { createPost, setPostMedia } from '@/lib/db/repositories/posts';
 import {
   createPublication,
   deletePublication,
@@ -10,7 +10,7 @@ import {
   listPublicationsForCalendar,
   updatePublication,
 } from '@/lib/db/repositories/publications';
-import { media, user } from '@/lib/db/schema';
+import { user } from '@/lib/db/schema';
 
 async function makeUser(id: string, email: string) {
   await db.insert(user).values({ id, email });
@@ -109,23 +109,17 @@ describe('publications repository', () => {
 
   test('listPublicationsForCalendar joint la miniature image du post', async () => {
     await makeUser('ucal', 'ucal@test.com');
-    // Post avec image (le media doit exister avant : FK posts.media_id)
-    const [m] = await db
-      .insert(media)
-      .values({
-        id: 'mediacal1',
-        userId: 'ucal',
-        kind: 'image',
-        assetKey: 'https://img/asset.png',
-        previewKey: 'prev',
-        width: 100,
-        height: 100,
-      })
-      .returning();
+    // Post avec image : le média est stocké directement sur le post (media_url).
     const withImg = await createPost('ucal', {
       title: 'Avec image',
       content: 'c',
-      mediaId: m!.id,
+    });
+    await setPostMedia('ucal', withImg.id, {
+      media_id: 'mediacal1',
+      media_url: 'https://img/asset.png',
+      media_kind: 'image',
+      media_width: 100,
+      media_height: 100,
     });
     await createPublication('ucal', {
       postId: withImg.id,

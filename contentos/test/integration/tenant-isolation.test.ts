@@ -8,19 +8,6 @@ import {
   updateIdea,
 } from '@/lib/db/repositories/ideas';
 import {
-  createImageAsset,
-  deleteImageAsset,
-  getImageAsset,
-  updateImageAsset,
-} from '@/lib/db/repositories/image-assets';
-import {
-  createMedia,
-  deleteMedia,
-  getMedia,
-  listMedia,
-  updateMedia,
-} from '@/lib/db/repositories/media';
-import {
   createPost,
   deletePost,
   getPost,
@@ -35,27 +22,6 @@ import {
   updatePublication,
 } from '@/lib/db/repositories/publications';
 import { getSettings, updateSettings, upsertSettings } from '@/lib/db/repositories/settings';
-import {
-  createStyleGuide,
-  deleteStyleGuide,
-  getStyleGuide,
-  listStyleGuides,
-  updateStyleGuide,
-} from '@/lib/db/repositories/style-guides';
-import {
-  createVisualStyle,
-  deleteVisualStyle,
-  getVisualStyle,
-  listVisualStyles,
-  updateVisualStyle,
-} from '@/lib/db/repositories/visual-styles';
-import {
-  createVisualTemplate,
-  deleteVisualTemplate,
-  getVisualTemplate,
-  listVisualTemplates,
-  updateVisualTemplate,
-} from '@/lib/db/repositories/visual-templates';
 import {
   createVoice,
   deleteVoice,
@@ -172,50 +138,6 @@ runTenantIsolationSuite('publications', {
   delete: deletePublication,
 });
 
-runTenantIsolationSuite('media', {
-  seed: (uid) =>
-    createMedia(uid, {
-      kind: 'image',
-      assetKey: 'k',
-      previewKey: 'k',
-      width: 1080,
-      height: 1080,
-    }),
-  rowId: (r) => r.id,
-  reload: (uid, id) => getMedia(uid, id),
-  updatePatch: { assetKey: 'hacked' },
-  updateAssertions: (row) => {
-    expect(row.assetKey).toBe('k');
-  },
-  get: getMedia,
-  list: listMedia,
-  update: updateMedia,
-  delete: deleteMedia,
-});
-
-runTenantIsolationSuite('image_assets', {
-  seed: async (uid) => {
-    const m = await createMedia(uid, {
-      kind: 'image',
-      assetKey: 'k',
-      previewKey: 'k',
-      width: 1080,
-      height: 1080,
-    });
-    return createImageAsset(uid, { mediaId: m.id, source: 'standalone', aiBrief: 'original' });
-  },
-  rowId: (r) => r.mediaId,
-  reload: (uid, id) => getImageAsset(uid, id),
-  updatePatch: { aiBrief: 'hacked' },
-  updateAssertions: (row) => {
-    expect(row.aiBrief).toBe('original');
-  },
-  get: getImageAsset,
-  update: updateImageAsset,
-  delete: deleteImageAsset,
-  // pas de list pour image_assets
-});
-
 runTenantIsolationSuite('writing_templates', {
   seed: (uid) =>
     createWritingTemplate(uid, {
@@ -234,67 +156,6 @@ runTenantIsolationSuite('writing_templates', {
   list: listWritingTemplates,
   update: updateWritingTemplate,
   delete: deleteWritingTemplate,
-});
-
-runTenantIsolationSuite('visual_templates', {
-  seed: (uid) =>
-    createVisualTemplate(uid, {
-      slug: 'sample',
-      label: 'Sample',
-      platform: 'linkedin',
-      width: 1080,
-      height: 1080,
-      bodyHtml: '<h1>{{title}}</h1>',
-      css: '',
-      variablesSchema: [{ name: 'title', label: 'T', type: 'string', max: 50 }],
-      sampleVars: { title: 'Hi' },
-    }) as Promise<{ id: string; label: string }>,
-  rowId: (r) => r.id,
-  reload: (uid, id) => getVisualTemplate(uid, id),
-  updatePatch: { label: 'hacked' },
-  updateAssertions: (row) => {
-    expect(row.label).toBe('Sample');
-  },
-  get: getVisualTemplate,
-  list: listVisualTemplates,
-  update: updateVisualTemplate,
-  delete: deleteVisualTemplate,
-});
-
-runTenantIsolationSuite('visual_styles', {
-  seed: (uid) =>
-    createVisualStyle(uid, {
-      name: 'Sample',
-      prompt: 'rendu sample',
-    }) as Promise<{ id: string; name: string }>,
-  rowId: (r) => r.id,
-  reload: (uid, id) => getVisualStyle(uid, id),
-  updatePatch: { name: 'hacked' },
-  updateAssertions: (row) => {
-    expect(row.name).toBe('Sample');
-  },
-  get: getVisualStyle,
-  list: listVisualStyles,
-  update: updateVisualStyle,
-  delete: deleteVisualStyle,
-});
-
-runTenantIsolationSuite('style_guides', {
-  seed: (uid) =>
-    createStyleGuide(uid, {
-      name: 'Sample',
-      content: '# test',
-    }) as Promise<{ id: string; name: string }>,
-  rowId: (r) => r.id,
-  reload: (uid, id) => getStyleGuide(uid, id),
-  updatePatch: { name: 'hacked' },
-  updateAssertions: (row) => {
-    expect(row.name).toBe('Sample');
-  },
-  get: getStyleGuide,
-  list: listStyleGuides,
-  update: updateStyleGuide,
-  delete: deleteStyleGuide,
 });
 
 describe('posts: isolation par user', () => {

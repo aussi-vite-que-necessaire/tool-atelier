@@ -1,25 +1,7 @@
-import {
-  dummyQueue,
-  type GenerateImageJob,
-  generateImageQueue,
-  type PublishLinkedinJob,
-  publishLinkedinQueue,
-  type RenderVisualJob,
-  renderVisualQueue,
-} from './client';
+import { dummyQueue, type PublishLinkedinJob, publishLinkedinQueue } from './client';
 
 export async function enqueueDummy(message: string): Promise<string> {
   const job = await dummyQueue.add('echo', { message });
-  return job.id!;
-}
-
-export async function enqueueRenderVisual(payload: RenderVisualJob): Promise<string> {
-  const job = await renderVisualQueue.add('render', payload, { jobId: payload.jobKey });
-  return job.id!;
-}
-
-export async function enqueueGenerateImage(payload: GenerateImageJob): Promise<string> {
-  const job = await generateImageQueue.add('generate', payload, { jobId: payload.jobKey });
   return job.id!;
 }
 

@@ -1,18 +1,16 @@
 'use client';
 
 import { ImagePlus, RefreshCw, Trash2 } from 'lucide-react';
-import { useLayoutEffect, useRef, useState, useTransition } from 'react';
+import { useLayoutEffect, useRef, useTransition } from 'react';
 import { toast } from 'sonner';
 import type { LinkedInAuthor } from '@/lib/linkedin/identity';
 import { cn } from '@/lib/utils';
-import { detachMediaAction } from '../media-actions';
+import type { MediaKind } from '@/lib/media-catalog/kind';
+import { detachMediaAction } from '../media-picker-actions';
 
 export type MediaInfo = {
-  kind: 'image' | 'carousel' | 'video';
+  kind: MediaKind;
   url: string;
-  width: number;
-  height: number;
-  slideUrls?: string[];
 };
 
 type Props = {
@@ -121,7 +119,6 @@ function PostVisual({
   onAddVisual: () => void;
 }) {
   const [detaching, startDetach] = useTransition();
-  const [slide, setSlide] = useState(0);
 
   if (!mediaInfo) {
     return (
@@ -137,7 +134,6 @@ function PostVisual({
     );
   }
 
-  const slides = mediaInfo.slideUrls ?? [];
   const detach = () => {
     startDetach(async () => {
       const r = await detachMediaAction(postId);
@@ -151,9 +147,9 @@ function PostVisual({
       {mediaInfo.kind === 'video' ? (
         // biome-ignore lint/a11y/useMediaCaption: vidéo utilisateur sans piste
         <video src={mediaInfo.url} controls className="block max-h-[28rem] w-full object-contain" />
-      ) : mediaInfo.kind === 'carousel' && slides.length === 0 ? (
+      ) : mediaInfo.kind === 'pdf' ? (
         <div className="space-y-1 py-10 text-center">
-          <p className="font-medium text-sm">PDF carrousel</p>
+          <p className="font-medium text-sm">📄 PDF</p>
           <a
             href={mediaInfo.url}
             target="_blank"
@@ -162,36 +158,6 @@ function PostVisual({
           >
             Ouvrir le PDF
           </a>
-        </div>
-      ) : mediaInfo.kind === 'carousel' ? (
-        <div className="relative">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={slides[slide]}
-            alt={`Slide ${slide + 1}`}
-            className="block max-h-[28rem] w-full object-contain"
-          />
-          <div className="absolute inset-x-0 bottom-2 flex items-center justify-center gap-2">
-            <button
-              type="button"
-              disabled={slide === 0}
-              onClick={() => setSlide((s) => Math.max(0, s - 1))}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white disabled:opacity-30"
-            >
-              ‹
-            </button>
-            <span className="rounded-full bg-black/55 px-2 py-0.5 text-white text-xs">
-              {slide + 1} / {slides.length}
-            </span>
-            <button
-              type="button"
-              disabled={slide >= slides.length - 1}
-              onClick={() => setSlide((s) => Math.min(slides.length - 1, s + 1))}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white disabled:opacity-30"
-            >
-              ›
-            </button>
-          </div>
         </div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element

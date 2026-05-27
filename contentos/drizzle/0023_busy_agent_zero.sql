@@ -1,0 +1,1 @@
+ALTER TABLE "publications" ALTER COLUMN "media_kind" SET DATA TYPE text USING "media_kind"::text;

@@ -38,10 +38,10 @@ export function PostCard({ post }: Props) {
             </span>
           </div>
         )}
-        {post.thumbnail?.kind === 'carousel' ? (
+        {post.thumbnail?.kind === 'pdf' ? (
           <span className="absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
             <Layers className="h-3 w-3" />
-            Carrousel
+            PDF
           </span>
         ) : null}
         <Badge

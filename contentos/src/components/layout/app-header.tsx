@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarDays, FileText, Image as ImageIcon, Lightbulb } from 'lucide-react';
+import { CalendarDays, FileText, Lightbulb } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 const APP_LINKS = [
   { href: '/ideas', label: 'Idées', icon: Lightbulb },
   { href: '/posts', label: 'Posts', icon: FileText },
-  { href: '/media', label: 'Galerie', icon: ImageIcon },
   { href: '/calendar', label: 'Calendrier', icon: CalendarDays },
 ];
 

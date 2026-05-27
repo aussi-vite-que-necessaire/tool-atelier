@@ -1,4 +1,3 @@
-import { getMedia } from '@/lib/db/repositories/media';
 import { getPost } from '@/lib/db/repositories/posts';
 import {
   createPublication,
@@ -17,15 +16,10 @@ async function buildSnapshot(userId: string, postId: string) {
   const account = await getSocialAccount(userId, 'linkedin');
   if (!account) throw new Error('Aucun compte LinkedIn connecté');
 
-  let snapshotKeys: string[] | null = null;
-  let mediaKind: 'image' | 'carousel' | 'video' | null = null;
-  if (post.mediaId) {
-    const media = await getMedia(userId, post.mediaId);
-    if (media) {
-      snapshotKeys = [media.assetKey];
-      mediaKind = media.kind;
-    }
-  }
+  // Lit directement les colonnes media du post (découplé du service media)
+  const snapshotKeys: string[] | null = post.mediaUrl ? [post.mediaUrl] : null;
+  const mediaKind: string | null = post.mediaKind ?? null;
+
   return { post, account, snapshotKeys, mediaKind };
 }
 
