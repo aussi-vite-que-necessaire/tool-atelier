@@ -7,9 +7,10 @@ import {
   getLatestPublicationForPost,
   getPublication,
   listPublications,
+  listPublicationsForCalendar,
   updatePublication,
 } from '@/lib/db/repositories/publications';
-import { user } from '@/lib/db/schema';
+import { media, user } from '@/lib/db/schema';
 
 async function makeUser(id: string, email: string) {
   await db.insert(user).values({ id, email });
@@ -104,5 +105,44 @@ describe('publications repository', () => {
     });
     const latest = await getLatestPublicationForPost('u1', postId);
     expect(latest?.status).toBe('queued');
+  });
+
+  test('listPublicationsForCalendar joint la miniature image du post', async () => {
+    await makeUser('ucal', 'ucal@test.com');
+    // Post avec image (le media doit exister avant : FK posts.media_id)
+    const [m] = await db
+      .insert(media)
+      .values({
+        id: 'mediacal1',
+        userId: 'ucal',
+        kind: 'image',
+        assetKey: 'https://img/asset.png',
+        previewKey: 'prev',
+        width: 100,
+        height: 100,
+      })
+      .returning();
+    const withImg = await createPost('ucal', {
+      title: 'Avec image',
+      content: 'c',
+      mediaId: m!.id,
+    });
+    await createPublication('ucal', {
+      postId: withImg.id,
+      contentSnapshot: 'snap',
+      platform: 'linkedin',
+    });
+    // Post sans image
+    const noImg = await createPost('ucal', { title: 'Sans image', content: 'c' });
+    await createPublication('ucal', {
+      postId: noImg.id,
+      contentSnapshot: 'snap2',
+      platform: 'linkedin',
+    });
+
+    const rows = await listPublicationsForCalendar('ucal');
+    const byPost = new Map(rows.map((r) => [r.postId, r]));
+    expect(byPost.get(withImg.id)?.thumbnailUrl).toBe('https://img/asset.png');
+    expect(byPost.get(noImg.id)?.thumbnailUrl).toBeNull();
   });
 });
