@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session) redirect('/signin');
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen overflow-x-clip bg-neutral-50">
       <AppHeader name={session.user.name ?? null} email={session.user.email} />
       <main className="max-w-6xl mx-auto p-6">{children}</main>
       <Toaster />
