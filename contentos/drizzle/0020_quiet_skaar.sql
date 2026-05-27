@@ -1,0 +1,2 @@
+ALTER TABLE "visual_templates" ADD COLUMN "style_guide_id" text;--> statement-breakpoint
+ALTER TABLE "visual_templates" ADD CONSTRAINT "visual_templates_style_guide_id_style_guides_id_fk" FOREIGN KEY ("style_guide_id") REFERENCES "public"."style_guides"("id") ON DELETE set null ON UPDATE no action;

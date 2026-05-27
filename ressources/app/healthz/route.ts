@@ -1,0 +1,9 @@
+// Sonde de santé : GET /healthz → 200 "ok". Ne touche pas la base.
+export const dynamic = "force-static"
+
+export function GET() {
+  return new Response("ok", {
+    status: 200,
+    headers: { "content-type": "text/plain" },
+  })
+}

@@ -68,6 +68,12 @@ if [ "$EMAIL" = "true" ]; then
   fi
 fi
 
+# Secrets applicatifs par projet (mécanisme intérimaire : fichier root-only sur lab ;
+# backend robuste à venir). Injectés dans l'env partagé (web + worker + migrate one-shot).
+if [ -f "/opt/lab/secrets/${PROJ}.env" ]; then
+  cat "/opt/lab/secrets/${PROJ}.env" >> "$APPDIR/.env"
+fi
+
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab
 if [ -n "$MIGRATE" ]; then
   docker run --rm --network lab --env-file "$APPDIR/.env" "$IMAGE" sh -c "$MIGRATE"
