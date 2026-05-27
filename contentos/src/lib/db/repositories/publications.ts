@@ -2,7 +2,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import type { CalendarPublication } from '@/lib/calendar/month-grid';
 import { db } from '../client';
 import { createId } from '../id';
-import { media, type Publication, posts, publications } from '../schema';
+import { type Publication, posts, publications } from '../schema';
 
 type PublicationStatus = 'scheduled' | 'queued' | 'publishing' | 'published' | 'failed';
 
@@ -73,18 +73,18 @@ export async function listPublications(userId: string): Promise<Publication[]> {
   return db.select().from(publications).where(eq(publications.userId, userId));
 }
 
-// Publications de l'utilisateur enrichies de la miniature image du post lié (URL publique
-// assetKey si le post a une image, null sinon). Utilisé par la vue calendrier.
+// Publications de l'utilisateur enrichies de la miniature image du post lié (URL
+// publique du média si le post porte une image, null sinon). Utilisé par la vue
+// calendrier.
 export async function listPublicationsForCalendar(userId: string): Promise<CalendarPublication[]> {
   const rows = await db
-    .select({ publication: publications, assetKey: media.assetKey, kind: media.kind })
+    .select({ publication: publications, mediaUrl: posts.mediaUrl, mediaKind: posts.mediaKind })
     .from(publications)
     .leftJoin(posts, eq(publications.postId, posts.id))
-    .leftJoin(media, eq(posts.mediaId, media.id))
     .where(eq(publications.userId, userId));
   return rows.map((r) => ({
     ...r.publication,
-    thumbnailUrl: r.kind === 'image' ? r.assetKey : null,
+    thumbnailUrl: r.mediaKind === 'image' ? r.mediaUrl : null,
   }));
 }
 

@@ -1,10 +1,10 @@
 import { and, desc, eq } from 'drizzle-orm';
+import type { MediaRef } from '@/lib/media-link/resolve';
 import { db } from '../client';
 import { createId } from '../id';
-import { media, type Post, posts } from '../schema';
-import type { MediaRef } from '@/lib/media-link/resolve';
+import { type Post, posts } from '../schema';
 
-export type PostThumbnail = { url: string; kind: 'image' | 'carousel' | 'video' };
+export type PostThumbnail = { url: string; kind: string };
 export type PostWithThumbnail = Post & { thumbnail: PostThumbnail | null };
 
 export type CreatePostInput = {
@@ -53,28 +53,16 @@ export async function listPosts(userId: string): Promise<Post[]> {
 }
 
 /**
- * Comme listPosts, mais joint le visuel attaché pour la vignette du listing.
- * `thumbnail.url` est une URL publique engine affichable telle quelle :
- * assetKey pour une image, previewKey (= 1re slide) pour un carrousel. Pour une
- * vidéo, assetKey est le fichier mp4 (pas une image) : l'UI affiche un repère.
+ * Comme listPosts, en exposant le visuel attaché pour la vignette du listing.
+ * `thumbnail.url` est l'URL publique du média référencé, affichable telle
+ * quelle. Pour une vidéo, l'URL pointe le fichier mp4 (pas une image) : l'UI
+ * affiche un repère.
  */
 export async function listPostsWithMedia(userId: string): Promise<PostWithThumbnail[]> {
-  const rows = await db
-    .select({
-      post: posts,
-      mediaKind: media.kind,
-      mediaAssetKey: media.assetKey,
-      mediaPreviewKey: media.previewKey,
-    })
-    .from(posts)
-    .leftJoin(media, eq(posts.mediaId, media.id))
-    .where(eq(posts.userId, userId))
-    .orderBy(desc(posts.updatedAt));
-
-  return rows.map(({ post, mediaKind, mediaAssetKey, mediaPreviewKey }) => {
-    if (!mediaKind) return { ...post, thumbnail: null };
-    const url = mediaKind === 'carousel' ? mediaPreviewKey! : mediaAssetKey!;
-    return { ...post, thumbnail: { url, kind: mediaKind } };
+  const rows = await listPosts(userId);
+  return rows.map((post) => {
+    if (!post.mediaUrl || !post.mediaKind) return { ...post, thumbnail: null };
+    return { ...post, thumbnail: { url: post.mediaUrl, kind: post.mediaKind } };
   });
 }
 

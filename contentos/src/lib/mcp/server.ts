@@ -6,8 +6,6 @@ import { registerIdeaTools } from './tools/ideas';
 import { registerMediaTools } from './tools/media';
 import { registerPostTools } from './tools/posts';
 import { registerPublishingTools } from './tools/publishing';
-import { registerStyleGuideTools } from './tools/style-guides';
-import { registerVisualTools } from './tools/visuals';
 import { registerVoiceTools } from './tools/voices';
 
 export function registerAllTools(server: McpServer): void {
@@ -25,7 +23,5 @@ export function registerAllTools(server: McpServer): void {
   registerConfigTools(server);
   registerMediaTools(server);
   registerPublishingTools(server);
-  registerStyleGuideTools(server);
-  registerVisualTools(server);
   registerVoiceTools(server);
 }

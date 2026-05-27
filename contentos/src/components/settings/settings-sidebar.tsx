@@ -8,9 +8,6 @@ const items: { label: string; href: string }[] = [
   { label: 'Brand', href: '/settings/brand' },
   { label: 'Voix', href: '/settings/voice' },
   { label: "Templates d'écriture", href: '/settings/writing-templates' },
-  { label: 'Visual styles', href: '/settings/visual-styles' },
-  { label: 'Visual templates', href: '/settings/visual-templates' },
-  { label: 'Style guides', href: '/settings/style-guides' },
   { label: 'Connexions', href: '/settings/connections' },
 ];
 

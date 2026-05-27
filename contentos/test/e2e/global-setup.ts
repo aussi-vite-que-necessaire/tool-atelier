@@ -10,9 +10,6 @@ async function globalSetup(): Promise<() => Promise<void>> {
       ...process.env,
       E2E_TESTING: 'true',
       RESEND_API_KEY: '',
-      // Stub media-engine filesystem : URLs chargeables par le navigateur,
-      // bytes partagés entre le process web et le process worker.
-      CONTENT_OS_MEDIA_STUB: 'fs',
       // Stub LinkedIn : publishStub retourne un faux URN sans appel réseau.
       CONTENT_OS_LINKEDIN_STUB: '1',
     },
