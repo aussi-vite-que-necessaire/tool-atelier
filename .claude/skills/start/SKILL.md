@@ -11,7 +11,7 @@ Tu es dans **l'atelier** (monorepo `tool-atelier`). Accueille Manu et demande ce
 1. **Bosser sur un projet existant** → lance `/lab-list` (montre les projets + leur état), demande lequel, puis `/lab-work <projet>`.
 2. **Créer un projet** → lance `/lab-new`.
 3. **Lister les projets** → lance `/lab-list`.
-4. **Infra / plateforme** → l'infra (serveurs, DNS, secrets, Postgres/Redis, déploiement bas niveau) se pilote depuis **cockpit** (repo séparé), pas ici. Préviens Manu.
+4. **Infra / plateforme** → l'infra bas niveau (serveurs, DNS, Postgres/Redis centraux, firewall) est gérée **hors de l'atelier**, pas ici. Préviens Manu. (Les secrets applicatifs, eux, se gèrent ici avec `/lab-secret`.)
 5. **Autre** → demande en prose ce qu'il veut.
 
 **Règle transverse, toujours :** jamais de commit sur `main`. On code sur une **branche** (un push de branche déploie une **preview** `<projet>-<branche>.lab.avqn.ch`), on ouvre une **PR**, et **merger la PR déploie la prod** `<projet>.lab.avqn.ch`.

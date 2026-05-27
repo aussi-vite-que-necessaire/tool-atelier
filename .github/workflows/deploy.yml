@@ -85,6 +85,18 @@ jobs:
           else
             $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/lab.json"
           fi
+          # Secrets chiffrés (age) que le projet consomme : global + projet (déjà chiffrés).
+          # deploy.sh les déchiffre sur lab avec /opt/lab/secrets-key. sysadmin jamais copié.
+          if [ -f secrets/global.env.age ]; then
+            $SCP secrets/global.env.age "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/global.env.age"
+          else
+            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/global.env.age"
+          fi
+          if [ -f "secrets/projects/${PROJ}.env.age" ]; then
+            $SCP "secrets/projects/${PROJ}.env.age" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/${PROJ}.env.age"
+          else
+            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/${PROJ}.env.age"
+          fi
           $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGE'"
 
   teardown:

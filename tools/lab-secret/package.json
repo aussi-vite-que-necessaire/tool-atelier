@@ -1,0 +1,13 @@
+{
+  "name": "lab-secret",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Gestionnaire de secrets de l'atelier (age, pur JS)",
+  "bin": {
+    "lab-secret": "lab-secret.mjs"
+  },
+  "dependencies": {
+    "age-encryption": "0.3.0"
+  }
+}

@@ -8,7 +8,7 @@ read -r -d '' CTX <<'EOF'
   1. Bosser sur un projet existant
   2. Créer un projet
   3. Lister les projets (et leur état)
-  4. Infra / plateforme (renvoie vers cockpit)
+  4. Infra / plateforme (gérée hors de l'atelier)
   5. Autre
 Puis enchaîne avec la skill /start (qui orchestre le bon process). Règle absolue : JAMAIS de commit sur `main` — toujours une branche + PR (le hook branch-guard le rappelle). Un push de branche = preview ; merge de PR = prod.
 EOF
