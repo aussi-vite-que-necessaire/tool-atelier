@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 import { config as loadEnv } from 'dotenv';
 
 // .env.test (committé) force DATABASE_URL sur contentos_test : les E2E locaux
-// ne touchent pas la base de dev. En CI, DATABASE_URL est déjà posé.
+// ne touchent pas la base de dev. En CI, DATABASE_URL est déjà posé par le job test.
 loadEnv();
 loadEnv({ path: '.env.test', override: true });
 
