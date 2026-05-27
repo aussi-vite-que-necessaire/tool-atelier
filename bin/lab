@@ -63,6 +63,31 @@ cmd_rm() {
   echo "retiré: $name (branche conservée ; après merge : git branch -d work/$name)" >&2
 }
 
+cmd_create() {
+  local nom="${1:-}"; [ -n "$nom" ] || usage
+  local s; s="$(slug "$nom")"
+  [ -e "$ROOT/$s" ] && { echo "lab: le projet '$s' existe déjà — utilise: lab new $s <libellé>" >&2; exit 1; }
+  local branch="work/new-$s" path="$WT_DIR/new-$s"
+  [ -e "$path" ] && { echo "lab: worktree déjà présent: $path" >&2; exit 1; }
+  git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch" \
+    && { echo "lab: branche déjà prise: $branch" >&2; exit 1; }
+  git -C "$ROOT" worktree add -q -b "$branch" "$path" >/dev/null
+  echo "worktree de création prêt : $branch" >&2
+  echo "$path"
+}
+
+cmd_meta() {
+  local label="${1:-atelier}"
+  local s; s="$(slug "$label")"
+  local branch="chore/atelier-$s" path="$WT_DIR/atelier-$s"
+  [ -e "$path" ] && { echo "lab: worktree déjà présent: $path" >&2; exit 1; }
+  git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch" \
+    && { echo "lab: branche déjà prise: $branch" >&2; exit 1; }
+  git -C "$ROOT" worktree add -q -b "$branch" "$path" >/dev/null
+  echo "worktree plomberie prêt : $branch" >&2
+  echo "$path"
+}
+
 cmd_menu() {
   local projects=() d
   for d in "$ROOT"/*/; do [ -f "$d/Dockerfile" ] && projects+=("$(basename "$d")"); done
@@ -80,10 +105,12 @@ cmd_menu() {
 
 sub="${1:-menu}"; shift 2>/dev/null || true
 case "$sub" in
-  new)  cmd_new "$@" ;;
-  ls)   cmd_ls ;;
-  cd)   cmd_cd "$@" ;;
-  rm)   cmd_rm "$@" ;;
-  menu) cmd_menu ;;
-  *)    usage ;;
+  new)    cmd_new "$@" ;;
+  create) cmd_create "$@" ;;
+  meta)   cmd_meta "$@" ;;
+  ls)     cmd_ls ;;
+  cd)     cmd_cd "$@" ;;
+  rm)     cmd_rm "$@" ;;
+  menu)   cmd_menu ;;
+  *)      usage ;;
 esac
