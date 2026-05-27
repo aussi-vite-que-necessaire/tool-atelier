@@ -5,7 +5,7 @@
 #      - refus de git switch / git checkout <branche> (le footgun qui détourne la branche
 #        partagée) ;
 #      - refus d'éditer un fichier d'un dossier projet (dir top-level avec Dockerfile)
-#        → force le dev en worktree (lab new <projet> <libellé>).
+#        → force le dev en session isolée (Atelier.command, ou claude --worktree).
 # Lit le JSON du hook sur stdin. Fail-open si jq/git absents ou hors repo.
 set -uo pipefail
 
@@ -27,7 +27,7 @@ branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
 case "$cmd" in
   *"git commit"*|*"git push"*)
     if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
-      printf 'Bloqué : jamais de commit/push sur "%s" dans l'\''atelier. Crée une branche (lab new <projet> <libellé>) puis ouvre une PR.\n' "$branch" >&2
+      printf 'Bloqué : jamais de commit/push sur "%s" dans l'\''atelier. Lance une session isolée (Atelier.command, ou claude --worktree) puis ouvre une PR.\n' "$branch" >&2
       exit 2
     fi ;;
 esac
@@ -44,7 +44,7 @@ root="$(git rev-parse --show-toplevel 2>/dev/null)"
 case "$cmd" in
   *"git checkout -- "*|*"git checkout --") : ;;          # restore de fichiers → OK
   *"git switch"*|*"git checkout "*)
-    printf 'Bloqué : pas de changement de branche dans le checkout principal partagé (d'\''autres sessions le partagent). Crée ton worktree : lab new <projet> <libellé>.\n' >&2
+    printf 'Bloqué : pas de changement de branche dans le checkout principal partagé (d'\''autres sessions le partagent). Lance ta session isolée : Atelier.command (ou claude --worktree).\n' >&2
     exit 2 ;;
 esac
 
@@ -53,7 +53,7 @@ if { [ "$tool" = "Write" ] || [ "$tool" = "Edit" ]; } && [ -n "$file" ] && [ -n 
   rel="${file#"$root"/}"
   top="${rel%%/*}"
   if [ "$top" != "$rel" ] && [ -f "$root/$top/Dockerfile" ]; then
-    printf 'Bloqué : pas de dev projet (%s/) dans le checkout principal partagé. Lance ta session en worktree : lab new %s <libellé>.\n' "$top" "$top" >&2
+    printf 'Bloqué : pas de dev projet (%s/) dans le checkout principal partagé. Lance ta session isolée : Atelier.command (ou claude --worktree).\n' "$top" >&2
     exit 2
   fi
 fi

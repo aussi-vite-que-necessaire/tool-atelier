@@ -58,7 +58,10 @@ Le nom de branche auto (`worktree-<nom>`) sert tel quel à la preview au push
   > oriente-moi vers la bonne skill. Ne choisis aucune tâche toi-même, attends ma réponse. »
 - La session est créée sur claude.ai, sur sa propre branche, et est **interactive** : on la
   pilote depuis **claude.ai/code** ou l'app mobile (le terminal local dépêche puis rend la
-  main). On peut la rapatrier en local avec `claude --teleport <id>`.
+  main).
+- **Détection de support** : `--remote` n'est pas présent dans toutes les versions du CLI.
+  Le lanceur teste sa présence (`claude --help`) ; s'il est absent, il **n'essaie pas** et
+  ouvre `claude.ai/code` (entrée cloud du web) avec un message clair — pas d'échec silencieux.
 - Prérequis (déjà documentés) : connexion GitHub (`/web-setup`), compte claude.ai,
   abonnement. La CI/`scripts/cloud-setup.sh` installe les deps au démarrage.
 
@@ -140,6 +143,9 @@ Décrire l'état cible (instantané, pas d'historique) :
 
 ## Risques / incertitudes
 
+- **Disponibilité de `--remote`** : absent du CLI installé (vérifié sur 2.1.152, qui n'a que
+  `--remote-control`). Le lanceur détecte et retombe sur `claude.ai/code` — le mode cloud du
+  lanceur ne devient « direct » que sur une version du CLI qui expose `--remote`.
 - **Rendu interactif en cloud** : `claude --remote "/start..."` est attendu fonctionnel
   (les sessions cloud sont interactives), mais le rendu d'`AskUserQuestion` en cloud n'est
   pas formellement vérifié. Mitigation : `/start` retombe sur une question en prose.

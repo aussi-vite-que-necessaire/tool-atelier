@@ -16,8 +16,12 @@ MW="$TMP/mw"; git -C "$MAIN" worktree add -q "$MW" chore/atelier-x
 
 run() { ( cd "$1" && "$HOOK" ); }   # le hook lit son cwd
 
+# Checkout principal : oriente vers le lanceur.
 run "$MAIN" | grep -q "checkout principal" || fail "checkout principal non détecté"
-run "$HW"   | grep -q "hello"              || fail "scope projet hello non détecté"
-run "$MW"   | grep -q "plomberie"          || fail "scope plomberie non détecté"
+run "$MAIN" | grep -q "Atelier.command"    || fail "checkout principal n'oriente pas vers Atelier.command"
+# Tout worktree lié : session isolée qui oriente vers /start (aucune détection de projet).
+run "$HW"   | grep -q "/start"             || fail "worktree (projet) n'oriente pas vers /start"
+run "$HW"   | grep -q "isolée"             || fail "worktree (projet) pas annoncé comme session isolée"
+run "$MW"   | grep -q "/start"             || fail "worktree (plomberie) n'oriente pas vers /start"
 
 echo "OK session-start.test.sh"

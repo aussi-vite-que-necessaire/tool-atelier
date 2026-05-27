@@ -5,11 +5,18 @@ Monorepo incubateur des projets de Manu, **pilotable par agents**. **Un dossier 
 
 ## Au démarrage : qu'est-ce qu'on fait ?
 
-L'entrée de l'atelier est le launcher **`lab`** (ou double-clic **`Atelier.command`**) : il
-demande quoi faire et prépare le bon contexte (worktree isolé) avant de lancer `claude`. Si tu
-ouvres `claude` brut dans le checkout principal, lance **`/start`** (routeur de secours). Skills disponibles :
+L'entrée de l'atelier est le lanceur **`Atelier.command`** (double-clic macOS, ou exécuté au
+terminal). Il ne fait qu'une chose : **sandboxer le dev**. Il pose une seule question — **local
+ou cloud** — et ouvre la session isolée correspondante :
 
-- **`/start`** — routeur de secours (dans claude).
+- **local** → worktree isolé sur ta machine (`claude --worktree`).
+- **cloud** → session sur claude.ai (`claude --remote` si le CLI le supporte, sinon le
+  lanceur ouvre `claude.ai/code`), pilotée au navigateur ou sur mobile.
+
+Le lanceur ne décide d'aucune tâche : **ce qu'on fait dans la session, c'est `/start` qui le
+décide**, à l'intérieur (local comme cloud). Skills disponibles :
+
+- **`/start`** — entrée de session : demande quoi faire et oriente.
 - **`/lab-list`** — liste les projets + leur état (régénère `PROJECTS.md`).
 - **`/lab-new`** — crée un projet depuis un starter (`static`/`api`/`flagship`) ou vierge.
 - **`/lab-work <projet>`** — focalise la session sur un projet (branche dédiée).
@@ -22,7 +29,7 @@ ouvres `claude` brut dans le checkout principal, lance **`/start`** (routeur de 
 - **Jamais de commit sur `main`.** On code sur une **branche**, on ouvre une **PR**.
 - **Push de branche → preview** : `https://<projet>-<branche>.lab.avqn.ch` (détruite à la suppression de la branche).
 - **Merge de PR → prod** : `https://<projet>.lab.avqn.ch`.
-- **Une session = un worktree isolé + une branche.** Voir « Collaboration multi-agents ». Le hook `branch-guard` bloque les commits/push sur `main` et le dev projet dans le checkout principal partagé.
+- **Une session = un worktree isolé + une branche.** Le lanceur s'appuie sur le worktree natif de Claude Code (`claude --worktree`) ; voir « Collaboration multi-agents ». Le hook `branch-guard` bloque les commits/push sur `main` et le dev projet dans le checkout principal partagé.
 
 ## Collaboration multi-agents
 
@@ -30,9 +37,9 @@ ouvres `claude` brut dans le checkout principal, lance **`/start`** (routeur de 
 
 - **Construire = cloud.** Chaque tâche autonome tourne en session cloud (isolée, sa branche, sa preview, sa PR). Le deploy est CI-piloté (`git push`), donc une session cloud n'a pas besoin de SSH. On n'y met ni la clé SSH du lab ni `LAB_SECRETS_KEY`.
 - **Opérer = local de confiance.** Logs, diagnostic (`/lab-ssh`), secrets (`/lab-secret`), dev hands-on : sur ta machine, qui détient les clés.
-- **Sessions locales isolées.** Une session = un worktree sous `.claude/worktrees/` + sa branche `work/<projet>-<libellé>`. Lance-les avec **`lab new <projet> <libellé>`** (ou le menu double-clic `Atelier.command`). Jamais deux sessions d'écriture dans le checkout principal : il sert de base de lancement et pour la plomberie de l'atelier (CLAUDE.md, skills, scripts), pas pour le dev projet.
+- **Sessions locales isolées.** Une session = un worktree sous `.claude/worktrees/` + sa branche, ouverte par **`Atelier.command`** (mode local) ou directement `claude --worktree` (worktree auto-nommé, auto-nettoyé s'il n'a rien produit). Jamais deux sessions d'écriture dans le checkout principal : il sert de base de lancement et pour la plomberie de l'atelier (CLAUDE.md, skills, scripts), pas pour le dev projet.
 - **Prod sérialisée.** La prod ne change que par l'entonnoir PR → merge → CI (un seul déploiement à la fois). Pas de mutation de prod en SSH ad-hoc ; la lecture/diagnostic SSH reste libre.
-- **Frameworks invités.** superpowers et consorts accélèrent mais défèrent à ce contrat : leurs skills de worktree utilisent `lab`, leur « fin de branche » défère à `/lab-deploy` + PR.
+- **Frameworks invités.** superpowers et consorts accélèrent mais défèrent à ce contrat : leurs skills de worktree utilisent le worktree natif (`claude --worktree`), leur « fin de branche » défère à `/lab-deploy` + PR.
 - **Amorçage cloud.** Une fois : connecter GitHub (`/web-setup`). L'environnement cloud lance `scripts/cloud-setup.sh` au démarrage (installe les deps par projet). Les secrets cloud sont des variables d'environnement (visibles) : on n'y met que ce qu'une session de build doit voir.
 
 ## Déployer (build sur la CI uniquement)

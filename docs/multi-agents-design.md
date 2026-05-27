@@ -38,35 +38,34 @@ CI-piloté : `git push` suffit, l'agent n'a pas besoin de SSH pour livrer.
 - **Cloud** : chaque tâche = une session cloud isolée + sa branche → zéro collision de
   code ni de runtime entre agents, par construction.
 - **Local** : chaque session = un worktree git isolé + sa branche. Le harness le fait
-  nativement (sessions d'arrière-plan / vue agents, chacune dans son worktree). Le lanceur
-  de l'atelier ajoute le vernis : nommage `work/<projet>-<libellé>`, garde-fou, ergonomie.
+  nativement (`claude --worktree` ; sessions d'arrière-plan / vue agents, chacune dans son
+  worktree). Le lanceur de l'atelier choisit local/cloud et défère au worktree natif ; le
+  garde-fou protège le checkout principal.
 - **Règle dure** : jamais deux sessions d'écriture dans le **checkout principal**. Le
   checkout principal est une **base** d'où l'on lance des sessions et d'où l'on touche la
   plomberie de l'atelier (CLAUDE.md, skills, scripts) — jamais un lieu de dev de projet.
 
-## Le lanceur local — `lab`
+## Le lanceur — `Atelier.command`
 
-Un point d'entrée unique, à la fois menu CLI et commande, **double-cliquable** (un
-`Atelier.command` dans le repo) et **relocalisable** (se localise via son propre chemin et
-`git rev-parse --show-toplevel` ; aucun chemin en dur, survit à un déplacement du dossier).
+Un point d'entrée unique, **double-cliquable** (`Atelier.command` à la racine) et
+**relocalisable** (se localise via son propre chemin ; survit à un déplacement du dossier).
+Il ne fait qu'une chose : **sandboxer le dev**. Il pose une seule question — **local ou
+cloud** — et ouvre la session isolée correspondante :
 
-| Commande | Effet |
+| Mode | Effet |
 |---|---|
-| `lab new <projet> [libellé]` | Crée la branche `work/<projet>-<libellé>` + le worktree, dépose le terminal dedans, lance la session |
-| `lab ls` | Liste les worktrees/sessions et leur branche, propre/sale |
-| `lab cd <nom>` | Revient dans un worktree existant |
-| `lab rm <nom>` | Retire un worktree (refuse si sale ou si une session y tourne) |
+| `local` | `claude --worktree` — worktree isolé natif sous `.claude/worktrees/`, branche auto-nommée, auto-nettoyé s'il n'a rien produit |
+| `cloud` | session sur claude.ai (`claude --remote "<amorçage>"` si le CLI le supporte, sinon ouvre `claude.ai/code`), pilotée au navigateur/mobile |
 
-Le déplacement du terminal dans le worktree exige une **fonction shell** (un processus ne
-peut pas `cd` son parent), sourcée une fois (`source <repo>/bin/lab-shell.sh`). La logique
-(validation, `git worktree add`, nommage) vit dans `bin/lab` ; la fonction shell n'est
-qu'un fin wrapper qui capture le chemin créé et y `cd`. Le lanceur s'appuie sur
-l'isolation worktree native du harness plutôt que de la réimplémenter.
+Le lanceur ne décide d'aucune tâche : tout le « quoi faire » se décide dans la session via
+`/start`. Pour le cloud, l'amorçage ne fait que déclencher `/start` (aucune tâche pré-choisie).
 
-Worktrees sous `.claude/worktrees/<nom>/`, dans le repo (emplacement déjà utilisé par le
-harness). `.claude/worktrees/` est dans `.gitignore` : les worktrees (copies du monorepo)
-ne polluent ni `git status` ni les commits ; le reste de `.claude/` reste versionné.
-`lab ls` et `scripts/cartography.sh` excluent `.claude/worktrees/`.
+L'isolation worktree s'appuie entièrement sur le worktree natif de Claude Code (`claude
+--worktree`), sans plomberie maison. Worktrees sous `.claude/worktrees/<nom>/`, dans
+`.gitignore` : les copies du monorepo ne polluent ni `git status` ni les commits ; le reste
+de `.claude/` reste versionné. La gestion des worktrees restants se fait avec git natif
+(`git worktree list` / `git worktree remove`). `scripts/cartography.sh` exclut
+`.claude/worktrees/`.
 
 ## Le garde-fou — hook
 
@@ -78,9 +77,10 @@ git rev-parse --git-dir  ==  git rev-parse --git-common-dir   → checkout princ
 ```
 
 Dans le checkout principal, il **refuse** de muter du code projet, `git switch`,
-`git commit`/`git add` de code projet, avec le message « crée d'abord ton worktree :
-`lab new <projet>` ». Zone d'exemption : lecture, `lab-*`, et l'édition des métas de
-l'atelier (`CLAUDE.md`, `.claude/`, `docs/`, `bin/`, `scripts/`). C'est l'extension du
+`git commit`/`git add` de code projet, avec le message « lance d'abord ta session isolée :
+`Atelier.command` (ou `claude --worktree`) ». Zone d'exemption : lecture, `lab-*`, et
+l'édition des métas de l'atelier (`CLAUDE.md`, `.claude/`, `docs/`, `bin/`, `scripts/`).
+C'est l'extension du
 `branch-guard` actuel (qui bloque déjà commit/push sur `main`). Les worktrees liés et les
 sessions cloud passent sans friction.
 
@@ -125,8 +125,9 @@ Brancher un autre framework demain ne demande que de lui faire lire le même `CL
 
 - `CLAUDE.md` : section « Collaboration multi-agents » (étoile polaire, le découpage
   construire/opérer, le contrat, la cohabitation des invités).
-- `bin/lab` (+ `bin/lab-shell.sh`) : lanceur local relocalisable et double-cliquable
-  (`Atelier.command`), appuyé sur l'isolation worktree native.
+- `Atelier.command` : lanceur double-cliquable et relocalisable, une seule question
+  (local/cloud), appuyé sur le worktree natif de Claude Code (`claude --worktree` /
+  `claude --remote`).
 - `.gitignore` : ajout de `.claude/worktrees/`.
 - Hook `PreToolUse` garde-fou + zone d'exemption (extension de `branch-guard`).
 - Script de setup d'environnement cloud + doc `/web-setup`.
@@ -141,4 +142,4 @@ l'isolation totale), aucune nouvelle dépendance.
 - Conteneur local par session (YAGNI tant que cloud et Dev Containers existent).
 - Ne jamais supprimer un worktree sans vérifier qu'aucune session n'y travaille : ceux
   présents sous `.claude/worktrees/` et `/private/tmp/` peuvent être des agents actifs.
-  `lab rm` refuse un worktree sale ou occupé.
+  `claude --worktree` ne nettoie automatiquement que les worktrees sans changement.
