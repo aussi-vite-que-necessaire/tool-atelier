@@ -9,7 +9,6 @@ export async function aggregatePdf(imageIds: string[]): Promise<MediaRecord> {
   if (imageIds.length === 0) throw new Error("Au moins une image requise");
 
   const images: PdfImage[] = [];
-  let size: { width: number; height: number } | undefined;
 
   for (const id of imageIds) {
     const rec = await getMediaRecord(id);
@@ -20,10 +19,11 @@ export async function aggregatePdf(imageIds: string[]): Promise<MediaRecord> {
     const got = await getImageBytes(rec.r2_key);
     if (!got) throw new Error(`Octets absents pour ${id}`);
     images.push({ bytes: Buffer.from(got.bytes), type: got.contentType });
-    if (!size && rec.width && rec.height) size = { width: rec.width, height: rec.height };
   }
 
-  const pdf = await buildPdf(images, size);
+  // Pas de taille forcée : chaque page épouse les dimensions de son image (pas
+  // d'étirement si les images diffèrent). buildPdf déduit la taille par image.
+  const pdf = await buildPdf(images);
 
   return store({
     bytes: new Uint8Array(pdf),

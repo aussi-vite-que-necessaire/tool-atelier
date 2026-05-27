@@ -199,9 +199,9 @@ export function registerAllTools(server: McpServer): void {
           .optional()
           .describe("Filtre par tags : toutes les tags fournies doivent être présentes (intersection)."),
         source: z
-          .enum(["gemini_generate", "gemini_edit", "html_render", "upload"])
+          .enum(["gemini_generate", "gemini_edit", "html_render", "template_render", "upload", "pdf_aggregate"])
           .optional()
-          .describe("Filtre par origine : gemini_generate, gemini_edit, html_render ou upload."),
+          .describe("Filtre par origine : gemini_generate, gemini_edit, html_render, template_render, upload ou pdf_aggregate."),
         limit: z
           .number()
           .int()
