@@ -92,6 +92,11 @@ if [ -f /opt/lab/secrets-key ]; then
   [ -f "$APPDIR/${PROJ}.env.age" ]         && age -d -i /opt/lab/secrets-key "$APPDIR/${PROJ}.env.age"         >> "$APPDIR/.env"
 fi
 
+# Origine publique du déploiement : primitive générique connue de la plateforme seule
+# (elle attribue le host). Écrite APRÈS les secrets pour être autoritative — en --env-file
+# la dernière occurrence d'une clé gagne, donc un secret périmé ne peut pas la masquer.
+printf 'APP_URL=https://%s\n' "$HOST" >> "$APPDIR/.env"
+
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab
 if [ -n "$MIGRATE" ]; then
   docker run --rm --network lab --env-file "$APPDIR/.env" "$IMAGE" sh -c "$MIGRATE"
