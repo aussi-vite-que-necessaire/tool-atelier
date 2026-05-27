@@ -52,9 +52,11 @@ describe('processPublishLinkedin', () => {
   test('pdf → publish reçoit un média document ; vidéo → video ; image → image', async () => {
     // Le worker récupère les octets du média via fetch(snapshotKeys[0]) : on stub
     // fetch pour renvoyer des octets quels que soient l'URL.
+    // mockImplementation (et non mockResolvedValue) : une Response neuve par appel,
+    // sinon le corps déjà lu au 1er fetch casse les appels suivants.
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+      .mockImplementation(async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
 
     try {
       for (const [kind, expected] of [
