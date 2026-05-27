@@ -28,7 +28,7 @@ export function AppHeader({ name, email }: { name: string | null; email: string 
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-semibold hover:opacity-70">
-            content-os
+            Contentos
           </Link>
           <nav aria-label="Navigation principale" className="flex items-center gap-1">
             {APP_LINKS.map((link) => {

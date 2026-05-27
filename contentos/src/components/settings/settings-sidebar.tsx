@@ -19,7 +19,7 @@ export function SettingsSidebar({ email }: { email: string }) {
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 px-3 py-4">
       <Link href="/" className="px-3 pb-4 text-lg font-semibold">
-        content-os
+        Contentos
       </Link>
       <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
         Réglages

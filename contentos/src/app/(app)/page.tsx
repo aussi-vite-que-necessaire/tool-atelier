@@ -1,22 +1,64 @@
+import { CalendarDays, Lightbulb, PenSquare } from 'lucide-react';
 import { headers } from 'next/headers';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { auth } from '@/lib/auth/server';
+import { listPosts } from '@/lib/db/repositories/posts';
+import { listPublicationsForCalendar } from '@/lib/db/repositories/publications';
+import { buildDashboard } from '@/lib/home/dashboard';
+import { getAuthorIdentity } from '@/lib/linkedin/identity';
+import { DashboardStats } from './_components/dashboard-stats';
+import { LastPublished } from './_components/last-published';
+import { UpcomingPublications } from './_components/upcoming-publications';
+
+const QUICK_ACTIONS = [
+  { href: '/posts', label: 'Créer un post', icon: PenSquare, variant: 'default' as const },
+  { href: '/calendar', label: 'Calendrier', icon: CalendarDays, variant: 'outline' as const },
+  { href: '/ideas', label: 'Idées', icon: Lightbulb, variant: 'outline' as const },
+];
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  const displayName = session?.user.name?.trim() || session?.user.email || 'inconnu';
+  if (!session) return null;
+  const userId = session.user.id;
+  const firstName = (session.user.name?.trim() || session.user.email || '').split(/\s+/)[0];
+
+  const [posts, pubs, author] = await Promise.all([
+    listPosts(userId),
+    listPublicationsForCalendar(userId),
+    getAuthorIdentity(userId),
+  ]);
+  const { counts, upcoming, lastPublished } = buildDashboard(pubs);
+  const drafts = posts.filter((p) => p.status === 'draft').length;
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Bienvenue, {displayName}</h2>
-      <p className="text-neutral-600">
-        Ton instance content-os est prête. Les fonctionnalités arriveront dans les prochains
-        sprints.
-      </p>
-      <Button nativeButton={false} render={<Link href="/settings/brand" />}>
-        Ouvrir les réglages
-      </Button>
+    <div className="space-y-8">
+      <header className="space-y-1">
+        <h1 className="text-3xl font-bold tracking-tight">Bonjour, {firstName}</h1>
+        <p className="text-muted-foreground">
+          Voici l’état de ton contenu — ce qui arrive et ce qui vient de partir.
+        </p>
+      </header>
+
+      <div className="flex flex-wrap gap-2">
+        {QUICK_ACTIONS.map((action) => (
+          <Link
+            key={action.href}
+            href={action.href}
+            className={buttonVariants({ variant: action.variant, size: 'lg' })}
+          >
+            <action.icon className="size-4" />
+            {action.label}
+          </Link>
+        ))}
+      </div>
+
+      <DashboardStats drafts={drafts} scheduled={counts.scheduled} published={counts.published} />
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        <UpcomingPublications items={upcoming} />
+        <LastPublished publication={lastPublished} author={author} />
+      </div>
     </div>
   );
 }
