@@ -63,27 +63,68 @@ cmd_rm() {
   echo "retiré: $name (branche conservée ; après merge : git branch -d work/$name)" >&2
 }
 
+cmd_create() {
+  local nom="${1:-}"; [ -n "$nom" ] || usage
+  local s; s="$(slug "$nom")"
+  [ -e "$ROOT/$s" ] && { echo "lab: le projet '$s' existe déjà — utilise: lab new $s <libellé>" >&2; exit 1; }
+  local branch="work/new-$s" path="$WT_DIR/new-$s"
+  [ -e "$path" ] && { echo "lab: worktree déjà présent: $path" >&2; exit 1; }
+  git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch" \
+    && { echo "lab: branche déjà prise: $branch" >&2; exit 1; }
+  git -C "$ROOT" worktree add -q -b "$branch" "$path" >/dev/null
+  echo "worktree de création prêt : $branch" >&2
+  echo "$path"
+}
+
+cmd_meta() {
+  local label="${1:-atelier}"
+  local s; s="$(slug "$label")"
+  local branch="chore/atelier-$s" path="$WT_DIR/atelier-$s"
+  [ -e "$path" ] && { echo "lab: worktree déjà présent: $path" >&2; exit 1; }
+  git -C "$ROOT" show-ref --verify --quiet "refs/heads/$branch" \
+    && { echo "lab: branche déjà prise: $branch" >&2; exit 1; }
+  git -C "$ROOT" worktree add -q -b "$branch" "$path" >/dev/null
+  echo "worktree plomberie prêt : $branch" >&2
+  echo "$path"
+}
+
 cmd_menu() {
-  local projects=() d
-  for d in "$ROOT"/*/; do [ -f "$d/Dockerfile" ] && projects+=("$(basename "$d")"); done
-  [ "${#projects[@]}" -gt 0 ] || { echo "aucun projet dans l'atelier" >&2; exit 1; }
-  echo "Projets de l'atelier :" >&2
-  local i=1 p
-  for p in "${projects[@]}"; do printf '  %d) %s\n' "$i" "$p" >&2; i=$((i+1)); done
-  printf 'Projet (numéro) ? ' >&2; read -r choice
-  local proj="${projects[$((choice-1))]:-}"
-  [ -n "$proj" ] || { echo "choix invalide" >&2; exit 1; }
-  printf 'Libellé (ex: apercu-linkedin) ? ' >&2; read -r label
-  local path; path="$(cmd_new "$proj" "${label:-session}")"
-  cd "$path" && exec claude
+  echo "Atelier — qu'est-ce qu'on fait ?" >&2
+  echo "  1) Bosser sur un projet" >&2
+  echo "  2) Créer un projet" >&2
+  echo "  3) Plomberie de l'atelier (CLAUDE.md, skills, lab, hooks)" >&2
+  echo "  4) Lister les projets" >&2
+  echo "  5) Infra / plateforme" >&2
+  echo "  6) Autre" >&2
+  printf 'Choix ? ' >&2; read -r c
+  local path
+  case "$c" in
+    1) local projects=() d; for d in "$ROOT"/*/; do [ -f "$d/Dockerfile" ] && projects+=("$(basename "$d")"); done
+       [ "${#projects[@]}" -gt 0 ] || { echo "aucun projet" >&2; exit 1; }
+       local i=1 p; for p in "${projects[@]}"; do printf '  %d) %s\n' "$i" "$p" >&2; i=$((i+1)); done
+       printf 'Projet (numéro) ? ' >&2; read -r pc; local proj="${projects[$((pc-1))]:-}"
+       [ -n "$proj" ] || { echo "choix invalide" >&2; exit 1; }
+       printf 'Libellé ? ' >&2; read -r label
+       path="$(cmd_new "$proj" "${label:-session}")"; cd "$path" && exec claude ;;
+    2) printf 'Nom du nouveau projet ? ' >&2; read -r nom
+       path="$(cmd_create "$nom")"; cd "$path" && exec claude "Crée le projet $nom dans l'atelier : lance /lab-new $nom." ;;
+    3) printf 'Libellé de la tâche (plomberie) ? ' >&2; read -r label
+       path="$(cmd_meta "$label")"; cd "$path" && exec claude ;;
+    4) exec claude "Liste les projets de l'atelier : lance /lab-list." ;;
+    5) exec claude "Parlons infra / plateforme de l'atelier." ;;
+    6) exec claude ;;
+    *) echo "choix invalide" >&2; exit 1 ;;
+  esac
 }
 
 sub="${1:-menu}"; shift 2>/dev/null || true
 case "$sub" in
-  new)  cmd_new "$@" ;;
-  ls)   cmd_ls ;;
-  cd)   cmd_cd "$@" ;;
-  rm)   cmd_rm "$@" ;;
-  menu) cmd_menu ;;
-  *)    usage ;;
+  new)    cmd_new "$@" ;;
+  create) cmd_create "$@" ;;
+  meta)   cmd_meta "$@" ;;
+  ls)     cmd_ls ;;
+  cd)     cmd_cd "$@" ;;
+  rm)     cmd_rm "$@" ;;
+  menu)   cmd_menu ;;
+  *)      usage ;;
 esac

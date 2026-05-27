@@ -40,4 +40,17 @@ bin/lab rm hello-preview-linkedin || fail "rm a échoué sur worktree propre"
 [ -d ".claude/worktrees/hello-preview-linkedin" ] && fail "worktree non retiré"
 git show-ref --verify --quiet refs/heads/work/hello-preview-linkedin || fail "branche supprimée à tort"
 
+# create : worktree bootstrap pour un NOUVEAU projet (qui n'existe pas encore)
+out="$(bin/lab create monapp)" || fail "create a échoué"
+[ -d ".claude/worktrees/new-monapp" ] || fail "worktree de création absent"
+git show-ref --verify --quiet refs/heads/work/new-monapp || fail "branche de création absente"
+[ "$out" = "$TMP/.claude/worktrees/new-monapp" ] || fail "create : chemin inattendu: $out"
+bin/lab create hello 2>/dev/null && fail "create a accepté un projet existant"
+
+# meta : worktree de plomberie de l'atelier
+out="$(bin/lab meta routage)" || fail "meta a échoué"
+[ -d ".claude/worktrees/atelier-routage" ] || fail "worktree meta absent"
+git show-ref --verify --quiet refs/heads/chore/atelier-routage || fail "branche meta absente"
+[ "$out" = "$TMP/.claude/worktrees/atelier-routage" ] || fail "meta : chemin inattendu: $out"
+
 echo "OK lab.test.sh"
