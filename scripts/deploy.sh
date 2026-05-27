@@ -122,4 +122,9 @@ EOF
 docker exec lab-platform-caddy-1 caddy validate --config /etc/caddy/Caddyfile
 docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 
+# Hygiène disque : le pull a fait glisser le tag, l'ancienne image est devenue <none>. On retire
+# les images orphelines (dangling uniquement) — jamais une image taguée encore servie par un
+# conteneur (prod ou preview active). En échec, on n'invalide pas un déploiement réussi.
+docker image prune -f >/dev/null 2>&1 || true
+
 echo "✓ déployé : https://${HOST}  (image ${IMAGE})"
