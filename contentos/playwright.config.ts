@@ -6,10 +6,6 @@ import { config as loadEnv } from 'dotenv';
 loadEnv();
 loadEnv({ path: '.env.test', override: true });
 
-// Mode serveur externe : si E2E_BASE_URL est défini (CI contre un conteneur de
-// l'image déjà construite), Playwright ne lance pas son propre serveur.
-const externalBase = process.env.E2E_BASE_URL;
-
 export default defineConfig({
   testDir: './test/e2e',
   timeout: 60_000,
@@ -17,24 +13,20 @@ export default defineConfig({
   workers: 1,
   globalSetup: './test/e2e/global-setup.ts',
   use: {
-    baseURL: externalBase ?? 'http://localhost:3000',
+    baseURL: 'http://localhost:3000',
     trace: 'retain-on-failure',
   },
-  ...(externalBase
-    ? {}
-    : {
-        webServer: {
-          command: 'npm run start',
-          url: 'http://localhost:3000',
-          timeout: 60_000,
-          reuseExistingServer: false,
-          env: {
-            E2E_TESTING: 'true',
-            RESEND_API_KEY: '',
-            CONTENT_OS_LINKEDIN_STUB: '1',
-            CONTENT_OS_MEDIA_STUB: 'fs',
-            DATABASE_URL: process.env.DATABASE_URL!,
-          },
-        },
-      }),
+  webServer: {
+    command: 'npm run start',
+    url: 'http://localhost:3000',
+    timeout: 60_000,
+    reuseExistingServer: false,
+    env: {
+      E2E_TESTING: 'true',
+      RESEND_API_KEY: '',
+      CONTENT_OS_LINKEDIN_STUB: '1',
+      CONTENT_OS_MEDIA_STUB: 'fs',
+      DATABASE_URL: process.env.DATABASE_URL!,
+    },
+  },
 });

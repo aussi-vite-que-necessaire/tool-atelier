@@ -3,10 +3,6 @@ import { type ChildProcess, spawn } from 'node:child_process';
 let workerProcess: ChildProcess | undefined;
 
 async function globalSetup(): Promise<() => Promise<void>> {
-  // Mode serveur externe (CI contre un conteneur) : web et worker tournent déjà
-  // comme conteneurs (pilotés par le job e2e), rien à démarrer ici.
-  if (process.env.E2E_BASE_URL) return async () => {};
-
   // Le worker BullMQ n'a pas de serveur HTTP : on le démarre ici en hors-bande
   // (Playwright `webServer` requiert une URL de probe, ce qui ne matche pas).
   workerProcess = spawn('npm', ['run', 'worker'], {

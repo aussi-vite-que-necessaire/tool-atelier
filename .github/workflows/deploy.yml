@@ -51,8 +51,9 @@ jobs:
           [ -n "$e" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
           echo "env=$e" >> "$GITHUB_OUTPUT"
 
-  # Build unique de l'image (le seul `next build`), poussée sur GHCR. Cache de
-  # couches GHA → npm ci réutilisé tant que le lockfile ne bouge pas.
+  # Build de l'image (buildx + cache GHA → npm ci réutilisé tant que le lockfile
+  # ne bouge pas) et push sur GHCR. Tourne EN PARALLÈLE du job `test` : le deploy
+  # ne fait que pull cette image, il ne rebuild jamais.
   build:
     needs: detect
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
@@ -77,7 +78,8 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.project }}
           cache-to: type=gha,mode=max,scope=${{ matrix.project }}
 
-  # Tests host rapides (unit + integration + worker). Aucun build : il vit dans l'image.
+  # Gate de tests (host) : unit + integration + worker + smoke e2e. Tourne en
+  # parallèle du build ; le build host ici sert uniquement au smoke e2e.
   test:
     needs: detect
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
@@ -128,97 +130,27 @@ jobs:
           fi
       - name: Unit + integration + worker
         run: npm test --if-present
-
-  # e2e contre un conteneur de l'image déjà construite (artefact réel, pas de 2e build).
-  e2e:
-    needs: [detect, build]
-    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        project: ${{ fromJson(needs.detect.outputs.projects) }}
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: app
-          POSTGRES_PASSWORD: app
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U app" --health-interval 5s
-          --health-timeout 5s --health-retries 10
-      redis:
-        image: redis:7
-        ports: ["6379:6379"]
-        options: >-
-          --health-cmd "redis-cli ping" --health-interval 5s
-          --health-timeout 5s --health-retries 10
-    env:
-      IMAGE: ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:${{ needs.detect.outputs.env }}
-      DATABASE_URL: postgres://app:app@localhost:5432/${{ matrix.project }}_test
-      REDIS_URL: redis://localhost:6379
-      APP_URL: http://localhost:3000
-      BETTER_AUTH_SECRET: ci-placeholder-secret-ci-placeholder
-    steps:
-      - uses: actions/checkout@v4
-      - id: check
-        working-directory: ${{ matrix.project }}
-        run: |
-          if [ -f playwright.config.ts ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; echo "pas d'e2e — skip"; fi
-      - uses: actions/setup-node@v4
-        if: steps.check.outputs.run == 'true'
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: ${{ matrix.project }}/package-lock.json
-      - name: Install deps + base de test
-        if: steps.check.outputs.run == 'true'
-        working-directory: ${{ matrix.project }}
-        run: |
-          npm ci
-          npm run db:test:prepare
+      - name: Build (requis pour le smoke e2e)
+        run: npm run build --if-present
       - name: Cache navigateurs Playwright
-        if: steps.check.outputs.run == 'true'
+        if: hashFiles(format('{0}/playwright.config.ts', matrix.project)) != ''
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles(format('{0}/package-lock.json', matrix.project)) }}
-      - name: Playwright browsers
-        if: steps.check.outputs.run == 'true'
-        working-directory: ${{ matrix.project }}
-        run: npx playwright install --with-deps chromium
-      - name: Login GHCR + pull image
-        if: steps.check.outputs.run == 'true'
+      - name: Smoke e2e (si playwright configuré)
         run: |
-          printf '%s' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
-          docker pull "$IMAGE"
-      - name: Démarrer web + worker (conteneurs de l'image)
-        if: steps.check.outputs.run == 'true'
-        run: |
-          COMMON="-e DATABASE_URL=$DATABASE_URL -e REDIS_URL=$REDIS_URL -e APP_URL=$APP_URL -e BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET -e E2E_TESTING=true -e RESEND_API_KEY= -e CONTENT_OS_MEDIA_STUB=fs -e CONTENT_OS_LINKEDIN_STUB=1"
-          docker run -d --network host --name app-web -e PORT=3000 $COMMON "$IMAGE"
-          docker run -d --network host --name app-worker $COMMON "$IMAGE" node worker-runner.mjs
-          for i in $(seq 1 30); do
-            if curl -fsS http://localhost:3000/healthz >/dev/null 2>&1; then echo "web prêt"; break; fi
-            [ "$i" = 30 ] && { echo "::error::web jamais prêt"; docker logs app-web; exit 1; }
-            sleep 2
-          done
-      - name: e2e (contre le conteneur)
-        if: steps.check.outputs.run == 'true'
-        working-directory: ${{ matrix.project }}
-        env:
-          E2E_BASE_URL: http://localhost:3000
-        run: npm run test:e2e
-      - name: Logs conteneurs (si échec)
-        if: failure() && steps.check.outputs.run == 'true'
-        run: |
-          echo "=== web ==="; docker logs app-web || true
-          echo "=== worker ==="; docker logs app-worker || true
+          if [ -f playwright.config.ts ]; then
+            npx playwright install --with-deps chromium
+            npm run test:e2e
+          else
+            echo "pas d'e2e — skip"
+          fi
 
-  # Deploy = pull (l'image est déjà construite et testée). Plus aucun build ici.
+  # Deploy = pull (l'image est déjà construite par le job `build` et testée par
+  # `test`). Aucun build ici → ~45s.
   deploy:
-    needs: [detect, build, test, e2e]
+    needs: [detect, build, test]
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
     runs-on: ubuntu-latest
     strategy:
