@@ -23,14 +23,23 @@ git rev-parse --git-dir >/dev/null 2>&1 || exit 0
 
 branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
 
-# 1) Jamais de commit/push sur main/master
-case "$cmd" in
-  *"git commit"*|*"git push"*)
-    if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
-      printf 'Bloqué : jamais de commit/push sur "%s" dans l'\''atelier. Lance une session isolée (Atelier.command, ou claude --worktree) puis ouvre une PR.\n' "$branch" >&2
-      exit 2
-    fi ;;
-esac
+# 1) Sur main/master : jamais de commit, ni de push mettant à jour main. La suppression d'une
+#    branche distante (git push --delete / -d) ne touche pas main → autorisée (nettoyage des
+#    branches mergées/abandonnées depuis le checkout principal, sans contourner par l'API).
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  case "$cmd" in
+    *"git commit"*)
+      printf 'Bloqué : jamais de commit sur "%s" dans l'\''atelier. Lance une session isolée (Atelier.command, ou claude --worktree) puis ouvre une PR.\n' "$branch" >&2
+      exit 2 ;;
+    *"git push"*)
+      case "$cmd" in
+        *" --delete"*|*" -d "*) : ;;   # suppression d'une branche distante → autorisée
+        *)
+          printf 'Bloqué : jamais de push sur "%s" dans l'\''atelier. Lance une session isolée (Atelier.command, ou claude --worktree) puis ouvre une PR.\n' "$branch" >&2
+          exit 2 ;;
+      esac ;;
+  esac
+fi
 
 # Suis-je dans le checkout principal partagé (pas un worktree lié, pas un sous-module) ?
 gd="$(git rev-parse --absolute-git-dir 2>/dev/null)"

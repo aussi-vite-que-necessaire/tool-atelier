@@ -37,5 +37,11 @@ guard() {
 [ "$(guard Write "$WT" "" "$WT/hello/x.ts")" = "0" ]              || fail "write projet en worktree bloqué à tort"
 # 7) git worktree add depuis le checkout principal => autorisé
 [ "$(guard Bash "$MAIN" "git worktree add z" "")" = "0" ]         || fail "git worktree add bloqué à tort"
+# 8) git push sur main (checkout principal) => bloqué (force le flux PR)
+[ "$(guard Bash "$MAIN" "git push" "")" = "2" ]                   || fail "push sur main non bloqué"
+# 9) suppression d'une branche distante depuis main => autorisée (nettoyage)
+[ "$(guard Bash "$MAIN" "git push --delete origin feat" "")" = "0" ] || fail "push --delete bloqué à tort"
+# 10) suppression forme courte (-d) depuis main => autorisée
+[ "$(guard Bash "$MAIN" "git push -d origin feat" "")" = "0" ]    || fail "push -d bloqué à tort"
 
 echo "OK guard.test.sh"
