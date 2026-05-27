@@ -96,16 +96,17 @@ test.describe('Calendrier', () => {
 
     // La modale s'ouvre (URL interceptée) et montre le skin LinkedIn.
     await expect(page).toHaveURL(new RegExp(`/calendar/preview/${postId}`));
-    await expect(page.getByText('Ligne 1 du post de test')).toBeVisible({ timeout: 10_000 });
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Ligne 1 du post de test')).toBeVisible({ timeout: 10_000 });
 
-    // « voir plus » déplie le texte.
-    const seeMore = page.getByRole('button', { name: /voir plus/ });
+    // « voir plus » déplie le texte (la 12e ligne n'est visible qu'après dépliage).
+    const seeMore = dialog.getByRole('button', { name: /voir plus/ });
     await expect(seeMore).toBeVisible();
     await seeMore.click();
-    await expect(page.getByText('Ligne 12 du post de test')).toBeVisible();
+    await expect(dialog.getByText('Ligne 12 du post de test')).toBeVisible();
 
     // Bouton Modifier → page d'édition du post.
-    await page.getByRole('link', { name: 'Modifier' }).click();
+    await dialog.getByRole('link', { name: 'Modifier' }).click();
     await expect(page).toHaveURL(new RegExp(`/posts/${postId}`));
   });
 });
