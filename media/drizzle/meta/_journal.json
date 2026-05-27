@@ -8,6 +8,20 @@
       "when": 1779829334726,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779887271972,
+      "tag": "0001_luxuriant_human_torch",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779887670899,
+      "tag": "0002_chilly_moon_knight",
+      "breakpoints": true
     }
   ]
 }

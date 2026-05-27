@@ -38,66 +38,20 @@ Modifié hors `media/` : `scripts/deploy.sh`, `CLAUDE.md` (racine atelier).
 
 ---
 
-## Task 1 : `deploy.sh` — injecter `BROWSER_URL` sur `browser: true`
+## Task 1 : support `browser: true` dans `deploy.sh` (déjà livré — vérifier)
 
-**Files:**
-- Modify: `scripts/deploy.sh` (bloc des besoins déclarés)
-- Modify: `CLAUDE.md` (section Données — `lab.json`)
+`scripts/deploy.sh` lit `browser` dans `lab.json` et injecte `BROWSER_URL` depuis
+`LAB_BROWSER_URL` de `/opt/lab/platform/.env` (même schéma que `db`/`redis`/`email`). Le
+`CLAUDE.md` racine documente la convention. Rien à modifier.
 
-- [ ] **Step 1 : lire le bloc à modifier**
+- [ ] **Step 1 : vérifier**
 
-Dans `scripts/deploy.sh`, repérer le bloc Redis (`if [ "$REDIS" = "true" ]; then … fi`) et la lecture des besoins (`DB=…; REDIS=…; EMAIL=…`).
+Run: `grep -n 'BROWSER' scripts/deploy.sh`
+Expected: bloc `if [ "$BROWSER" = "true" ]` présent, lisant `LAB_BROWSER_URL` et écrivant `BROWSER_URL`.
 
-- [ ] **Step 2 : déclarer le besoin `browser`**
-
-Modifier la ligne d'init et la lecture `jq` :
-
-```bash
-DB=false; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""
-if [ -f "$APPDIR/lab.json" ]; then
-  DB="$(jq -r '.db // false' "$APPDIR/lab.json")"
-  REDIS="$(jq -r '.redis // false' "$APPDIR/lab.json")"
-  EMAIL="$(jq -r '.email // false' "$APPDIR/lab.json")"
-  BROWSER="$(jq -r '.browser // false' "$APPDIR/lab.json")"
-  MIGRATE="$(jq -r '.migrate // empty' "$APPDIR/lab.json")"
-  SEED="$(jq -r '.seed // empty' "$APPDIR/lab.json")"
-fi
-```
-
-- [ ] **Step 3 : injecter `BROWSER_URL`**
-
-Juste après le bloc Redis, ajouter :
-
-```bash
-# Chromium partagé (browserless central sur le réseau lab) : URL CDP injectée
-if [ "$BROWSER" = "true" ]; then
-  # /opt/lab/platform/.env porte LAB_BROWSER_URL (ex. ws://browser:3000?token=…)
-  LAB_BROWSER_URL=""
-  [ -f /opt/lab/platform/.env ] && . /opt/lab/platform/.env
-  if [ -n "${LAB_BROWSER_URL:-}" ]; then
-    printf 'BROWSER_URL=%s\n' "$LAB_BROWSER_URL" >> "$APPDIR/.env"
-  else
-    echo "⚠ browser: true mais LAB_BROWSER_URL absent de /opt/lab/platform/.env (skip) — provisionner browserless."
-  fi
-fi
-```
-
-- [ ] **Step 4 : documenter la convention**
-
-Dans `CLAUDE.md` (racine), section « Données — `lab.json` », ajouter à la phrase décrivant les clés :
-`browser: true` → `BROWSER_URL` (Chromium partagé browserless, central sur le réseau `lab`).
-
-- [ ] **Step 5 : vérifier**
-
-Run: `bash -n scripts/deploy.sh`
-Expected: aucune sortie (syntaxe OK).
-
-- [ ] **Step 6 : commit**
-
-```bash
-git add scripts/deploy.sh CLAUDE.md
-git commit -m "🤖 deploy: injecter BROWSER_URL sur browser:true (Chromium partagé)"
-```
+> Le conteneur browserless lui-même est provisionné en **Task 12 (Step 0)** : il vit dans
+> `/opt/lab/platform`, hors du dépôt atelier, exposé aux projets `browser: true` via
+> `LAB_BROWSER_URL` dans le `.env` plateforme.
 
 ---
 
@@ -735,11 +689,19 @@ import { db } from "@/db";
 import { schema } from "@/db/schema";
 import { sendEmail } from "@/lib/email";
 
+// URL publique dérivée de l'environnement de déploiement (APP_ENV injecté par deploy.sh) :
+// prod → media.lab.avqn.ch ; preview → media-<branche>.lab.avqn.ch. Indispensable pour que
+// l'OAuth/magic-link émette des URLs absolues correctes sur chaque environnement.
+const APP_ENV = process.env.APP_ENV ?? "dev";
+const baseURL =
+  process.env.BETTER_AUTH_URL ??
+  (APP_ENV === "prod" ? "https://media.lab.avqn.ch" : `https://media-${APP_ENV}.lab.avqn.ch`);
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   secret: process.env.BETTER_AUTH_SECRET,
-  baseURL: process.env.BETTER_AUTH_URL,
-  trustedOrigins: process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : [],
+  baseURL,
+  trustedOrigins: [baseURL],
   plugins: [
     magicLink({
       expiresIn: 600,
@@ -989,11 +951,19 @@ git commit -m "🤖 media: serveur MCP + 6 outils (porté), handler /api/mcp"
 
 ---
 
-## Task 12 : seed, secrets, déploiement preview, vérification
+## Task 12 : provisionnement, secrets, déploiement preview, vérification
 
 **Files:**
 - Modify: `media/scripts/seed.mjs` (no-op sûr)
 - Modify: `media/.env.example`
+
+- [ ] **Step 0 : provisionner browserless + Resend (plateforme, via SSH)**
+
+La plateforme `/opt/lab/platform` est maintenue sur le serveur (hors dépôt). Y ajouter un service
+`browser` (`ghcr.io/browserless/chromium`) sur le réseau `lab`, alias `browser`, protégé par
+`TOKEN`, **non exposé** par Caddy ; poser `LAB_BROWSER_URL=ws://browser:3000?token=<TOKEN>` (+ le
+`BROWSER_TOKEN`) et `RESEND_API_KEY` + `EMAIL_FROM=sys@avqn.ch` dans `/opt/lab/platform/.env` ;
+`docker compose -f /opt/lab/platform/docker-compose.yml up -d browser`. Vérifier `docker ps`.
 
 - [ ] **Step 1 : seed neutre**
 
@@ -1018,11 +988,19 @@ R2_PUBLIC_BASE_URL=
 
 - [ ] **Step 3 : poser les secrets (`/lab-secret`, scope `media`)**
 
-Via la skill `/lab-secret` : `BETTER_AUTH_SECRET` (aléatoire fort), `GEMINI_API_KEY`, `MEDIA_ENGINE_SERVICE_KEY` (aléatoire fort), `R2_S3_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL`. `BETTER_AUTH_URL` = `https://media.lab.avqn.ch` (prod) — fournir aussi côté preview.
+Sources : `BETTER_AUTH_SECRET` + `MEDIA_ENGINE_SERVICE_KEY` **générés** (`openssl rand -base64 32`) ;
+`R2_PUBLIC_BASE_URL` (`https://pub-fb7e62553ae24a9d9811823614c71ea6.r2.dev`) + `R2_BUCKET`
+(`image-studio`) **connus** (wrangler.toml source) ; `R2_S3_ENDPOINT` =
+`https://<CLOUDFLARE_ACCOUNT_ID>.r2.cloudflarestorage.com`, `R2_ACCESS_KEY_ID` = id du
+`CLOUDFLARE_API_TOKEN`, `R2_SECRET_ACCESS_KEY` = SHA-256 de sa valeur — **dérivés** du token
+Cloudflare partagé (récupéré via `cockpit/bin/secret-get`) ; `GEMINI_API_KEY` **fourni** (ajouté
+au coffre Bitwarden, hors-bande). `BETTER_AUTH_URL` n'est **pas** un secret : il est dérivé de
+`APP_ENV` dans `auth.ts` (prod → `https://media.lab.avqn.ch`, sinon
+`https://media-<env>.lab.avqn.ch`).
 
-- [ ] **Step 4 : prérequis plateforme**
+- [ ] **Step 4 : vérifier le prérequis plateforme**
 
-Vérifier que browserless est provisionné (`LAB_BROWSER_URL` dans `/opt/lab/platform/.env`). Sinon, le rendu HTML échouera en preview (cf. spec §5/§13).
+`LAB_BROWSER_URL` présent dans `/opt/lab/platform/.env` (posé en Step 0) et conteneur `browser` up.
 
 - [ ] **Step 5 : commit + push + preview**
 

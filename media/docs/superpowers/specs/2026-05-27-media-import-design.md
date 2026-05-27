@@ -54,15 +54,15 @@ la file d'attente et la concurrence du rendu.
 
 ## 5. Brique Chromium partagée
 
-Deux moitiés nettement séparées.
+Trois moitiés nettement séparées.
 
-**Côté plateforme (hors atelier — prérequis).** Un conteneur **browserless** (`browserless/chromium`)
-tourne sur le réseau `lab`, alias `browser`, exposant un endpoint CDP WebSocket protégé par token.
-Il n'est **jamais** exposé via Caddy (interne uniquement). Il vit dans `/opt/lab/platform`, géré
-hors de l'atelier. **Prérequis à provisionner là-bas avant que le rendu HTML fonctionne.**
+**Côté plateforme.** Un service `browser` (`ghcr.io/browserless/chromium`) tourne dans la stack
+`/opt/lab/platform`, sur le réseau `lab` (résolu par le nom `browser`), exposant un endpoint CDP
+WebSocket protégé par token. Il n'est **jamais** exposé via Caddy (interne uniquement). Son token
+et `LAB_BROWSER_URL` (`ws://browser:3000?token=…`) vivent dans `/opt/lab/platform/.env`.
 
 **Côté atelier (livrable).** `scripts/deploy.sh` lit `browser: true` dans `lab.json` et injecte
-`BROWSER_URL` (ex. `ws://browser:3000?token=…`) dans l'environnement du projet — exactement comme
+`BROWSER_URL` depuis `LAB_BROWSER_URL` dans l'environnement du projet — exactement comme
 `db`/`redis`. Convention documentée dans le `CLAUDE.md` racine et la doc `lab.json`.
 
 **Côté `media` (client).** Le rendu utilise `puppeteer-core` :
@@ -156,7 +156,7 @@ pas contentos** tout de suite : contentos continue d'appeler son `/v1` sur Cloud
 1. Déployer `media` en **preview** (branche) et valider iso-fonctionnel (MCP + `/v1`).
 2. Prérequis plateforme : browserless provisionné + support `browser: true` dans `deploy.sh`.
 3. **Merge PR → prod** `media.lab.avqn.ch`.
-4. **Ré-enregistrer le connecteur claude.ai** sur `https://media.lab.avqn.ch/mcp` (le connecteur
+4. **Ré-enregistrer le connecteur claude.ai** sur `https://media.lab.avqn.ch/api/mcp` (le connecteur
    passe à la maison ; le Worker reste joignable mais n'est plus le connecteur enregistré).
 5. **Le Worker Cloudflare `image-studio` + D1 restent en service** pour contentos. **R2 conservé** :
    les deux systèmes partagent le bucket (clés nanoid uniques → pas de collision).
@@ -192,8 +192,9 @@ de la skill `/lab-new`. **contentos et ressources ne sont pas migrés.**
 
 ## 13. Risques / points ouverts
 
-- **Prérequis browserless (hors atelier)** : le rendu HTML ne marche en preview qu'une fois le
-  conteneur partagé provisionné côté plateforme. C'est le point le plus incertain.
+- **Couplage des creds R2 au token Cloudflare partagé** : faute de capacité à émettre un token R2
+  dédié, les identifiants S3 dérivent du `CLOUDFLARE_API_TOKEN` partagé (scope R2 compte entier).
+  Si ce token tourne, l'accès R2 de `media` casse. À remplacer par un token bucket-scopé dédié.
 - **Timeouts de génération** : Gemini peut prendre 10–30 s ; vérifier que les timeouts Caddy/Next
   tolèrent les appels synchrones `/v1/generate` et `/v1/render-html`.
 - **Charge Chromium sur le serveur** : browserless intègre déjà une file d'attente de rendu. Si la
