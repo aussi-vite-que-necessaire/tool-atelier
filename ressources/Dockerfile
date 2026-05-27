@@ -14,7 +14,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ARG NEXT_PUBLIC_BETTER_AUTH_URL=https://ressources.lab.avqn.ch
+ARG NEXT_PUBLIC_BETTER_AUTH_URL=https://ressources.avqn.ch
 ENV NEXT_PUBLIC_BETTER_AUTH_URL=${NEXT_PUBLIC_BETTER_AUTH_URL}
 # Placeholders : permettent au build d'aboutir sans vrais secrets ni base.
 ENV DATABASE_URL=postgres://placeholder:placeholder@localhost:5432/placeholder
