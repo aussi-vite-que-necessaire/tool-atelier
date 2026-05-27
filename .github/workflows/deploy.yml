@@ -38,8 +38,71 @@ jobs:
           echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "projets changés: $projects"
 
-  deploy:
+  test:
     needs: detect
+    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: ${{ fromJson(needs.detect.outputs.projects) }}
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    env:
+      # Variables requises par src/lib/env.ts (vitest, build, serveur e2e).
+      # .env.test (committé) force DATABASE_URL sur la base de test localhost.
+      APP_URL: http://localhost:3000
+      REDIS_URL: redis://localhost:6379
+      BETTER_AUTH_SECRET: ci-placeholder-secret-ci-placeholder
+      DATABASE_URL: postgres://app:app@localhost:5432/contentos_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+      - name: Install deps
+        run: npm ci
+      - name: Prepare test DB (si lab.json déclare db)
+        run: |
+          if [ -f lab.json ] && [ "$(jq -r '.db // false' lab.json)" = "true" ]; then
+            npm run db:test:prepare
+          else
+            echo "pas de db déclarée — skip"
+          fi
+      - name: Unit + integration + worker
+        run: npm test --if-present
+      - name: Build (requis pour le smoke e2e)
+        run: npm run build --if-present
+      - name: Smoke e2e (si playwright configuré)
+        run: |
+          if [ -f playwright.config.ts ]; then
+            npx playwright install --with-deps chromium
+            npm run test:e2e
+          else
+            echo "pas d'e2e — skip"
+          fi
+
+  deploy:
+    needs: [detect, test]
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
     runs-on: ubuntu-latest
     strategy:
