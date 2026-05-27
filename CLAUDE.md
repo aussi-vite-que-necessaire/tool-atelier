@@ -36,10 +36,11 @@ ajoutée plus tard si le besoin se présente.
 ## Données — `lab.json`
 
 Un projet déclare ses besoins dans **`lab.json`** :
-`{ "description": "...", "db": true, "redis": false, "email": false, "migrate": "npm run migrate", "seed": "npm run seed" }`
+`{ "description": "...", "db": true, "redis": false, "email": false, "browser": false, "migrate": "npm run migrate", "seed": "npm run seed" }`
 Au déploiement, `deploy.sh` crée la base `<projet>_<env>` (Postgres central), injecte
 `DATABASE_URL` (auto), lance `migrate` puis `seed` (hors prod) ; `redis: true` → `REDIS_URL` +
-`REDIS_PREFIX` ; `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` (Resend, clé de plateforme).
+`REDIS_PREFIX` ; `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` (Resend, clé de plateforme) ;
+`browser: true` → `BROWSER_URL` (Chromium partagé browserless, central sur le réseau `lab`).
 Preview = base vide + seed, droppée au teardown. Exemples : `hello/` (rien), `counter/` (db).
 
 ## Secrets applicatifs — `/lab-secret`

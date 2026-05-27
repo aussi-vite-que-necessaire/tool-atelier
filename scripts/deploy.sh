@@ -33,11 +33,12 @@ APP_ENV=$ENV
 EOF
 
 # Besoins déclarés par le projet (lab.json absent => projet sans base ni redis)
-DB=false; REDIS=false; EMAIL=false; MIGRATE=""; SEED=""
+DB=false; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""
 if [ -f "$APPDIR/lab.json" ]; then
   DB="$(jq -r '.db // false' "$APPDIR/lab.json")"
   REDIS="$(jq -r '.redis // false' "$APPDIR/lab.json")"
   EMAIL="$(jq -r '.email // false' "$APPDIR/lab.json")"
+  BROWSER="$(jq -r '.browser // false' "$APPDIR/lab.json")"
   MIGRATE="$(jq -r '.migrate // empty' "$APPDIR/lab.json")"
   SEED="$(jq -r '.seed // empty' "$APPDIR/lab.json")"
 fi
@@ -56,6 +57,18 @@ fi
 # Redis central : URL + préfixe de namespace
 if [ "$REDIS" = "true" ]; then
   printf 'REDIS_URL=redis://redis:6379\nREDIS_PREFIX=%s:%s:\n' "$PROJ" "$ENV" >> "$APPDIR/.env"
+fi
+
+# Chromium partagé (browserless central sur le réseau lab) : URL CDP injectée
+if [ "$BROWSER" = "true" ]; then
+  # /opt/lab/platform/.env porte LAB_BROWSER_URL (ex. ws://browser:3000?token=…)
+  LAB_BROWSER_URL=""
+  [ -f /opt/lab/platform/.env ] && . /opt/lab/platform/.env
+  if [ -n "${LAB_BROWSER_URL:-}" ]; then
+    printf 'BROWSER_URL=%s\n' "$LAB_BROWSER_URL" >> "$APPDIR/.env"
+  else
+    echo "⚠ browser: true mais LAB_BROWSER_URL absent de /opt/lab/platform/.env (skip) — provisionner browserless."
+  fi
 fi
 
 # Email partagé (Resend) : clé de plateforme injectée si déclaré et disponible sur lab
