@@ -35,8 +35,39 @@ cmd_new() {
   echo "$path"
 }
 
+cmd_ls() {
+  local d n b s
+  for d in "$WT_DIR"/*/; do
+    [ -d "$d" ] || continue
+    n="$(basename "$d")"
+    b="$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+    if [ -n "$(git -C "$d" status --porcelain 2>/dev/null)" ]; then s="sale"; else s="propre"; fi
+    printf '%-32s %-32s %s\n' "$n" "$b" "$s"
+  done
+}
+
+cmd_cd() {
+  local name="${1:-}"; [ -n "$name" ] || usage
+  local path="$WT_DIR/$name"
+  [ -d "$path" ] || { echo "lab: worktree introuvable: $name" >&2; exit 1; }
+  echo "$path"
+}
+
+cmd_rm() {
+  local name="${1:-}"; [ -n "$name" ] || usage
+  local path="$WT_DIR/$name"
+  [ -d "$path" ] || { echo "lab: worktree introuvable: $name" >&2; exit 1; }
+  [ -n "$(git -C "$path" status --porcelain 2>/dev/null)" ] \
+    && { echo "lab: refus — worktree non propre (travail en cours): $name" >&2; exit 1; }
+  git -C "$ROOT" worktree remove "$path"
+  echo "retiré: $name (branche conservée ; après merge : git branch -d work/$name)" >&2
+}
+
 sub="${1:-menu}"; shift 2>/dev/null || true
 case "$sub" in
   new) cmd_new "$@" ;;
+  ls)  cmd_ls ;;
+  cd)  cmd_cd "$@" ;;
+  rm)  cmd_rm "$@" ;;
   *)   usage ;;
 esac
