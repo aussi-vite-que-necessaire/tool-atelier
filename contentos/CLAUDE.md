@@ -28,18 +28,21 @@ dans `drizzle/`, appliquées au déploiement par le one-shot `scripts/migrate.mj
 ## Déployer (via l'atelier)
 
 `git push` sur une branche → preview `https://contentos-<branche>.lab.avqn.ch`. Merge de la PR
-→ prod lab `https://contentos.lab.avqn.ch`. Jamais de commit direct sur `main`. La CI de
-l'atelier build l'image (`docker build`) → GHCR → pull sur `lab` ; le serveur ne build jamais.
+→ prod sur le domaine public **`https://contentos.avqn.ch`** (aussi joignable via
+`contentos.lab.avqn.ch`). Jamais de commit direct sur `main`. La CI de l'atelier build l'image
+(`docker build`) → GHCR → pull sur `lab` ; le serveur ne build jamais.
 
-L'URL publique du MCP/OAuth correspond à l'origine déployée : la plateforme injecte `APP_URL` =
-l'URL preview ou prod lab effective (cf. `deploy.sh`), et `better-auth` s'aligne dessus.
+L'URL publique du MCP/OAuth correspond à l'origine déployée : la plateforme injecte `APP_URL` (cf.
+`deploy.sh`) = l'URL preview en preview, et le domaine `domain` de `lab.json`
+(`https://contentos.avqn.ch`) en prod ; `better-auth` s'aligne dessus.
 
 ## Données & secrets
 
 `lab.json` déclare `"db": true` + `"redis": true` → la plateforme crée la base
 `<projet>_<env>` (Postgres central) + provisionne Redis et injecte **`DATABASE_URL`** et
-**`REDIS_URL`** automatiquement. Elle injecte aussi **`APP_URL`** = l'origine déployée (preview
-ou prod lab), par environnement. Le one-shot `migrate` applique `drizzle/` avant le démarrage.
+**`REDIS_URL`** automatiquement. Elle injecte aussi **`APP_URL`** = l'origine déployée par
+environnement : l'URL preview en preview, le `domain` de `lab.json` (`contentos.avqn.ch`) en prod.
+Le one-shot `migrate` applique `drizzle/` avant le démarrage.
 
 Les autres secrets viennent de **`/opt/lab/secrets/contentos.env`** sur `lab` (posé hors
 dépôt, jamais committé) :

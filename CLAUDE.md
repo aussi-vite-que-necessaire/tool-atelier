@@ -48,14 +48,16 @@ ajoutée plus tard si le besoin se présente.
 ## Données — `lab.json`
 
 Un projet déclare ses besoins dans **`lab.json`** :
-`{ "description": "...", "db": true, "redis": false, "email": false, "browser": false, "migrate": "npm run migrate", "seed": "npm run seed" }`
+`{ "description": "...", "db": true, "redis": false, "email": false, "browser": false, "domain": "monprojet.com", "migrate": "npm run migrate", "seed": "npm run seed" }`
 Au déploiement, `deploy.sh` crée la base `<projet>_<env>` (Postgres central), injecte
 `DATABASE_URL` (auto), lance `migrate` puis `seed` (hors prod) ; `redis: true` → `REDIS_URL` +
 `REDIS_PREFIX` ; `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` (Resend, clé de plateforme) ;
 `browser: true` → `BROWSER_URL` (Chromium partagé browserless, central sur le réseau `lab`).
 Quel que soit `lab.json`, `deploy.sh` injecte aussi **`APP_URL`** = l'origine publique du
-déploiement (`https://<projet>-<env>.lab.avqn.ch` en preview, `https://<projet>.lab.avqn.ch` en
-prod lab) : la plateforme attribue le host, c'est donc elle qui fournit l'URL.
+déploiement. Par défaut c'est le host attribué par la plateforme
+(`https://<projet>-<env>.lab.avqn.ch` en preview, `https://<projet>.lab.avqn.ch` en prod lab).
+Si `lab.json` déclare **`domain`**, la **prod** prend ce domaine public custom comme `APP_URL`
+(le DNS du domaine doit pointer vers le lab) ; les previews gardent leur host `*.lab.avqn.ch`.
 Preview = base vide + seed, droppée au teardown. Exemples : `hello/` (rien), `counter/` (db).
 
 ## Secrets applicatifs — `/lab-secret`
