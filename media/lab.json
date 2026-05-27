@@ -1,0 +1,1 @@
+{ "description": "media (media.lab.avqn.ch) — génération/édition d'image (Gemini), rendu HTML→image (Chromium partagé), API MCP + /v1. Conception : docs/superpowers/.", "db": true, "email": true, "browser": true, "migrate": "node scripts/migrate.mjs", "seed": "node scripts/seed.mjs" }
