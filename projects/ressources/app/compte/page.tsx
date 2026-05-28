@@ -1,11 +1,9 @@
 import Link from "next/link"
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
 import { LogOut, X, Compass } from "lucide-react"
-import { auth } from "@/lib/auth"
+import { requireSession } from "@/lib/auth/session"
 import { listSubscriptions } from "@/lib/content/queries"
 import { displayName } from "@/lib/account"
-import { unsubscribeAction, updateNameAction, signOutAction } from "@/lib/actions/account"
+import { unsubscribeAction, signOutAction } from "@/lib/actions/account"
 import { LibraryNav } from "@/components/library-nav"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
@@ -13,9 +11,7 @@ import { SiteFooter } from "@/components/site-footer"
 export const dynamic = "force-dynamic"
 
 export default async function ComptePage() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) redirect("/connexion")
-
+  const session = await requireSession("/compte")
   const items = await listSubscriptions(session.user.id)
   const { name, email } = session.user
 
@@ -33,29 +29,21 @@ export default async function ComptePage() {
         <section className="border-b-2 border-ink py-10">
           <h2 className="mb-6 font-mono text-xs font-extrabold uppercase tracking-widest text-ink-soft">Profil</h2>
 
-          <form action={updateNameAction} className="max-w-md space-y-2">
-            <label className="label" htmlFor="name">Nom</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              defaultValue={name ?? ""}
-              maxLength={80}
-              placeholder="Ton nom"
-              className="field"
-            />
-            <button
-              type="submit"
-              className="press mt-2 inline-flex items-center border-2 border-ink bg-accent px-4 py-2 text-xs font-bold uppercase tracking-wide text-accent-ink shadow-brutal-sm"
-            >
-              Enregistrer
-            </button>
-          </form>
-
-          <div className="mt-8 max-w-md">
+          <div className="max-w-md">
             <p className="label">Email</p>
             <p className="font-mono text-sm">{email}</p>
           </div>
+
+          {name && (
+            <div className="mt-6 max-w-md">
+              <p className="label">Nom</p>
+              <p className="font-mono text-sm">{name}</p>
+            </div>
+          )}
+
+          <p className="mt-6 max-w-md text-xs text-ink-soft">
+            Le profil est géré sur le compte central de la suite contentos.
+          </p>
 
           <form action={signOutAction} className="mt-8">
             <button

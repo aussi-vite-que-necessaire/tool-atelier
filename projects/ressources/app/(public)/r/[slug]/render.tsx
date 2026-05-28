@@ -2,7 +2,8 @@ import Link from "next/link"
 import { headers, cookies } from "next/headers"
 import { notFound } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
-import { auth } from "@/lib/auth"
+import { getSession } from "@/lib/auth/session"
+import { userIsAdmin } from "@/lib/auth/admin"
 import { buildPageTree, type TreePage } from "@/lib/content/tree"
 import { resolvePageByPath } from "@/lib/content/resolve"
 import { extractToc, type TocItem } from "@/lib/content/toc"
@@ -38,8 +39,8 @@ export async function renderResourcePage(
   const h = await headers()
   // URL d'abord (présente au 1er clic, avant que le cookie ne soit lisible), cookie en repli (first-touch persisté).
   const ref = parseRefFromRecord(opts?.searchParams) ?? parseRefCookie((await cookies()).get(REF_COOKIE)?.value)
-  const session = await auth.api.getSession({ headers: h })
-  const isAdmin = !!(session?.user as { isAdmin?: boolean } | undefined)?.isAdmin
+  const session = await getSession()
+  const isAdmin = userIsAdmin(session?.user.id)
   const preview = !!opts?.preview && isAdmin
 
   const data = await getResourceBySlug(slug, preview)

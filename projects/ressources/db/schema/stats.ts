@@ -1,7 +1,8 @@
 import { pgTable, uuid, text, timestamp, index } from "drizzle-orm/pg-core"
 import { resources, pages } from "./content"
-import { user } from "./auth"
 
+// userId : ID utilisateur frappé par auth.contentos.ch (text, nullable, sans FK
+// locale — le user vit dans le projet auth, base séparée).
 export const viewEvents = pgTable(
   "view_events",
   {
@@ -10,7 +11,7 @@ export const viewEvents = pgTable(
       .notNull()
       .references(() => resources.id, { onDelete: "cascade" }),
     pageId: uuid("page_id").references(() => pages.id, { onDelete: "cascade" }),
-    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    userId: text("user_id"),
     type: text("type").notNull(),
     source: text("source"),
     medium: text("medium"),

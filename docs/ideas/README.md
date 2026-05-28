@@ -7,3 +7,4 @@ Capturer une idée : `/lab-idea <sujet>`.
 ## Idées
 
 - [Mutualiser les tests e2e](2026-05-28-e2e-mutualises.md) — À explorer — Sortir Playwright en projet `e2e/` central quand 2-3 projets l'utilisent.
+- [Ressources : séparer admin et public](2026-05-28-ressources-admin-vs-public.md) — À explorer — Restreindre `ressources` à l'admin, extraire le front-end public dans un projet dédié quand on l'ouvre à des visiteurs externes.

@@ -1,8 +1,6 @@
 import Link from "next/link"
-import { headers } from "next/headers"
-import { redirect } from "next/navigation"
 import { Compass } from "lucide-react"
-import { auth } from "@/lib/auth"
+import { requireSession } from "@/lib/auth/session"
 import { listSubscriptions } from "@/lib/content/queries"
 import { ResourceCard } from "@/components/resource-card"
 import { LibraryNav } from "@/components/library-nav"
@@ -13,9 +11,7 @@ import { Reveal } from "@/components/ui/reveal"
 export const dynamic = "force-dynamic"
 
 export default async function BibliothequePage() {
-  const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) redirect("/connexion")
-
+  const session = await requireSession("/bibliotheque")
   const items = await listSubscriptions(session.user.id)
 
   return (

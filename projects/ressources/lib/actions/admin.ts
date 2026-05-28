@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
-import { requireAdmin } from "@/lib/admin/guard"
+import { requireAdmin } from "@/lib/auth/admin"
 import { moveInList } from "@/lib/admin/reorder"
 import { validateModuleInput } from "@/lib/resources/module-input"
 import * as service from "@/lib/resources/service"
