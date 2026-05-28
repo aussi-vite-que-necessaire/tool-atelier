@@ -3,70 +3,61 @@
 import { useState } from "react";
 import { authClient, signIn } from "@/lib/auth-client";
 
-// OTP par email uniquement.
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const input =
-    "w-full rounded-lg border border-brand-900/30 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-600";
-  const btn =
-    "w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-50";
-
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-8 px-6">
-      <h1 className="text-center text-2xl font-bold tracking-tight text-brand-900">
-        Se connecter
-      </h1>
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
+      <h1 className="text-xl font-semibold">Connexion</h1>
+      <p className="text-sm text-gray-600">Reçois un code par email pour te connecter.</p>
 
       <input
-        className={input}
+        className="rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
         type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
 
-      <section className="space-y-3">
-        {!otpSent ? (
+      {!otpSent ? (
+        <button
+          className="rounded border border-gray-900 bg-gray-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+          disabled={!email}
+          onClick={async () => {
+            await authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
+            setOtpSent(true);
+            setMsg("Code envoyé (000000 en preview).");
+          }}
+        >
+          Recevoir un code
+        </button>
+      ) : (
+        <>
+          <input
+            className="rounded border border-gray-300 px-3 py-2 text-center font-mono text-sm tracking-[0.4em] outline-none focus:border-gray-500"
+            inputMode="numeric"
+            placeholder="000000"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+          />
           <button
-            className={btn}
-            disabled={!email}
+            className="rounded border border-gray-900 bg-gray-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+            disabled={otp.length < 6}
             onClick={async () => {
-              await authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
-              setOtpSent(true);
-              setMsg("Code envoyé (000000 en preview).");
+              const r = await signIn.emailOtp({ email, otp });
+              setMsg(r.error ? "Code invalide." : "Connecté.");
+              if (!r.error) location.href = "/";
             }}
           >
-            Recevoir un code
+            Valider le code
           </button>
-        ) : (
-          <>
-            <input
-              className={input + " text-center font-mono tracking-[0.4em]"}
-              inputMode="numeric"
-              placeholder="000000"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-            />
-            <button
-              className={btn}
-              disabled={otp.length < 6}
-              onClick={async () => {
-                const r = await signIn.emailOtp({ email, otp });
-                setMsg(r.error ? "Code invalide." : "Connecté.");
-                if (!r.error) location.href = "/";
-              }}
-            >
-              Valider le code
-            </button>
-          </>
-        )}
-      </section>
+        </>
+      )}
 
-      {msg && <p className="text-center text-sm text-brand-900/60">{msg}</p>}
+      {msg && <p className="text-xs text-gray-500">{msg}</p>}
     </main>
   );
 }

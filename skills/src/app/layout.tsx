@@ -6,14 +6,10 @@ export const metadata: Metadata = {
   description: "Hub central des skills agentiques de la suite de tools de l'atelier (contentos, ressources, media).",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <body className="min-h-screen bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+      <body className="min-h-screen bg-white text-gray-900 antialiased">
         {children}
       </body>
     </html>

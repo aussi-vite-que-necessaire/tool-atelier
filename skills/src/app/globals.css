@@ -1,31 +1,5 @@
 @import "tailwindcss";
 
-/* Thème "atelier de l'outillage" — papier crème + encre profonde, accent terracotta sobre.
-   Sert de hub manuel : on regarde, on emporte un skill, on revient. */
-@theme {
-  --color-brand-50: #f7f3ea;
-  --color-brand-100: #efe7d6;
-  --color-brand-200: #e2d3b5;
-  --color-brand-500: #b46a3c;
-  --color-brand-600: #94522a;
-  --color-brand-700: #6f3c1f;
-  --color-brand-900: #2c1709;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Liberation Mono", monospace;
-}
-
 :root {
-  color-scheme: light dark;
-}
-
-html, body {
-  background-color: var(--color-brand-50);
-  color: var(--color-brand-900);
-}
-
-@media (prefers-color-scheme: dark) {
-  html, body {
-    background-color: #1a120a;
-    color: #f0e4d0;
-  }
+  color-scheme: light;
 }
