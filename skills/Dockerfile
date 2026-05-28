@@ -1,14 +1,17 @@
 # syntax=docker/dockerfile:1
 
 # --- deps : installe toutes les dépendances (build a besoin des devDeps) ---
+# build-essentials + python3 : filet de sécurité pour les npm postinstall qui
+# compileraient une native non préfabriquée (rare avec node:22-slim mais arrive).
 FROM node:22-slim AS deps
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 # --- build : compile l'app Astro en SSR Node standalone ---
-# Pas de NODE_ENV=production ici : laisse vite/astro accéder aux devDeps qu'il
-# pourrait charger via require dynamique pendant le build.
 FROM node:22-slim AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -28,12 +31,8 @@ ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOST=0.0.0.0
 
-# debian-slim a déjà un user "node" prêt à l'emploi.
-
 # Sortie Astro standalone : entry.mjs + client/.
 COPY --from=build --chown=node:node /app/dist ./dist
-# Le bundle Astro Node embarque l'app — node_modules requis pour les deps non-bundlées
-# (postgres, jszip, resend, drizzle-orm…). On reprend prod-deps slim.
 COPY --from=proddeps --chown=node:node /app/node_modules ./node_modules
 # Skills (source de vérité) — lus à chaud par /api/skills/[name]/download.
 COPY --from=build --chown=node:node /app/skills ./skills
