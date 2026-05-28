@@ -16,7 +16,7 @@ export type Manifest = {
 const SKILLS_ROOT = path.join(process.cwd(), "skills");
 
 // Ordre stable d'affichage : meta en tête, puis par tool, puis alpha.
-const TOOL_ORDER = ["suite", "ressources", "contentos", "media"];
+const TOOL_ORDER = ["suite", "ressources", "cast", "media"];
 
 export async function listSkills(): Promise<Manifest[]> {
   let entries: import("node:fs").Dirent[];

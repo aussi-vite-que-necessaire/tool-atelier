@@ -18,7 +18,7 @@ Deux frictions sur contentos :
    HTTP — donc impossible de le dériver d'en-têtes seuls). `scripts/deploy.sh` injecte
    `DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY` automatiquement mais **pas `APP_URL`** : celui-ci
    est figé dans le secret statique `contentos.env.age`, donc une seule valeur. Les previews
-   (`contentos-<branche>.lab.avqn.ch`) héritent d'un `APP_URL` faux → auth, MCP et LinkedIn
+   (`cast-<branche>.preview.contentos.ch`) héritent d'un `APP_URL` faux → auth, MCP et LinkedIn
    pointent vers la mauvaise origine.
 
 ## Objectifs
@@ -32,7 +32,7 @@ Deux frictions sur contentos :
 
 L'origine publique d'un déploiement est une primitive universelle (comme `DATABASE_URL`) : seule
 la plateforme la connaît, puisqu'elle attribue le host. `scripts/deploy.sh` calcule déjà `HOST`
-par environnement (`<projet>-<env>.lab.avqn.ch` en preview, `<projet>.lab.avqn.ch` en prod lab).
+par environnement (`<projet>-<branche>.preview.contentos.ch` en preview, `<projet>.contentos.ch` en prod lab).
 
 **Changement.** Dans `deploy.sh`, après le bloc de déchiffrement des secrets `age`, injecter :
 
@@ -112,7 +112,7 @@ Tout sur la branche `work/contentos-optimiser-build-feature-preview`, une seule 
 
 ## Critères de réussite
 
-- Une preview de branche sert `APP_URL = https://contentos-<branche>.lab.avqn.ch` ; le flux OAuth
+- Une preview de branche sert `APP_URL = https://cast-<branche>.preview.contentos.ch` ; le flux OAuth
   MCP et le magic-link aboutissent sur cette origine.
 - Un push qui casse un test (unit/integration/worker/smoke) **ne déploie pas**.
 - La suite e2e locale et CI se limite au smoke `auth` et tourne en quelques secondes une fois le

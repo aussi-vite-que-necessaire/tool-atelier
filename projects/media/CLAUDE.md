@@ -5,7 +5,7 @@ HTML→image** (Chromium partagé), **templates visuels** (Handlebars + variable
 **styles de génération**, **chartes graphiques**, **construction de PDF** (agrégation d'images) et
 **upload** d'image/PDF/vidéo. Le tout stocké sur R2 + métadonnées Postgres, et exposé par **trois
 interfaces** — un serveur **MCP** (connecteur claude.ai), une **API `/v1`** service-to-service, et
-un **front-end d'admin** (derrière le login). Prod : `https://media.lab.avqn.ch`.
+un **front-end d'admin** (derrière le login). Prod : `https://media.contentos.ch`.
 
 **Conceptions** : `docs/superpowers/specs/2026-05-27-media-import-design.md` (socle v1) et
 `docs/superpowers/specs/2026-05-27-media-migration-contentos-design.md` (centre des médias).
@@ -14,7 +14,7 @@ un **front-end d'admin** (derrière le login). Prod : `https://media.lab.avqn.ch
 
 ## Skill agentique
 
-Le skill `creer-un-visuel` (mode d'emploi du service media — générer, éditer, rendre, agréger en PDF) vit dans le hub central de l'atelier : `skills/skills/creer-un-visuel/`. Téléchargeable sur `https://skills.lab.avqn.ch` après connexion OTP.
+Le skill `creer-un-visuel` (mode d'emploi du service media — générer, éditer, rendre, agréger en PDF) vit dans le hub central de l'atelier : `skills/skills/creer-un-visuel/`. Téléchargeable sur `https://skills.contentos.ch` après connexion OTP.
 
 ## Stack
 
@@ -62,7 +62,7 @@ main) : `DATABASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `BROWSER_URL`.
 
 Build sur la CI uniquement (`docker build` → GHCR → pull sur `lab`). `next build` n'a besoin ni de
 `DATABASE_URL` ni de `BETTER_AUTH_SECRET` (lecture paresseuse au runtime). `git push` sur une
-branche → preview `https://media-<branche>.lab.avqn.ch` ; merge de la PR → prod. **Jamais de commit
+branche → preview `https://media-<branche>.preview.contentos.ch` ; merge de la PR → prod. **Jamais de commit
 sur `main`.**
 
 ## Commandes

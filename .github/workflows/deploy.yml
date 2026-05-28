@@ -38,9 +38,18 @@ jobs:
             base="$(git merge-base origin/main HEAD 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)"
           fi
           changed="$(git diff --name-only "$base" '${{ github.sha }}')"
-          projects="$(printf '%s\n' "$changed" | awk -F/ '$1=="projects" && NF>2 {print $2}' | sort -u \
-            | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
-            | jq -R . | jq -cs .)"
+          # Plomberie de déploiement (scripts/deploy.sh, workflow CI) → redéploie tous les projets
+          # qui ont un Dockerfile (le pipeline les concerne tous).
+          if printf '%s\n' "$changed" | grep -qE '^(scripts/deploy\.sh|\.github/workflows/deploy\.yml)$'; then
+            projects="$(ls -1 projects/ \
+              | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
+              | jq -R . | jq -cs .)"
+            echo "plomberie modifiée → redéploie tous les projets"
+          else
+            projects="$(printf '%s\n' "$changed" | awk -F/ '$1=="projects" && NF>2 {print $2}' | sort -u \
+              | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
+              | jq -R . | jq -cs .)"
+          fi
           echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "projets changés: $projects"
           # Sous-ensemble testable côté Node : exige package.json + package-lock.json (sinon
@@ -211,6 +220,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Serializé : un seul deploy à la fois pour éviter la concurrence sur le daemon
+      # Docker du lab (plusieurs `docker pull` simultanés font échouer le containerd
+      # lease — « lease does not exist: not found »).
+      max-parallel: 1
       matrix:
         project: ${{ fromJson(needs.detect.outputs.projects) }}
     env:
@@ -270,7 +283,11 @@ jobs:
           $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGES'"
       - name: Résumé
         run: |
-          if [ "$ENV" = "prod" ]; then host="${PROJ}.lab.avqn.ch"; else host="${PROJ}-${ENV}.lab.avqn.ch"; fi
+          if [ "$ENV" = "prod" ]; then
+            if [ "$PROJ" = "www" ]; then host="contentos.ch"; else host="${PROJ}.contentos.ch"; fi
+          else
+            host="${PROJ}-${ENV}.preview.contentos.ch"
+          fi
           echo "🚀 **${PROJ}** (\`${ENV}\`) déployé → https://${host}" >> "$GITHUB_STEP_SUMMARY"
 
   teardown:

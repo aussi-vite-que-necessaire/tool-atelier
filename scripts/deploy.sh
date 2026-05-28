@@ -13,7 +13,20 @@ set -euo pipefail
 PROJ="$1"; ENV="$2"; IMAGES="$3"
 APPDIR="/opt/lab/apps/${PROJ}-${ENV}"
 UPSTREAM="${PROJ}-${ENV}"
-if [ "$ENV" = "prod" ]; then HOST="${PROJ}.lab.avqn.ch"; else HOST="${PROJ}-${ENV}.lab.avqn.ch"; fi
+# Hosts publics : prod sous *.contentos.ch (cas spécial `www` = apex + www), preview sous *.preview.contentos.ch.
+# PRIMARY_HOST sert d'identité publique (APP_URL, logs) ; HOSTS_CADDY est la liste séparée par virgule pour la route.
+if [ "$ENV" = "prod" ]; then
+  if [ "$PROJ" = "www" ]; then
+    PRIMARY_HOST="contentos.ch"
+    HOSTS_CADDY="contentos.ch, www.contentos.ch"
+  else
+    PRIMARY_HOST="${PROJ}.contentos.ch"
+    HOSTS_CADDY="$PRIMARY_HOST"
+  fi
+else
+  PRIMARY_HOST="${PROJ}-${ENV}.preview.contentos.ch"
+  HOSTS_CADDY="$PRIMARY_HOST"
+fi
 
 # jq requis pour lire lab.json — auto-install si absent (serveur fraîchement provisionné)
 command -v jq >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq jq; }
@@ -63,7 +76,7 @@ umask 077
 } > "$APPDIR/.env"
 
 # Besoins déclarés par le projet (lab.json absent => projet sans base ni redis)
-DB=false; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""; DOMAIN=""
+DB=false; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""
 if [ -f "$APPDIR/lab.json" ]; then
   DB="$(jq -r '.db // false' "$APPDIR/lab.json")"
   REDIS="$(jq -r '.redis // false' "$APPDIR/lab.json")"
@@ -71,7 +84,6 @@ if [ -f "$APPDIR/lab.json" ]; then
   BROWSER="$(jq -r '.browser // false' "$APPDIR/lab.json")"
   MIGRATE="$(jq -r '.migrate // empty' "$APPDIR/lab.json")"
   SEED="$(jq -r '.seed // empty' "$APPDIR/lab.json")"
-  DOMAIN="$(jq -r '.domain // empty' "$APPDIR/lab.json")"
 fi
 
 # Postgres central : base <projet>_<env> + DATABASE_URL injecté
@@ -123,13 +135,9 @@ if [ -f /opt/lab/secrets-key ]; then
   [ -f "$APPDIR/${PROJ}.env.age" ]         && age -d -i /opt/lab/secrets-key "$APPDIR/${PROJ}.env.age"         >> "$APPDIR/.env"
 fi
 
-# Origine publique injectée dans APP_URL. Par défaut = host déployé (juste pour les previews
-# et la prod lab par défaut). En prod, si lab.json déclare "domain" (domaine public custom dont
-# le DNS pointe vers le lab), l'identité publique est ce domaine. Écrite APRÈS les secrets pour
-# être autoritative — en --env-file la dernière occurrence d'une clé gagne.
-APP_ORIGIN="https://${HOST}"
-if [ "$ENV" = "prod" ] && [ -n "$DOMAIN" ]; then APP_ORIGIN="https://${DOMAIN}"; fi
-printf 'APP_URL=%s\n' "$APP_ORIGIN" >> "$APPDIR/.env"
+# Origine publique injectée dans APP_URL = host primaire du déploiement. Écrite APRÈS les
+# secrets pour être autoritative — en --env-file la dernière occurrence d'une clé gagne.
+printf 'APP_URL=https://%s\n' "$PRIMARY_HOST" >> "$APPDIR/.env"
 
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab.
 # En multi-image, le rôle `web` porte drizzle + scripts (cf. Dockerfile target `web`).
@@ -146,7 +154,7 @@ docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose
 
 mkdir -p /opt/lab/platform/sites
 cat > "/opt/lab/platform/sites/${PROJ}-${ENV}.caddy" <<EOF
-${HOST} {
+${HOSTS_CADDY} {
 	reverse_proxy ${UPSTREAM}:8080
 }
 EOF
@@ -158,4 +166,4 @@ docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 # conteneur (prod ou preview active). En échec, on n'invalide pas un déploiement réussi.
 docker image prune -f >/dev/null 2>&1 || true
 
-echo "✓ déployé : https://${HOST}  (images ${IMAGES})"
+echo "✓ déployé : https://${PRIMARY_HOST}  (images ${IMAGES})"

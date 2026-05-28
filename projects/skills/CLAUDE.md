@@ -4,7 +4,7 @@ Point d'entrée unique pour découvrir et installer les **skills agentiques** de
 tools de l'atelier (contentos, ressources, media). Chaque skill est un cerveau / mode d'emploi
 embarqué dans un agent Claude pour piloter le tool correspondant via MCP.
 
-**Prod** : `https://skills.lab.avqn.ch`.
+**Prod** : `https://skills.contentos.ch`.
 
 ## Stack — Astro SSR (Node)
 
@@ -33,7 +33,7 @@ skills/
 │   ├── lib/
 │   │   ├── skills-fs.ts           lecture/listing des skills + manifestes
 │   │   ├── auth.ts                BetterAuth (emailOTP, drizzle adapter)
-│   │   ├── auth-preview.ts        code preview "000000" sur hôtes *-<env>.lab.avqn.ch
+│   │   ├── auth-preview.ts        code preview "000000" sur hôtes *-<env>.preview.contentos.ch
 │   │   └── email.ts               Resend (envoi du code)
 │   ├── db/                        tables BetterAuth (user/session/account/verification)
 │   └── styles/global.css          Tailwind v4 (import unique)
@@ -77,7 +77,7 @@ SKILL.md          # entrée du skill (frontmatter YAML standard Claude)
 2. **Bump** `version` dans `manifest.json` (`1` → `2` → `3`…).
 3. Mettre à jour `latest_changes` (court).
 4. Commit + push sur une branche → merge de la PR → la nouvelle version est en ligne sur
-   `skills.lab.avqn.ch`. Pas d'historique : seule la dernière version est servie.
+   `skills.contentos.ch`. Pas d'historique : seule la dernière version est servie.
 
 ## Ajouter un skill
 
@@ -91,7 +91,7 @@ SKILL.md          # entrée du skill (frontmatter YAML standard Claude)
 OTP par email (BetterAuth + Resend), même contrat que `contentos` / `ressources` / `media` :
 - `BETTER_AUTH_SECRET` requis en prod (sinon BetterAuth refuse de démarrer). Posé dans
   `/lab-secret`, scope `skills`, valeur `openssl rand -base64 32`.
-- Code preview `000000` quand l'hôte courant est `*-<env>.lab.avqn.ch` (preview).
+- Code preview `000000` quand l'hôte courant est `*-<env>.preview.contentos.ch` (preview).
 - `DATABASE_URL` + `RESEND_API_KEY` + `EMAIL_FROM` + `APP_URL` injectés par la plateforme.
 
 ## Standalone runtime
@@ -107,5 +107,5 @@ sur `:8080`.
 
 ## Déployer
 
-`git push` sur une branche → preview `https://skills-<branche>.lab.avqn.ch`. Merge de la PR
-→ prod `https://skills.lab.avqn.ch`. Jamais de commit sur `main`.
+`git push` sur une branche → preview `https://skills-<branche>.preview.contentos.ch`. Merge de la PR
+→ prod `https://skills.contentos.ch`. Jamais de commit sur `main`.

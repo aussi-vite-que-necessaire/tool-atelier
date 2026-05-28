@@ -1,5 +1,5 @@
 // Identité de test utilisée pour l'auto-login en preview.
-export const PREVIEW_USER = 'preview@contentos.local';
+export const PREVIEW_USER = 'preview@cast.local';
 // Code OTP déterministe accepté en preview (jamais en prod).
 export const PREVIEW_OTP = '000000';
 

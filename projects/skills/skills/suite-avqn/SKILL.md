@@ -34,7 +34,7 @@ Ouvre la conversation en confirmant en un coup d'œil :
    `content-os-redaction`, `creer-un-visuel`).
 
 Si l'un manque, dis-le, et propose à l'utilisateur soit de l'installer (récupération sur
-`https://skills.lab.avqn.ch`), soit de réduire le scope au workflow qui n'en a pas besoin.
+`https://skills.contentos.ch`), soit de réduire le scope au workflow qui n'en a pas besoin.
 
 ## Workflows croisés
 

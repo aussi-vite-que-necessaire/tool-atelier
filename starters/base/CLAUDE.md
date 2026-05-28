@@ -16,5 +16,5 @@ Point de départ **déviable** : tout est modifiable. Les capacités cochées au
 
 ## Déployer
 
-`git push` sur une branche → preview `https://__PROJECT_NAME__-<branche>.lab.avqn.ch`.
-Merge de la PR → prod `https://__PROJECT_NAME__.lab.avqn.ch`. Jamais de commit sur `main`.
+`git push` sur une branche → preview `https://__PROJECT_NAME__-<branche>.preview.contentos.ch`.
+Merge de la PR → prod `https://__PROJECT_NAME__.contentos.ch`. Jamais de commit sur `main`.

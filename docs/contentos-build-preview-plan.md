@@ -53,13 +53,13 @@ Expected: aucune sortie (syntaxe OK).
 
 Run (vérifie qu'APP_URL est bien injecté et gagne contre une valeur antérieure) :
 ```bash
-APPDIR=$(mktemp -d); HOST=contentos-ma-branche.lab.avqn.ch
+APPDIR=$(mktemp -d); HOST=cast-ma-branche.preview.contentos.ch
 printf 'APP_URL=https://stale.example\n' > "$APPDIR/.env"   # simule un secret périmé
 printf 'APP_URL=https://%s\n' "$HOST" >> "$APPDIR/.env"
 # docker/dotenv : dernière clé gagne
 tail -n1 "$APPDIR/.env"; rm -rf "$APPDIR"
 ```
-Expected: `APP_URL=https://contentos-ma-branche.lab.avqn.ch`
+Expected: `APP_URL=https://cast-ma-branche.preview.contentos.ch`
 
 - [ ] **Step 4 : commit**
 
@@ -238,7 +238,7 @@ EOF
 
 Dans la section « Données — `lab.json` » de `CLAUDE.md` (racine), ajouter à la liste des variables
 auto-fournies que la plateforme injecte `APP_URL` = l'origine publique du déploiement
-(`https://<projet>-<env>.lab.avqn.ch` en preview, `https://<projet>.lab.avqn.ch` en prod lab),
+(`https://<projet>-<branche>.preview.contentos.ch` en preview, `https://<projet>.contentos.ch` en prod lab),
 au même titre que `DATABASE_URL`. Reformuler la phrase existante sur les variables auto-fournies
 pour l'inclure (état cible, sans cadrage par contraste).
 
@@ -280,4 +280,4 @@ EOF
 - Découpage : tout sur la branche, commits gitmoji + Co-Authored-By. ✓
 
 Validation finale réelle (non automatisable ici) : pousser la branche → la preview
-`contentos-<branche>.lab.avqn.ch` doit servir le bon `APP_URL` et le gate CI doit passer.
+`cast-<branche>.preview.contentos.ch` doit servir le bon `APP_URL` et le gate CI doit passer.

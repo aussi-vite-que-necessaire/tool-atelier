@@ -2,7 +2,7 @@
 
 Source de vérité des skills agentiques de la suite AVQN. Chaque dossier contient un
 `manifest.json` + `SKILL.md` (et éventuelles sous-arbo). Le hub
-(`https://skills.lab.avqn.ch`) les liste et les sert en zip versionné.
+(`https://skills.contentos.ch`) les liste et les sert en zip versionné.
 
 ## Skills publiés
 
