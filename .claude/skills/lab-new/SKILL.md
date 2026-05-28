@@ -17,7 +17,7 @@ commites le projet sur la branche courante.
 
 - **Nom** en kebab-case (`^[a-z][a-z0-9-]*$`, ex. `mon-app`) — demande en prose.
 - **Description** — une phrase. Sert au `lab.json`, à la landing et au `CLAUDE.md`.
-- Vérifie que `<nom>/` n'existe pas à la racine de l'atelier.
+- Vérifie que `projects/<nom>/` n'existe pas.
 
 ## 2. Choisis les capacités
 
@@ -47,7 +47,7 @@ est inclus dès qu'OTP est choisi.
 
 Demande le **nom du serveur** et, en langage naturel, **ce qu'il doit permettre de faire**.
 Le scaffold MCP (route, connecteur OAuth, outil `ping`) est posé par la composition ; **toi**,
-après composition, tu écris dans `<nom>/src/lib/mcp/` :
+après composition, tu écris dans `projects/<nom>/src/lib/mcp/` :
 
 - la constante `INSTRUCTIONS` de `server.ts` (décrit le serveur pour l'agent IA),
 - un fichier `tools/<outil>.ts` par capacité décrite (schéma d'entrée `zod` + handler), enregistré
@@ -58,7 +58,7 @@ Garde le pattern de l'outil `ping` (helper `jsonResult`).
 ## 5. Thème (IA)
 
 Demande l'ambiance souhaitée (couleurs, ton, inspiration). Réécris **uniquement** le bloc
-`@theme` de `<nom>/src/app/globals.css` : palette (`--color-brand-*`) et `--font-sans`. La landing
+`@theme` de `projects/<nom>/src/app/globals.css` : palette (`--color-brand-*`) et `--font-sans`. La landing
 générique consomme ces tokens — pas besoin de la refaire.
 
 ## 6. Compose
@@ -67,12 +67,12 @@ générique consomme ces tokens — pas besoin de la refaire.
 node scripts/compose-project.mjs '{"name":"<nom>","description":"<phrase>","modules":[...],"authMethods":[...],"mcp":{"server":"<nom-serveur>"}}'
 ```
 
-Puis applique tes touches créatives (étapes 4-5) dans `<nom>/`.
+Le projet est créé dans `projects/<nom>/`. Puis applique tes touches créatives (étapes 4-5) dedans.
 
 ## 7. Smoke local (échoue vite avant la CI)
 
 ```bash
-cd <nom> && npm install --no-audit --no-fund
+cd projects/<nom> && npm install --no-audit --no-fund
 npm run db:generate   # si db (génère drizzle/ depuis le schéma composé)
 npm run build         # doit réussir (exit 0)
 ```
@@ -82,7 +82,7 @@ Corrige toute erreur de build avant de pousser. Reviens à la racine de l'atelie
 ## 8. Déploie jusqu'en prod
 
 ```bash
-git add <nom> && git commit -m "🤖 nouveau projet <nom>"
+git add projects/<nom> && git commit -m "🤖 nouveau projet <nom>"
 git push                                  # → preview https://<nom>-<branche>.lab.avqn.ch
 gh pr create --fill                       # titre : ✨ nouveau projet <nom>
 gh run watch                              # attendre la CI verte (build + deploy preview)

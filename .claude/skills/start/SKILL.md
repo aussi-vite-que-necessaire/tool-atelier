@@ -30,11 +30,11 @@ Trois rails, trois skills :
 
 ### A) Projet existant
 
-Scanne les projets à la racine en lisant chaque `*/lab.json` :
+Scanne les projets en lisant chaque `projects/*/lab.json` :
 
 ```bash
-for f in */lab.json; do
-  dir=$(dirname "$f")
+for f in projects/*/lab.json; do
+  dir=$(basename "$(dirname "$f")")
   desc=$(jq -r '.description // ""' "$f")
   printf '%s — %s\n' "$dir" "$desc"
 done

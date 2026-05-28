@@ -60,11 +60,16 @@ esac
 # 3) Pas d'édition d'un dossier projet dans le checkout principal
 if { [ "$tool" = "Write" ] || [ "$tool" = "Edit" ]; } && [ -n "$file" ] && [ -n "$root" ]; then
   rel="${file#"$root"/}"
-  top="${rel%%/*}"
-  if [ "$top" != "$rel" ] && [ -f "$root/$top/Dockerfile" ]; then
-    printf 'Bloqué : pas de dev projet (%s/) dans le checkout principal partagé. Lance ta session isolée : Atelier.command (ou claude --worktree).\n' "$top" >&2
-    exit 2
-  fi
+  case "$rel" in
+    projects/*/*)
+      proj="${rel#projects/}"
+      proj="${proj%%/*}"
+      if [ -f "$root/projects/$proj/Dockerfile" ]; then
+        printf 'Bloqué : pas de dev projet (projects/%s/) dans le checkout principal partagé. Lance ta session isolée : Atelier.command (ou claude --worktree).\n' "$proj" >&2
+        exit 2
+      fi
+      ;;
+  esac
 fi
 
 exit 0

@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       projects: ${{ steps.changed.outputs.projects }}
+      node_projects: ${{ steps.changed.outputs.node_projects }}
       env: ${{ steps.env.outputs.env }}
     steps:
       - uses: actions/checkout@v4
@@ -37,11 +38,22 @@ jobs:
             base="$(git merge-base origin/main HEAD 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)"
           fi
           changed="$(git diff --name-only "$base" '${{ github.sha }}')"
-          projects="$(printf '%s\n' "$changed" | awk -F/ 'NF>1 && $1!=".github"{print $1}' | sort -u \
-            | while read -r d; do [ -f "$d/Dockerfile" ] && printf '%s\n' "$d"; done \
+          projects="$(printf '%s\n' "$changed" | awk -F/ '$1=="projects" && NF>2 {print $2}' | sort -u \
+            | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
             | jq -R . | jq -cs .)"
           echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "projets changés: $projects"
+          # Sous-ensemble testable côté Node : exige package.json + package-lock.json (sinon
+          # `npm ci` ou `setup-node@cache:npm` échouent). Les projets non-Node (ex. `hello/`
+          # = simple server.js) ou sans lockfile (`counter/`) restent buildés et déployés,
+          # mais ne passent pas par le job `test`.
+          node_projects="$(printf '%s\n' "$projects" | jq -r '.[]' \
+            | while read -r d; do
+                [ -f "projects/$d/package.json" ] && [ -f "projects/$d/package-lock.json" ] && printf '%s\n' "$d"
+              done \
+            | jq -R . | jq -cs .)"
+          echo "node_projects=$node_projects" >> "$GITHUB_OUTPUT"
+          echo "projets testés (Node): $node_projects"
       - id: env
         run: |
           ref='${{ github.ref_name }}'
@@ -83,8 +95,8 @@ jobs:
         run: |
           set -euo pipefail
           # Liste des targets : depuis lab.json (.images), ou [""] = mono-image.
-          if [ -f "$PROJ/lab.json" ]; then
-            TARGETS="$(jq -r '(.images // [""]) | .[]' "$PROJ/lab.json")"
+          if [ -f "projects/$PROJ/lab.json" ]; then
+            TARGETS="$(jq -r '(.images // [""]) | .[]' "projects/$PROJ/lab.json")"
           else
             TARGETS=""
           fi
@@ -105,20 +117,22 @@ jobs:
             docker buildx build $TARGET_FLAG \
               --cache-from "type=gha,scope=$SCOPE" \
               --cache-to   "type=gha,mode=max,scope=$SCOPE" \
-              --tag "$IMG" --push "$PROJ"
+              --tag "$IMG" --push "projects/$PROJ"
             echo "::endgroup::"
           done
 
   # Gate de tests (host) : unit + integration + worker + smoke e2e. Tourne en
   # parallèle du build ; le build host ici sert uniquement au smoke e2e.
+  # Ne tourne que pour les projets Node (package.json + package-lock.json). Les autres
+  # (ex. `hello/` server.js pur) sont buildés et déployés sans passer par ce gate.
   test:
     needs: detect
-    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+    if: needs.detect.outputs.node_projects != '' && needs.detect.outputs.node_projects != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJson(needs.detect.outputs.projects) }}
+        project: ${{ fromJson(needs.detect.outputs.node_projects) }}
     services:
       postgres:
         image: postgres:17
@@ -137,7 +151,7 @@ jobs:
           --health-timeout 5s --health-retries 10
     defaults:
       run:
-        working-directory: ${{ matrix.project }}
+        working-directory: projects/${{ matrix.project }}
     env:
       APP_URL: http://localhost:3000
       REDIS_URL: redis://localhost:6379
@@ -149,7 +163,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+          cache-dependency-path: projects/${{ matrix.project }}/package-lock.json
       - name: Install deps
         run: npm ci
       - name: Prepare test DB (si lab.json déclare db)
@@ -164,18 +178,18 @@ jobs:
       - name: Cache .next/cache
         uses: actions/cache@v4
         with:
-          path: ${{ matrix.project }}/.next/cache
-          key: next-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles(format('{0}/package-lock.json', matrix.project)) }}-${{ github.sha }}
+          path: projects/${{ matrix.project }}/.next/cache
+          key: next-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles(format('projects/{0}/package-lock.json', matrix.project)) }}-${{ github.sha }}
           restore-keys: |
-            next-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles(format('{0}/package-lock.json', matrix.project)) }}-
+            next-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles(format('projects/{0}/package-lock.json', matrix.project)) }}-
       - name: Build (requis pour le smoke e2e)
         run: npm run build --if-present
       - name: Cache navigateurs Playwright
-        if: hashFiles(format('{0}/playwright.config.ts', matrix.project)) != ''
+        if: hashFiles(format('projects/{0}/playwright.config.ts', matrix.project)) != ''
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles(format('{0}/package-lock.json', matrix.project)) }}
+          key: playwright-${{ runner.os }}-${{ hashFiles(format('projects/{0}/package-lock.json', matrix.project)) }}
       - name: Smoke e2e (si playwright configuré)
         run: |
           if [ -f playwright.config.ts ]; then
@@ -186,10 +200,14 @@ jobs:
           fi
 
   # Deploy = pull (l'image est déjà construite par le job `build` et testée par
-  # `test`). Aucun build ici → ~45s.
+  # `test` si Node). Aucun build ici → ~45s.
   deploy:
     needs: [detect, build, test]
-    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+    # `test` peut être skippé (aucun projet Node testable) ; on autorise alors le deploy.
+    if: |
+      needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+      && needs.build.result == 'success'
+      && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -206,11 +224,11 @@ jobs:
         run: |
           set -euo pipefail
           IMAGES_PARAM=""
-          if [ -f "$PROJ/lab.json" ] && [ "$(jq -r '.images // [] | length' "$PROJ/lab.json")" -gt 0 ]; then
+          if [ -f "projects/$PROJ/lab.json" ] && [ "$(jq -r '.images // [] | length' "projects/$PROJ/lab.json")" -gt 0 ]; then
             # Format multi : "web=ghcr.io/...,worker=ghcr.io/..."
             IMAGES_PARAM="$(jq -r --arg owner "$OWNER" --arg proj "$PROJ" --arg env "$ENV" \
               '.images | map("\(.)=ghcr.io/\($owner)/atelier-\($proj)-\(.):\($env)") | join(",")' \
-              "$PROJ/lab.json")"
+              "projects/$PROJ/lab.json")"
           else
             # Format mono (historique)
             IMAGES_PARAM="ghcr.io/$OWNER/atelier-$PROJ:$ENV"
@@ -231,9 +249,9 @@ jobs:
           SCP="scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
           $SSH "mkdir -p /opt/lab/apps/${PROJ}-${ENV}"
           $SCP scripts/deploy.sh "root@$LAB_HOST:/opt/lab/deploy.sh"
-          $SCP "${PROJ}/compose.yml" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/compose.yml"
-          if [ -f "${PROJ}/lab.json" ]; then
-            $SCP "${PROJ}/lab.json" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/lab.json"
+          $SCP "projects/${PROJ}/compose.yml" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/compose.yml"
+          if [ -f "projects/${PROJ}/lab.json" ]; then
+            $SCP "projects/${PROJ}/lab.json" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/lab.json"
           else
             $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/lab.json"
           fi
