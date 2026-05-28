@@ -1,10 +1,9 @@
 import { pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { user } from './auth';
 
 export const settings = pgTable('settings', {
-  userId: text('user_id')
-    .primaryKey()
-    .references(() => user.id, { onDelete: 'cascade' }),
+  // user_id : référence l'id du user dans auth.contentos.ch (pas de FK locale,
+  // la table user est gérée par le service SSO).
+  userId: text('user_id').primaryKey(),
   brandName: text('brand_name').notNull().default(''),
   brandSignature: text('brand_signature').notNull().default(''),
   brandLogoUrl: text('brand_logo_url'),

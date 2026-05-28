@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it, test } from 'vitest';
-import { db } from '@/lib/db/client';
 import {
   createPost,
   deletePost,
@@ -11,12 +10,10 @@ import {
   setPostMedia,
   updatePost,
 } from '@/lib/db/repositories/posts';
-import { user } from '@/lib/db/schema';
 import { createTestUser } from './helpers/seed';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
-}
+// No-op : la table user vit côté auth.contentos.ch, plus locale.
+async function makeUser(_id: string, _email: string) {}
 
 describe('posts repository', () => {
   test('createPost insère une row avec defaults', async () => {

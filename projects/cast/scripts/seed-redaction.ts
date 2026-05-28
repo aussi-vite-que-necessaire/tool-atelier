@@ -2,7 +2,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { eq } from 'drizzle-orm';
 import { createIdea, listIdeas } from '@/lib/db/repositories/ideas';
 import { createVoice, listVoices, updateVoice } from '@/lib/db/repositories/voice';
 import {
@@ -61,25 +60,10 @@ if (isDirectRun) {
 }
 
 async function runCli(): Promise<void> {
-  const { db } = await import('@/lib/db/client');
-  const { user } = await import('@/lib/db/schema');
-
-  async function resolveUserId(arg: string): Promise<string | undefined> {
-    if (arg.includes('@')) {
-      const rows = await db.select({ id: user.id }).from(user).where(eq(user.email, arg)).limit(1);
-      return rows[0]?.id;
-    }
-    return arg;
-  }
-
-  const arg = process.argv[2];
-  if (!arg) {
-    console.error('Usage: npm run seed:redaction -- <email|userId>');
-    process.exit(1);
-  }
-  const userId = await resolveUserId(arg);
+  // La table user vit côté auth.contentos.ch — on attend juste un userId connu.
+  const userId = process.argv[2];
   if (!userId) {
-    console.error(`Aucun user trouvé pour "${arg}". Connecte-toi d'abord, puis relance.`);
+    console.error('Usage: npm run seed:redaction -- <userId>');
     process.exit(1);
   }
   await seedRedaction(userId);

@@ -1,11 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import { updateBrandSettingsCore } from '@/app/(settings)/settings/brand/actions-core';
-import { db } from '@/lib/db/client';
 import { getSettings, upsertSettings } from '@/lib/db/repositories/settings';
-import { user } from '@/lib/db/schema';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
+// La table user vit côté auth.contentos.ch, plus locale ; on initialise juste
+// les settings pour le user_id donné.
+async function makeUser(id: string, _email: string) {
   await upsertSettings(id);
 }
 

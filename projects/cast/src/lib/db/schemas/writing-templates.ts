@@ -1,13 +1,12 @@
 import { index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { user } from './auth';
 
 export const writingTemplates = pgTable(
   'writing_templates',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    // user_id : référence l'id du user dans auth.contentos.ch (pas de FK locale,
+    // la table user est gérée par le service SSO).
+    userId: text('user_id').notNull(),
     name: text('name').notNull(),
     platform: text('platform').notNull().default('linkedin'),
     structure: text('structure').notNull(),

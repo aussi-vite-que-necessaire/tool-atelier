@@ -1,18 +1,15 @@
 import { describe, expect, test } from 'vitest';
-import { db } from '@/lib/db/client';
 import { getSettings } from '@/lib/db/repositories/settings';
 import { listVoices } from '@/lib/db/repositories/voice';
 import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
-import { user } from '@/lib/db/schema';
 import {
   DEFAULT_VOICE_CONTENT,
   DEFAULT_WRITING_TEMPLATE,
   seedUserDefaults,
 } from '@/lib/db/seeds/user-defaults';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
-}
+// No-op : la table user vit côté auth.contentos.ch, plus locale.
+async function makeUser(_id: string, _email: string) {}
 
 describe('seedUserDefaults', () => {
   test('crée settings + voice + writing_template par défaut', async () => {

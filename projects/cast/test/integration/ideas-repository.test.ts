@@ -1,5 +1,4 @@
 import { describe, expect, it, test } from 'vitest';
-import { db } from '@/lib/db/client';
 import {
   createIdea,
   deleteIdea,
@@ -7,12 +6,11 @@ import {
   listIdeas,
   updateIdea,
 } from '@/lib/db/repositories/ideas';
-import { user } from '@/lib/db/schema';
 import { createTestUser } from './helpers/seed';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
-}
+// No-op : la table user vit côté auth.contentos.ch, plus locale ;
+// l'id reste juste une string utilisée par les FK soft (user_id sans FK).
+async function makeUser(_id: string, _email: string) {}
 
 describe('ideas repository', () => {
   test('createIdea insère une row avec id généré', async () => {

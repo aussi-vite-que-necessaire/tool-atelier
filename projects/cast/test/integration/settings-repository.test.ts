@@ -1,11 +1,8 @@
 import { describe, expect, test } from 'vitest';
-import { db } from '@/lib/db/client';
 import { getSettings, updateSettings, upsertSettings } from '@/lib/db/repositories/settings';
-import { user } from '@/lib/db/schema';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
-}
+// No-op : la table user vit côté auth.contentos.ch, plus locale.
+async function makeUser(_id: string, _email: string) {}
 
 describe('settings repository', () => {
   test('upsertSettings crée une row vide', async () => {

@@ -1,12 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { createWritingTemplateCore } from '@/app/(settings)/settings/writing-templates/new/actions-core';
-import { db } from '@/lib/db/client';
 import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
-import { user } from '@/lib/db/schema';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
-}
+// No-op : la table user vit côté auth.contentos.ch, plus locale.
+async function makeUser(_id: string, _email: string) {}
 
 function fd(values: Record<string, string>): FormData {
   const f = new FormData();

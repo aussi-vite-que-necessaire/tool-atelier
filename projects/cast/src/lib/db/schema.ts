@@ -1,6 +1,4 @@
-export * from './schemas/auth';
 export * from './schemas/ideas';
-export * from './schemas/oidc';
 export * from './schemas/posts';
 export * from './schemas/publications';
 export * from './schemas/settings';
