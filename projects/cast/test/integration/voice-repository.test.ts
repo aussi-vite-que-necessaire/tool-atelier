@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest';
-import { db } from '@/lib/db/client';
 import {
   createVoice,
   deleteVoice,
@@ -7,11 +6,9 @@ import {
   listVoices,
   updateVoice,
 } from '@/lib/db/repositories/voice';
-import { user } from '@/lib/db/schema';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
-}
+// No-op : la table user vit côté auth.contentos.ch, plus locale.
+async function makeUser(_id: string, _email: string) {}
 
 describe('voice repository', () => {
   test('listVoices retourne [] si aucune voix', async () => {

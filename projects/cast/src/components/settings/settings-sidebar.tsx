@@ -11,7 +11,7 @@ const items: { label: string; href: string }[] = [
   { label: 'Connexions', href: '/settings/connections' },
 ];
 
-export function SettingsSidebar({ email }: { email: string }) {
+export function SettingsSidebar() {
   const pathname = usePathname();
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 px-3 py-4">
@@ -41,7 +41,6 @@ export function SettingsSidebar({ email }: { email: string }) {
         })}
       </nav>
       <div className="mt-auto px-3 pt-4 text-xs text-neutral-500">
-        <p className="truncate pb-2">{email}</p>
         <Link href="/" className="hover:text-neutral-900">
           ← Retour à l'app
         </Link>

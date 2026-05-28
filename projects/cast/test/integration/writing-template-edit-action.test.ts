@@ -3,13 +3,10 @@ import {
   deleteWritingTemplateCore,
   updateWritingTemplateCore,
 } from '@/app/(settings)/settings/writing-templates/[id]/actions-core';
-import { db } from '@/lib/db/client';
 import { createWritingTemplate, getWritingTemplate } from '@/lib/db/repositories/writing-templates';
-import { user } from '@/lib/db/schema';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
-}
+// No-op : la table user vit côté auth.contentos.ch, plus locale.
+async function makeUser(_id: string, _email: string) {}
 
 function fd(values: Record<string, string>): FormData {
   const f = new FormData();

@@ -5,17 +5,15 @@ const envSchema = z.object({
   APP_URL: z.string().url(),
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
-  BETTER_AUTH_SECRET: z.string().min(16),
-  RESEND_API_KEY: z.string().optional(),
-  RESEND_FROM: z.string().email().optional(),
+  // URL du provider d'auth de la suite contentos. Défaut prod = auth.contentos.ch.
+  // En preview, isPreview court-circuite tout fetch vers auth.
+  AUTH_URL: z.string().url().default('https://auth.contentos.ch'),
   LINKEDIN_CLIENT_ID: z.string().optional(),
   LINKEDIN_CLIENT_SECRET: z.string().optional(),
   TOKEN_ENCRYPTION_KEY: z.string().optional(),
   CONTENT_OS_LINKEDIN_STUB: z.enum(['0', '1']).default('0'),
   MEDIA_ENGINE_URL: z.string().optional(),
   MEDIA_ENGINE_SERVICE_KEY: z.string().optional(),
-  // Version de l'API LinkedIn (YYYYMM). LinkedIn ne garde une version active
-  // qu'environ 12 mois ; bumper si "NONEXISTENT_VERSION" au moment de publier.
   LINKEDIN_API_VERSION: z.string().default('202604'),
   E2E_TESTING: z.string().optional(),
   // Injecté par deploy.sh : 'prod' en prod, sinon le slug de branche (preview).

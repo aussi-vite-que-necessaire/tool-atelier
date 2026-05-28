@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest';
-import { db } from '@/lib/db/client';
 import { createPost, setPostMedia } from '@/lib/db/repositories/posts';
 import {
   createPublication,
@@ -10,11 +9,9 @@ import {
   listPublicationsForCalendar,
   updatePublication,
 } from '@/lib/db/repositories/publications';
-import { user } from '@/lib/db/schema';
 
-async function makeUser(id: string, email: string) {
-  await db.insert(user).values({ id, email });
-}
+// No-op : la table user vit côté auth.contentos.ch, plus locale.
+async function makeUser(_id: string, _email: string) {}
 
 async function makePostForUser(userId: string): Promise<string> {
   const post = await createPost(userId, { title: 'T', content: 'final' });

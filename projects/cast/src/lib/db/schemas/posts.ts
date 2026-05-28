@@ -1,5 +1,4 @@
 import { index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-import { user } from './auth';
 
 export const postStatus = pgEnum('post_status', ['draft', 'validated']);
 
@@ -7,9 +6,9 @@ export const posts = pgTable(
   'posts',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    // user_id : référence l'id du user dans auth.contentos.ch (pas de FK locale,
+    // la table user est gérée par le service SSO).
+    userId: text('user_id').notNull(),
     title: text('title').notNull(),
     mediaId: text('media_id'),
     mediaUrl: text('media_url'),

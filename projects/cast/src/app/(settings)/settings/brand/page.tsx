@@ -1,16 +1,13 @@
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { SettingsCard } from '@/components/settings/settings-card';
 import { SettingsPage } from '@/components/settings/settings-page';
-import { auth } from '@/lib/auth/server';
+import { requireUserId } from '@/lib/auth/session';
 import { getSettings } from '@/lib/db/repositories/settings';
 import { BrandForm } from './brand-form';
 
 export default async function BrandPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect('/signin');
+  const userId = await requireUserId();
 
-  const settings = await getSettings(session.user.id);
+  const settings = await getSettings(userId);
   if (!settings) {
     throw new Error('settings row missing for authenticated user');
   }

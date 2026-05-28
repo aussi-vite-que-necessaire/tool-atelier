@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { emailOTP } from "better-auth/plugins";
+import { emailOTP, mcp } from "better-auth/plugins";
 import { db } from "@/db";
 import { schema } from "@/db/schema";
 import { sendEmail } from "@/lib/email";
@@ -53,6 +53,14 @@ export const auth = betterAuth({
           subject: "Ton code de connexion",
           html: `<p>Ton code : <b>${otp}</b> (expire dans 10 minutes).</p>`,
         });
+      },
+    }),
+    mcp({
+      loginPage: "/sign-in",
+      oidcConfig: {
+        loginPage: "/sign-in",
+        allowDynamicClientRegistration: true,
+        requirePKCE: true,
       },
     }),
   ],

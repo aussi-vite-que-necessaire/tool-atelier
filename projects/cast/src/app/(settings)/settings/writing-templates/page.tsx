@@ -1,17 +1,14 @@
-import { headers } from 'next/headers';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { SettingsPage } from '@/components/settings/settings-page';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { auth } from '@/lib/auth/server';
+import { requireUserId } from '@/lib/auth/session';
 import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
 
 export default async function WritingTemplatesListPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect('/signin');
+  const userId = await requireUserId();
 
-  const templates = await listWritingTemplates(session.user.id);
+  const templates = await listWritingTemplates(userId);
 
   return (
     <SettingsPage

@@ -1,5 +1,4 @@
 import { describe, expect, it, test } from 'vitest';
-import { db } from '@/lib/db/client';
 import {
   createIdea,
   deleteIdea,
@@ -36,17 +35,14 @@ import {
   listWritingTemplates,
   updateWritingTemplate,
 } from '@/lib/db/repositories/writing-templates';
-import { user } from '@/lib/db/schema';
 import { createTestUser } from './helpers/seed';
 import { runTenantIsolationSuite } from './helpers/tenant-isolation-harness';
 
 // Tests bespoke pour settings (singleton par user, pas de create/list/delete).
+// La table user vit côté auth.contentos.ch — ici on travaille directement avec
+// des user_id stables (FK locale supprimée).
 describe('settings — tenant isolation', () => {
   test('user A ne voit pas les settings de user B', async () => {
-    await db.insert(user).values([
-      { id: 'alice', email: 'alice@test.com' },
-      { id: 'bob', email: 'bob@test.com' },
-    ]);
     await upsertSettings('alice');
     await upsertSettings('bob');
     await updateSettings('alice', { brandName: 'AliceCorp' });
@@ -59,10 +55,6 @@ describe('settings — tenant isolation', () => {
   });
 
   test('updateSettings sur user A ne touche pas user B', async () => {
-    await db.insert(user).values([
-      { id: 'alice', email: 'alice@test.com' },
-      { id: 'bob', email: 'bob@test.com' },
-    ]);
     await upsertSettings('alice');
     await upsertSettings('bob');
 

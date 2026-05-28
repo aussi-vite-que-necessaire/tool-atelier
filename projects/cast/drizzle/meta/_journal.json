@@ -176,6 +176,13 @@
       "when": 1779908229465,
       "tag": "0024_natural_menace",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1779983770548,
+      "tag": "0025_drop_auth_oidc",
+      "breakpoints": true
     }
   ]
 }
