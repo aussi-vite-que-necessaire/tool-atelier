@@ -211,6 +211,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # Serializé : un seul deploy à la fois pour éviter la concurrence sur le daemon
+      # Docker du lab (plusieurs `docker pull` simultanés font échouer le containerd
+      # lease — « lease does not exist: not found »).
+      max-parallel: 1
       matrix:
         project: ${{ fromJson(needs.detect.outputs.projects) }}
     env:
