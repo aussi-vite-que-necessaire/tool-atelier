@@ -8,7 +8,7 @@ description: Phase d'implémentation du pipe /lab-ship — exécute le plan tâc
 Phase 3 du pipe `/lab-ship`. **Aucune interaction humaine.** Lit le plan produit
 par `/lab-planifier`, dispatche un sub-agent par tâche, exécute la double revue
 (spec puis code quality), boucle jusqu'à approbation, rend la main à `/lab-ship`
-étape 6 (push + PR).
+étape 5 (push + PR).
 
 ## Contrat
 
@@ -16,7 +16,7 @@ par `/lab-planifier`, dispatche un sub-agent par tâche, exécute la double revu
   résolue par le controller via le choix le plus simple, notée dans le rapport
   de fin retourné à `/lab-ship`.
 - Pas de menu de fin. Sur approbation finale du code-quality-reviewer, **rendre
-  la main à `/lab-ship`** étape 6 (push + PR). **Ne pas** invoquer une skill de
+  la main à `/lab-ship`** étape 5 (push + PR). **Ne pas** invoquer une skill de
   type `finishing-a-development-branch`.
 - Stop sur blocage durable uniquement.
 
@@ -33,7 +33,7 @@ digraph lab_impl {
   "Toutes tâches faites ?" [shape=diamond];
   "Dispatch code-quality-reviewer final" [shape=box];
   "Quality approuvée ?" [shape=diamond];
-  "Retour à /lab-ship étape 6" [shape=doublecircle];
+  "Retour à /lab-ship étape 5" [shape=doublecircle];
 
   "Lire le plan" -> "Tâche suivante ?";
   "Tâche suivante ?" -> "Dispatch implementer sub-agent" [label="oui"];
@@ -47,7 +47,7 @@ digraph lab_impl {
   "Toutes tâches faites ?" -> "Dispatch code-quality-reviewer final" [label="oui"];
   "Dispatch code-quality-reviewer final" -> "Quality approuvée ?";
   "Quality approuvée ?" -> "Appliquer changements" [label="non"];
-  "Quality approuvée ?" -> "Retour à /lab-ship étape 6" [label="oui"];
+  "Quality approuvée ?" -> "Retour à /lab-ship étape 5" [label="oui"];
 }
 ```
 
@@ -73,7 +73,7 @@ digraph lab_impl {
    - **Si approbation** : étape 4.
 4. **Rendre la main à `/lab-ship`** avec un rapport bref : tâches faites,
    décisions tranchées sans demander, ambiguïtés résolues. `/lab-ship` enchaîne
-   sur l'étape 6 (push + PR).
+   sur l'étape 5 (push + PR).
 
 ## Boucle de revue — règles
 
@@ -90,4 +90,4 @@ digraph lab_impl {
 - Les prompts compagnons (anglais) sont la source de vérité du comportement des
   sub-agents — ne pas les paraphraser dans cette skill.
 - Tout commit est fait par le sub-agent dans sa tâche.
-- Rendre la main à `/lab-ship` étape 6, jamais à autre chose.
+- Rendre la main à `/lab-ship` étape 5, jamais à autre chose.
