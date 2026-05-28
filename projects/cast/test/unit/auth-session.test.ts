@@ -10,6 +10,9 @@ vi.mock('@/lib/auth/preview', () => ({
 vi.mock('@/lib/env', () => ({
   env: { AUTH_URL: 'https://auth.example.test', APP_URL: 'https://cast.example.test' },
 }));
+vi.mock('@/lib/db/seeds/user-defaults', () => ({
+  seedUserDefaults: vi.fn().mockResolvedValue(undefined),
+}));
 
 const mockHeaders = (cookie?: string) => {
   const h = new Headers();

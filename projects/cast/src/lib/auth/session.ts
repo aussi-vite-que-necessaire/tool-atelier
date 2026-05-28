@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { env } from '@/lib/env';
+import { seedUserDefaults } from '@/lib/db/seeds/user-defaults';
 import { isPreview, PREVIEW_USER_ID } from './preview';
 
 type Session = { user: { id: string } };
@@ -24,13 +25,27 @@ function signInRedirectUrl(): string {
   return `${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(env.APP_URL)}`;
 }
 
+// Cache process-level pour éviter de retaper la DB à chaque requête.
+// seedUserDefaults est idempotent côté DB (SELECT-then-insert), mais on évite
+// le round-trip si on a déjà vu cet user dans cette instance de worker.
+const seeded = new Set<string>();
+
+async function ensureSeeded(userId: string): Promise<void> {
+  if (seeded.has(userId)) return;
+  await seedUserDefaults(userId);
+  seeded.add(userId);
+}
+
 export async function requireUserId(): Promise<string> {
   const s = await fetchSession(await headers());
   if (!s) redirect(signInRedirectUrl());
+  await ensureSeeded(s.user.id);
   return s.user.id;
 }
 
 export async function getUserId(): Promise<string | undefined> {
   const s = await fetchSession(await headers());
-  return s?.user.id;
+  if (!s) return undefined;
+  await ensureSeeded(s.user.id);
+  return s.user.id;
 }
