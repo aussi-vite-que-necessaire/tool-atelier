@@ -26,7 +26,7 @@ décide**, à l'intérieur. Trois rails, trois skills :
 - **`/lab-new`** — créer un **nouveau projet** en composant une base Next.js + des capacités (`db`/`redis`/`auth`/`mcp`), avec thème écrit par l'IA, et le déployer jusqu'en prod.
 - **`/lab-meta`** — **plomberie de l'atelier** (skills, `CLAUDE.md`, scripts, hooks, lanceur). Flow libre, pas de rail forcé.
 
-Utilitaires : **`/start`** (router de session), **`/lab-work <projet>`** (focalise sur un projet, utilisé par `/lab-ship`), **`/lab-deploy`** (déploie le projet courant), **`/lab-secret`** (secrets), **`/lab-ssh`** (diagnostic serveur).
+Utilitaires : **`/start`** (router de session), **`/lab-deploy`** (déploie le projet courant), **`/lab-secret`** (secrets), **`/lab-ssh`** (diagnostic serveur).
 
 La liste des projets se déduit en scannant les `projects/*/lab.json` — chaque projet déclare sa description dans son `lab.json`.
 
