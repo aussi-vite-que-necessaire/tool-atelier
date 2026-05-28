@@ -32,8 +32,11 @@ et mappe `mediaKind → LinkedIn` (`pdf→document`, `video→video`, `image|ren
 ## Stack
 
 **Next.js 16** (App Router, sortie `standalone`) + **Drizzle ORM** (driver `pg`/node-postgres,
-schéma `src/lib/db/schema.ts`, client paresseux `src/lib/db/client.ts`) + **better-auth**
-(`BETTER_AUTH_SECRET`, plugin MCP/OAuth) + **BullMQ + ioredis**. Migrations SQL committées
+schéma `src/lib/db/schema.ts`, client paresseux `src/lib/db/client.ts`) + **BullMQ + ioredis**.
+Sessions web et OAuth/OIDC du MCP délégués à **`auth.contentos.ch`** (cookie cross-subdomain
+`.contentos.ch`) — `src/lib/auth/session.ts` lit la session via fetch HTTP, `src/lib/mcp/auth.ts`
+valide les bearer MCP via `${AUTH_URL}/api/auth/mcp/get-session`. Voir
+`docs/superpowers/specs/2026-05-28-cast-sso-migration-design.md`. Migrations SQL committées
 dans `drizzle/`, appliquées au déploiement par le one-shot `scripts/migrate.mjs`
 (`drizzle-orm/node-postgres`, deps de prod — pas de drizzle-kit). `GET /healthz` → `ok` sans DB.
 
@@ -63,8 +66,7 @@ environnement. Le one-shot `migrate` applique `drizzle/` avant le démarrage.
 Les autres secrets viennent du coffre `cast` de l'atelier (`/lab-secret`, scope `cast`),
 déchiffrés et injectés par `deploy.sh` :
 
-- `BETTER_AUTH_SECRET` — signature des sessions (≥ 16 car. ; `openssl rand -base64 32`)
-- `RESEND_API_KEY`, `RESEND_FROM` — email (sinon OTP loggé côté serveur)
+- `AUTH_URL` — URL du provider d'auth de la suite (défaut `https://auth.contentos.ch`).
 - `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_API_VERSION` — publication LinkedIn
 - `TOKEN_ENCRYPTION_KEY` — chiffrement des tokens LinkedIn stockés
 - `MEDIA_ENGINE_URL`, `MEDIA_ENGINE_SERVICE_KEY` — service **media** (`https://media.contentos.ch`) :
