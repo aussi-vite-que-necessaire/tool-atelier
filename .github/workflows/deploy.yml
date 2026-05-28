@@ -38,9 +38,18 @@ jobs:
             base="$(git merge-base origin/main HEAD 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)"
           fi
           changed="$(git diff --name-only "$base" '${{ github.sha }}')"
-          projects="$(printf '%s\n' "$changed" | awk -F/ '$1=="projects" && NF>2 {print $2}' | sort -u \
-            | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
-            | jq -R . | jq -cs .)"
+          # Plomberie de déploiement (scripts/deploy.sh, workflow CI) → redéploie tous les projets
+          # qui ont un Dockerfile (le pipeline les concerne tous).
+          if printf '%s\n' "$changed" | grep -qE '^(scripts/deploy\.sh|\.github/workflows/deploy\.yml)$'; then
+            projects="$(ls -1 projects/ \
+              | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
+              | jq -R . | jq -cs .)"
+            echo "plomberie modifiée → redéploie tous les projets"
+          else
+            projects="$(printf '%s\n' "$changed" | awk -F/ '$1=="projects" && NF>2 {print $2}' | sort -u \
+              | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
+              | jq -R . | jq -cs .)"
+          fi
           echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "projets changés: $projects"
           # Sous-ensemble testable côté Node : exige package.json + package-lock.json (sinon
