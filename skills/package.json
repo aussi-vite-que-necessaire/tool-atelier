@@ -10,7 +10,8 @@
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "migrate": "node scripts/migrate.mjs",
-    "seed": "node scripts/seed.mjs"
+    "seed": "node scripts/seed.mjs",
+    "db:test:prepare": "node scripts/db-test-prepare.mjs"
   },
   "dependencies": {
     "next": "^16.2.6",
