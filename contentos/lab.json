@@ -5,5 +5,6 @@
   "email": true,
   "domain": "contentos.avqn.ch",
   "migrate": "node scripts/migrate.mjs",
-  "worker": "node worker-runner.mjs"
+  "worker": "node worker-runner.mjs",
+  "images": ["web", "worker"]
 }
