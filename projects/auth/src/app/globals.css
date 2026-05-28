@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+/* Thème sobre & neutre : identité d'infrastructure, sans personnalité forte qui
+   déborderait sur les apps clientes du SSO. */
+@theme {
+  --color-brand-50: #fafafa;
+  --color-brand-500: #18181b;
+  --color-brand-600: #09090b;
+  --color-brand-900: #000000;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  color-scheme: light dark;
+}
