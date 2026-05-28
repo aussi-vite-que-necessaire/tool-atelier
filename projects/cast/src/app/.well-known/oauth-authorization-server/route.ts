@@ -1,4 +1,9 @@
-import { oAuthDiscoveryMetadata } from 'better-auth/plugins';
-import { auth } from '@/lib/auth/server';
+import { env } from '@/lib/env';
 
-export const GET = oAuthDiscoveryMetadata(auth);
+// Délègue la découverte OAuth aux clients vers le provider central.
+export function GET(): Response {
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `${env.AUTH_URL}/.well-known/oauth-authorization-server` },
+  });
+}
