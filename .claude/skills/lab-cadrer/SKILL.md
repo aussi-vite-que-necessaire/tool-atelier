@@ -39,7 +39,7 @@ explicite du design en fin de cadrage.
 4. **Demander la validation explicite.** « OK avec ce design ? Si oui, j'écris la
    spec et j'enchaîne. »
 5. **Sur validation** : écrire la spec dans
-   `docs/superpowers/specs/AAAA-MM-JJ-<sujet>-design.md`, échelle adaptée. Commit.
+   `docs/specs/AAAA-MM-JJ-<sujet>-design.md`, échelle adaptée. Commit.
 6. **Self-review inline de la spec** : scan placeholders, cohérence interne,
    scope, ambiguïté. Corriger inline. Pas de re-validation humaine.
 7. **Chaîner sur `/lab-planifier`** via le tool `Skill`. Annoncer brièvement :

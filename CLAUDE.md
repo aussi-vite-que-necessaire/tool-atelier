@@ -12,7 +12,7 @@ Les outils vivent sous `*.contentos.ch` en prod. Cas spécial : **`projects/www/
 | `/lab-new` | Créer un nouveau projet (base Next.js + capacités, déploiement jusqu'en prod) |
 | `/lab-meta` | Plomberie de l'atelier (skills, `CLAUDE.md`, scripts, hooks) — flow libre |
 
-Utilitaires : `/start` (router de session), `/lab-deploy` (déploie le projet courant), `/lab-secret` (secrets), `/lab-ssh` (diagnostic serveur).
+Utilitaires : `/start` (router de session), `/lab-deploy` (déploie le projet courant), `/lab-secret` (secrets), `/lab-ssh` (diagnostic serveur), `/lab-adr <sujet>` (capture une décision structurante dans `docs/decisions/`), `/lab-idea <sujet>` (capture une piste en backlog dans `docs/ideas/`).
 
 La liste des projets se déduit en scannant `projects/*/lab.json` — chaque projet déclare sa description dans son `lab.json`.
 

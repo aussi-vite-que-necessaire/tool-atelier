@@ -40,7 +40,7 @@ notification.
    validation explicite, écrit la spec et chaîne sur `/lab-planifier`. À partir
    de là, plus d'interaction humaine côté contenu.
 3. **Plan (sans gate).** `/lab-planifier` écrit le plan dans
-   `docs/superpowers/plans/AAAA-MM-JJ-<sujet>.md`, commit, et chaîne sur
+   `docs/plans/AAAA-MM-JJ-<sujet>.md`, commit, et chaîne sur
    `/lab-implémenter`.
 4. **Implémentation (sans gate).** `/lab-implémenter` orchestre les sub-agents
    (implementer + spec-reviewer par tâche, code-quality-reviewer final). À
