@@ -1,13 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { authClient, signIn } from "@/lib/auth-client";
 
 export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInForm />
+    </Suspense>
+  );
+}
+
+function SignInForm() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  function safeRedirect(): string {
+    const raw = searchParams.get("redirect");
+    if (!raw) return "/";
+    try {
+      const u = new URL(raw);
+      // Whitelist : domaines de la suite contentos uniquement.
+      if (u.hostname === "contentos.ch") return raw;
+      if (u.hostname.endsWith(".contentos.ch")) return raw;
+      if (u.hostname.endsWith(".preview.contentos.ch")) return raw;
+      return "/";
+    } catch {
+      return "/";
+    }
+  }
 
   const input =
     "w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-zinc-700";
@@ -62,7 +87,7 @@ export default function SignInPage() {
                   return;
                 }
                 setMsg("Connecté.");
-                location.href = "/";
+                location.href = safeRedirect();
               }}
             >
               Valider le code
