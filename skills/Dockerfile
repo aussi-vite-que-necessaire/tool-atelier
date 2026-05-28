@@ -22,7 +22,7 @@ RUN npm run build
 FROM node:22-slim AS proddeps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 
 # --- runner : image finale slim ---
 FROM node:22-slim AS runner
