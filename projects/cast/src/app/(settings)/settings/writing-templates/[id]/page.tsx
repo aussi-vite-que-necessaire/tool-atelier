@@ -1,8 +1,7 @@
-import { headers } from 'next/headers';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { SettingsCard } from '@/components/settings/settings-card';
 import { SettingsPage } from '@/components/settings/settings-page';
-import { auth } from '@/lib/auth/server';
+import { requireUserId } from '@/lib/auth/session';
 import { getWritingTemplate } from '@/lib/db/repositories/writing-templates';
 import { WritingTemplateForm } from '../writing-template-form';
 import { deleteWritingTemplateActionRaw, updateWritingTemplateAction } from './actions';
@@ -13,11 +12,10 @@ export default async function EditWritingTemplatePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect('/signin');
+  const userId = await requireUserId();
 
   const { id } = await params;
-  const template = await getWritingTemplate(session.user.id, id);
+  const template = await getWritingTemplate(userId, id);
   if (!template) notFound();
 
   const updateAction = updateWritingTemplateAction.bind(null, id);

@@ -1,8 +1,7 @@
 import { CalendarDays, Lightbulb, PenSquare } from 'lucide-react';
-import { headers } from 'next/headers';
 import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
-import { auth } from '@/lib/auth/server';
+import { requireUserId } from '@/lib/auth/session';
 import { listPosts } from '@/lib/db/repositories/posts';
 import { listPublicationsForCalendar } from '@/lib/db/repositories/publications';
 import { buildDashboard } from '@/lib/home/dashboard';
@@ -18,10 +17,7 @@ const QUICK_ACTIONS = [
 ];
 
 export default async function DashboardPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) return null;
-  const userId = session.user.id;
-  const firstName = (session.user.name?.trim() || session.user.email || '').split(/\s+/)[0];
+  const userId = await requireUserId();
 
   const [posts, pubs, author] = await Promise.all([
     listPosts(userId),
@@ -34,7 +30,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">Bonjour, {firstName}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Bonjour</h1>
         <p className="text-muted-foreground">
           Voici l’état de ton contenu — ce qui arrive et ce qui vient de partir.
         </p>

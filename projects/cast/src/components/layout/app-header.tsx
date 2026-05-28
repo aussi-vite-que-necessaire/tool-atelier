@@ -2,9 +2,8 @@
 
 import { CalendarDays, FileText, Lightbulb } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { authClient } from '@/lib/auth/client';
+import { usePathname } from 'next/navigation';
+import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const APP_LINKS = [
@@ -13,14 +12,8 @@ const APP_LINKS = [
   { href: '/calendar', label: 'Calendrier', icon: CalendarDays },
 ];
 
-export function AppHeader({ name, email }: { name: string | null; email: string }) {
-  const router = useRouter();
+export function AppHeader({ authUrl }: { authUrl: string }) {
   const pathname = usePathname();
-
-  async function handleSignOut() {
-    await authClient.signOut();
-    router.push('/signin');
-  }
 
   return (
     <header className="border-b bg-white">
@@ -50,11 +43,11 @@ export function AppHeader({ name, email }: { name: string | null; email: string 
         </div>
         <div className="flex items-center gap-3">
           <Link href="/settings" className="text-sm text-neutral-600 hover:text-neutral-900">
-            {name?.trim() ? name : email}
+            Réglages
           </Link>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+          <a href={authUrl} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
             Se déconnecter
-          </Button>
+          </a>
         </div>
       </div>
     </header>

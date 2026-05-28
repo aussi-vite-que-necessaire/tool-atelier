@@ -1,19 +1,18 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { headers } from 'next/headers';
-import { auth } from '@/lib/auth/server';
+import { getUserId } from '@/lib/auth/session';
 import { type BrandActionState, updateBrandSettingsCore } from './actions-core';
 
 export async function updateBrandSettings(
   _prev: BrandActionState,
   formData: FormData,
 ): Promise<BrandActionState> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) {
+  const userId = await getUserId();
+  if (!userId) {
     return { status: 'error', message: 'unauthenticated' };
   }
-  const result = await updateBrandSettingsCore(session.user.id, formData);
+  const result = await updateBrandSettingsCore(userId, formData);
   if (result.status === 'success') {
     revalidatePath('/settings/brand');
   }
