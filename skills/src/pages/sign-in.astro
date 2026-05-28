@@ -1,0 +1,106 @@
+---
+import { auth } from "@/lib/auth";
+import "@/styles/global.css";
+
+export const prerender = false;
+
+// Si déjà connecté → home.
+const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (session) return Astro.redirect("/");
+---
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connexion · skills</title>
+  </head>
+  <body class="min-h-screen bg-white text-gray-900 antialiased">
+    <main class="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
+      <h1 class="text-xl font-semibold">Connexion</h1>
+      <p class="text-sm text-gray-600">Reçois un code par email pour te connecter.</p>
+
+      <form id="email-form" class="flex flex-col gap-3">
+        <input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="Email"
+          required
+          class="rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-500"
+        />
+        <button
+          type="submit"
+          class="rounded border border-gray-900 bg-gray-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+        >
+          Recevoir un code
+        </button>
+      </form>
+
+      <form id="otp-form" class="hidden flex-col gap-3">
+        <input
+          id="otp"
+          name="otp"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="000000"
+          required
+          class="rounded border border-gray-300 px-3 py-2 text-center font-mono text-sm tracking-[0.4em] outline-none focus:border-gray-500"
+        />
+        <button
+          type="submit"
+          class="rounded border border-gray-900 bg-gray-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+        >
+          Valider le code
+        </button>
+      </form>
+
+      <p id="msg" class="text-xs text-gray-500"></p>
+    </main>
+
+    <script>
+      const $ = (id: string) => document.getElementById(id) as HTMLElement;
+      const emailForm = $("email-form") as HTMLFormElement;
+      const otpForm = $("otp-form") as HTMLFormElement;
+      const msg = $("msg");
+      let email = "";
+
+      emailForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        email = ($("email") as HTMLInputElement).value.trim();
+        if (!email) return;
+        msg.textContent = "Envoi en cours…";
+        const r = await fetch("/api/auth/email-otp/send-verification-otp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, type: "sign-in" }),
+        });
+        if (!r.ok) {
+          msg.textContent = "Erreur — réessaie dans un instant.";
+          return;
+        }
+        emailForm.classList.add("hidden");
+        otpForm.classList.remove("hidden");
+        otpForm.classList.add("flex");
+        msg.textContent = "Code envoyé (000000 en preview).";
+        ($("otp") as HTMLInputElement).focus();
+      });
+
+      otpForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const otp = ($("otp") as HTMLInputElement).value.trim();
+        if (otp.length < 6) return;
+        msg.textContent = "Validation…";
+        const r = await fetch("/api/auth/sign-in/email-otp", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email, otp }),
+        });
+        if (!r.ok) {
+          msg.textContent = "Code invalide.";
+          return;
+        }
+        location.href = "/";
+      });
+    </script>
+  </body>
+</html>

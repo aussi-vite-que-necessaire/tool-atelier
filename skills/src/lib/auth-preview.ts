@@ -1,11 +1,10 @@
-// Auto-login preview : code OTP déterministe accepté hors prod (jamais en prod).
-export const PREVIEW_USER = "preview@local";
+// Helpers de preview : code OTP figé pour itérer sans email réel.
+// Activé quand APP_URL pointe sur un *-<env>.lab.avqn.ch (env != prod) OU NODE_ENV=development.
+const url = process.env.APP_URL ?? "";
+const host = (() => {
+  try { return new URL(url).host; } catch { return ""; }
+})();
+const isPreviewHost = /^[^.]+-[a-z0-9-]+\.lab\.avqn\.ch$/.test(host);
+
+export const isPreview = process.env.NODE_ENV !== "production" || isPreviewHost;
 export const PREVIEW_OTP = "000000";
-
-// Preview = déployé non-prod (APP_ENV = slug de branche). Prod : APP_ENV === "prod".
-// On lit process.env directement pour rester importable sans parser tout l'env.
-export function isPreviewEnv(appEnv: string | undefined): boolean {
-  return !!appEnv && appEnv !== "prod";
-}
-
-export const isPreview = isPreviewEnv(process.env.APP_ENV);

@@ -6,24 +6,38 @@ embarqué dans un agent Claude pour piloter le tool correspondant via MCP.
 
 **Prod** : `https://skills.lab.avqn.ch`.
 
+## Stack — Astro SSR (Node)
+
+Le projet tourne en **Astro 5** + **adapter `@astrojs/node`** (mode `standalone`), pas Next.js.
+Choix volontaire pour un site front léger avec un peu d'auth : **build ~1s** (vs ~7s sur Next),
+runtime slim (entry `dist/server/entry.mjs` lancé par `node`). BetterAuth est branché par un
+handler unique sur `/api/auth/[...all]`, exactement comme avec Next.
+
+Une variante Astro du starter kit de l'atelier sera extraite dans un PR séparé
+(`starters/base-astro/` + module `auth` adapté).
+
 ## Structure
 
 ```
 skills/
 ├── lab.json                       db + email (auth OTP only)
+├── astro.config.mjs               output: "server" + adapter node (standalone) + Tailwind v4
 ├── src/
-│   ├── app/
-│   │   ├── page.tsx               liste publique des skills (lecture des manifests)
-│   │   ├── sign-in/page.tsx       OTP par email
+│   ├── pages/
+│   │   ├── index.astro            liste publique des skills (SSR ; lit les manifestes)
+│   │   ├── sign-in.astro          OTP par email (vanilla JS → REST BetterAuth)
+│   │   ├── healthz.ts             GET /healthz : 200 "ok"
 │   │   └── api/
-│   │       ├── auth/[...all]      BetterAuth
-│   │       └── skills/[name]/download   zip à la volée (auth requis)
+│   │       ├── auth/[...all].ts   BetterAuth — toutes les routes REST
+│   │       └── skills/[name]/download.ts   zip à la volée (auth requis)
 │   ├── lib/
 │   │   ├── skills-fs.ts           lecture/listing des skills + manifestes
-│   │   ├── auth.ts / auth-client.ts   BetterAuth (OTP)
+│   │   ├── auth.ts                BetterAuth (emailOTP, drizzle adapter)
+│   │   ├── auth-preview.ts        code preview "000000" sur hôtes *-<env>.lab.avqn.ch
 │   │   └── email.ts               Resend (envoi du code)
-│   └── db/                        tables BetterAuth
-└── skills/                        ← source de vérité des skills
+│   ├── db/                        tables BetterAuth (user/session/account/verification)
+│   └── styles/global.css          Tailwind v4 (import unique)
+└── skills/                        ← source de vérité des skills (un dossier par skill)
     ├── content-os-redaction/
     ├── creer-une-ressource/
     ├── creer-un-visuel/
@@ -35,8 +49,8 @@ skills/
 Chaque dossier `skills/<nom>/` contient :
 
 ```
-manifest.json     # méta + version (cf. ci-dessous)
-SKILL.md          # entrée du skill avec frontmatter YAML standard Claude
+manifest.json     # méta + version
+SKILL.md          # entrée du skill (frontmatter YAML standard Claude)
 ...               # fichiers du skill (production/, references/, etc.)
 ```
 
@@ -74,15 +88,17 @@ SKILL.md          # entrée du skill avec frontmatter YAML standard Claude
 
 ## Auth
 
-OTP par email (BetterAuth + Resend), même pattern que `contentos` / `ressources` / `media`.
-Code preview `000000` en preview. En prod : email réel via Resend (clé tirée du store via
-`/lab-secret`, scope `skills`).
+OTP par email (BetterAuth + Resend), même contrat que `contentos` / `ressources` / `media` :
+- `BETTER_AUTH_SECRET` requis en prod (sinon BetterAuth refuse de démarrer). Posé dans
+  `/lab-secret`, scope `skills`, valeur `openssl rand -base64 32`.
+- Code preview `000000` quand l'hôte courant est `*-<env>.lab.avqn.ch` (preview).
+- `DATABASE_URL` + `RESEND_API_KEY` + `EMAIL_FROM` + `APP_URL` injectés par la plateforme.
 
 ## Standalone runtime
 
-Les fichiers `skills/` doivent être présents dans le conteneur runtime. `next.config.ts` ajoute
-`outputFileTracingIncludes` pour `/` et `/api/skills/[name]/download`. Si on ajoute une route
-qui touche au dossier, l'inclure aussi.
+Le Dockerfile copie `dist/`, les `node_modules` de prod, et le dossier `skills/` (source de
+vérité, lue à chaud par la route de téléchargement). Lancé par `node ./dist/server/entry.mjs`
+sur `:8080`.
 
 ## Spec / plan
 
@@ -93,5 +109,3 @@ qui touche au dossier, l'inclure aussi.
 
 `git push` sur une branche → preview `https://skills-<branche>.lab.avqn.ch`. Merge de la PR
 → prod `https://skills.lab.avqn.ch`. Jamais de commit sur `main`.
-
-<!-- redeploy: BETTER_AUTH_SECRET injecté (preview/prod) -->
