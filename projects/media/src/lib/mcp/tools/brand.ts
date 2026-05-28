@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { jsonResult } from "@/lib/mcp/result";
+import { userIdFrom } from "@/lib/mcp/auth";
 import { getBrand, upsertBrand } from "@/lib/brand/repository";
 
 export function registerBrandTools(server: McpServer): void {
@@ -12,8 +13,9 @@ export function registerBrandTools(server: McpServer): void {
         "sous les variables {{brand.name}}, {{brand.signature}}, {{brand.logo}}.",
       inputSchema: {},
     },
-    async () => {
-      return jsonResult(await getBrand() ?? { name: "", signature: "", logoUrl: null });
+    async (_args, extra) => {
+      const userId = userIdFrom(extra);
+      return jsonResult(await getBrand(userId) ?? { name: "", signature: "", logoUrl: null });
     },
   );
 
@@ -35,15 +37,16 @@ export function registerBrandTools(server: McpServer): void {
           .describe("URL publique du logo (png/svg). Laisser vide pour supprimer."),
       },
     },
-    async ({ name, signature, logo_url }) => {
+    async ({ name, signature, logo_url }, extra) => {
+      const userId = userIdFrom(extra);
       // Lire l'état courant pour préserver les champs non fournis.
-      const current = await getBrand();
+      const current = await getBrand(userId);
       const merged = {
         name: name !== undefined ? name : (current?.name ?? ""),
         signature: signature !== undefined ? signature : (current?.signature ?? ""),
         logoUrl: logo_url !== undefined ? logo_url : (current?.logoUrl ?? null),
       };
-      const row = await upsertBrand(merged);
+      const row = await upsertBrand(userId, merged);
       return jsonResult(row);
     },
   );

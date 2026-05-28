@@ -10,8 +10,12 @@ function base(): string {
 }
 function authHeaders() { return { Authorization: `Bearer ${env.MEDIA_ENGINE_SERVICE_KEY}` }; }
 
-export async function listMedia(params: MediaListParams): Promise<{ items: MediaItem[]; total: number; limit: number; offset: number }> {
+// Toutes les fonctions du catalogue média prennent un userId — le service media
+// isole les données par utilisateur (cf. /v1 router côté media). Pas de fallback :
+// l'absence d'userId est un bug d'appelant, pas un cas à gérer silencieusement.
+export async function listMedia(userId: string, params: MediaListParams): Promise<{ items: MediaItem[]; total: number; limit: number; offset: number }> {
   const qs = new URLSearchParams();
+  qs.set("userId", userId);
   if (params.q) qs.set("q", params.q);
   if (params.kind) qs.set("kind", params.kind);
   if (params.tag) qs.set("tag", params.tag);
@@ -23,8 +27,9 @@ export async function listMedia(params: MediaListParams): Promise<{ items: Media
   return res.json();
 }
 
-export async function getMedia(id: string): Promise<MediaItem | null> {
-  const res = await fetch(`${base()}/v1/media/${encodeURIComponent(id)}`, { headers: authHeaders(), cache: "no-store" });
+export async function getMedia(userId: string, id: string): Promise<MediaItem | null> {
+  const qs = new URLSearchParams({ userId });
+  const res = await fetch(`${base()}/v1/media/${encodeURIComponent(id)}?${qs}`, { headers: authHeaders(), cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`media get ${res.status}`);
   return res.json();

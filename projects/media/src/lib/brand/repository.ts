@@ -6,23 +6,20 @@ import type { Brand } from "./context";
 
 type BrandRow = typeof brand.$inferSelect;
 
-const BRAND_ID = "brand";
-
-export async function getBrand(): Promise<BrandRow | null> {
-  const rows = await db.select().from(brand).where(eq(brand.id, BRAND_ID)).limit(1);
+export async function getBrand(userId: string): Promise<BrandRow | null> {
+  const rows = await db.select().from(brand).where(eq(brand.userId, userId)).limit(1);
   return rows[0] ?? null;
 }
 
-export async function upsertBrand(data: {
-  name: string;
-  signature: string;
-  logoUrl?: string | null;
-}): Promise<BrandRow> {
+export async function upsertBrand(
+  userId: string,
+  data: { name: string; signature: string; logoUrl?: string | null },
+): Promise<BrandRow> {
   const [row] = await db
     .insert(brand)
-    .values({ id: BRAND_ID, ...data, updatedAt: new Date() })
+    .values({ userId, ...data, updatedAt: new Date() })
     .onConflictDoUpdate({
-      target: brand.id,
+      target: brand.userId,
       set: {
         name: data.name,
         signature: data.signature,
@@ -34,6 +31,6 @@ export async function upsertBrand(data: {
   return row!;
 }
 
-export async function getBrandContext(): Promise<Brand> {
-  return toBrandContext(await getBrand());
+export async function getBrandContext(userId: string): Promise<Brand> {
+  return toBrandContext(await getBrand(userId));
 }

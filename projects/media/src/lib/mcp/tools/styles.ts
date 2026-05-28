@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { jsonResult } from "@/lib/mcp/result";
+import { userIdFrom } from "@/lib/mcp/auth";
 import { createStyle, listStyles, updateStyle, deleteStyle } from "@/lib/styles/repository";
 
 export function registerStyleTools(server: McpServer): void {
@@ -12,8 +13,9 @@ export function registerStyleTools(server: McpServer): void {
         "Utilise l'id retourné pour appliquer un style via style_id dans generate_image.",
       inputSchema: {},
     },
-    async () => {
-      return jsonResult(await listStyles());
+    async (_args, extra) => {
+      const userId = userIdFrom(extra);
+      return jsonResult(await listStyles(userId));
     },
   );
 
@@ -33,8 +35,9 @@ export function registerStyleTools(server: McpServer): void {
           ),
       },
     },
-    async ({ name, prompt }) => {
-      const row = await createStyle({ name, prompt });
+    async ({ name, prompt }, extra) => {
+      const userId = userIdFrom(extra);
+      const row = await createStyle(userId, { name, prompt });
       return jsonResult(row);
     },
   );
@@ -52,8 +55,12 @@ export function registerStyleTools(server: McpServer): void {
         prompt: z.string().optional().describe("Nouveau prompt du style."),
       },
     },
-    async ({ style_id, name, prompt }) => {
-      const row = await updateStyle(style_id, { ...(name !== undefined ? { name } : {}), ...(prompt !== undefined ? { prompt } : {}) });
+    async ({ style_id, name, prompt }, extra) => {
+      const userId = userIdFrom(extra);
+      const row = await updateStyle(userId, style_id, {
+        ...(name !== undefined ? { name } : {}),
+        ...(prompt !== undefined ? { prompt } : {}),
+      });
       if (!row) return jsonResult({ error: `Style introuvable: ${style_id}` });
       return jsonResult(row);
     },
@@ -70,8 +77,9 @@ export function registerStyleTools(server: McpServer): void {
           .describe("id du style à supprimer (issu de list_visual_styles)."),
       },
     },
-    async ({ style_id }) => {
-      await deleteStyle(style_id);
+    async ({ style_id }, extra) => {
+      const userId = userIdFrom(extra);
+      await deleteStyle(userId, style_id);
       return jsonResult({ deleted: true });
     },
   );

@@ -6,6 +6,7 @@ import { getImageBytes, deleteObject } from "@/lib/storage";
 import { getMediaRecord, listMediaRecords, deleteMediaRow } from "@/lib/media/repository";
 import { store } from "@/lib/store";
 import { jsonResult, imageResult } from "./result";
+import { userIdFrom } from "./auth";
 import { registerStyleTools } from "./tools/styles";
 import { registerStyleGuideTools } from "./tools/style-guides";
 import { registerBrandTools } from "./tools/brand";
@@ -51,11 +52,13 @@ export function registerAllTools(server: McpServer): void {
           .describe("id d'un style visuel (list_visual_styles) à appliquer. Son prompt est ajouté en suffixe au prompt fourni."),
       },
     },
-    async ({ prompt, aspect_ratio, tags, style_id }) => {
-      const st = style_id ? await getStyle(style_id) : undefined;
+    async ({ prompt, aspect_ratio, tags, style_id }, extra) => {
+      const userId = userIdFrom(extra);
+      const st = style_id ? await getStyle(userId, style_id) : undefined;
       const finalPrompt = composePrompt(prompt, st?.prompt);
       const { bytes, mimeType } = await generateImage(finalPrompt, aspect_ratio ?? "1:1");
       const rec = await store({
+        userId,
         bytes,
         mimeType,
         kind: "image",
@@ -95,14 +98,16 @@ export function registerAllTools(server: McpServer): void {
           .describe("Étiquettes libres pour retrouver la variante via list_images."),
       },
     },
-    async ({ image_id, edit_prompt, tags }) => {
-      const source = await getMediaRecord(image_id);
+    async ({ image_id, edit_prompt, tags }, extra) => {
+      const userId = userIdFrom(extra);
+      const source = await getMediaRecord(userId, image_id);
       if (!source) throw new Error(`Image introuvable: ${image_id}`);
       const src = await getImageBytes(source.r2_key);
       if (!src) throw new Error(`Fichier source absent du bucket: ${source.r2_key}`);
 
       const { bytes, mimeType } = await editImage(src.bytes, src.contentType, edit_prompt);
       const rec = await store({
+        userId,
         bytes,
         mimeType,
         kind: "image",
@@ -158,7 +163,8 @@ export function registerAllTools(server: McpServer): void {
           .describe("Étiquettes libres pour retrouver l'image via list_images."),
       },
     },
-    async ({ html, width, height, format, quality, wait_for, tags }) => {
+    async ({ html, width, height, format, quality, wait_for, tags }, extra) => {
+      const userId = userIdFrom(extra);
       const { bytes, mimeType } = await renderHtml({
         html,
         width,
@@ -168,6 +174,7 @@ export function registerAllTools(server: McpServer): void {
         waitFor: wait_for,
       });
       const rec = await store({
+        userId,
         bytes,
         mimeType,
         kind: "render",
@@ -211,8 +218,9 @@ export function registerAllTools(server: McpServer): void {
           .describe("Nombre max de résultats. Défaut 20, max 100."),
       },
     },
-    async ({ query, tags, source, limit }) => {
-      const records = await listMediaRecords({ query, tags, source, limit });
+    async ({ query, tags, source, limit }, extra) => {
+      const userId = userIdFrom(extra);
+      const records = await listMediaRecords(userId, { query, tags, source, limit });
       return jsonResult(records);
     },
   );
@@ -223,8 +231,9 @@ export function registerAllTools(server: McpServer): void {
       description: "Récupère les métadonnées d'une image par son id (null si inconnue).",
       inputSchema: { image_id: z.string().min(1).describe("id de l'image à récupérer.") },
     },
-    async ({ image_id }) => {
-      const rec = await getMediaRecord(image_id);
+    async ({ image_id }, extra) => {
+      const userId = userIdFrom(extra);
+      const rec = await getMediaRecord(userId, image_id);
       return jsonResult(rec);
     },
   );
@@ -235,11 +244,12 @@ export function registerAllTools(server: McpServer): void {
       description: "Supprime une image (objet R2 + ligne Postgres). Renvoie deleted:false si l'id est inconnu.",
       inputSchema: { image_id: z.string().min(1).describe("id de l'image à supprimer définitivement.") },
     },
-    async ({ image_id }) => {
-      const rec = await getMediaRecord(image_id);
+    async ({ image_id }, extra) => {
+      const userId = userIdFrom(extra);
+      const rec = await getMediaRecord(userId, image_id);
       if (!rec) return jsonResult({ deleted: false });
       // Ligne d'abord : si l'objet R2 échoue ensuite, on a au pire un orphelin inoffensif.
-      const deleted = await deleteMediaRow(image_id);
+      const deleted = await deleteMediaRow(userId, image_id);
       if (deleted) {
         await deleteObject(rec.r2_key);
       }

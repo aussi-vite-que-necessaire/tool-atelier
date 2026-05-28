@@ -9,6 +9,7 @@ type Row = typeof media.$inferSelect;
 function toRecord(r: Row): MediaRecord {
   return {
     id: r.id,
+    user_id: r.userId,
     r2_key: r.r2Key,
     url: r.url,
     kind: r.kind as MediaKind,
@@ -35,6 +36,7 @@ function sqlHasAllTags(tags: string[]) {
 export async function insertMedia(rec: MediaRecord): Promise<void> {
   await db.insert(media).values({
     id: rec.id,
+    userId: rec.user_id,
     r2Key: rec.r2_key,
     url: rec.url,
     kind: rec.kind,
@@ -53,13 +55,20 @@ export async function insertMedia(rec: MediaRecord): Promise<void> {
   });
 }
 
-export async function getMediaRecord(id: string): Promise<MediaRecord | null> {
-  const [row] = await db.select().from(media).where(eq(media.id, id)).limit(1);
+export async function getMediaRecord(userId: string, id: string): Promise<MediaRecord | null> {
+  const [row] = await db
+    .select()
+    .from(media)
+    .where(and(eq(media.id, id), eq(media.userId, userId)))
+    .limit(1);
   return row ? toRecord(row) : null;
 }
 
-export async function deleteMediaRow(id: string): Promise<boolean> {
-  const deleted = await db.delete(media).where(eq(media.id, id)).returning({ id: media.id });
+export async function deleteMediaRow(userId: string, id: string): Promise<boolean> {
+  const deleted = await db
+    .delete(media)
+    .where(and(eq(media.id, id), eq(media.userId, userId)))
+    .returning({ id: media.id });
   return deleted.length > 0;
 }
 
@@ -84,15 +93,15 @@ export interface ListParams {
   orientation?: Orientation;
 }
 
-// Construit les conditions WHERE partagées par list et count.
-function buildConds(params: ListParams) {
-  const conds = [];
+// Construit les conditions WHERE partagées par list et count (toujours filtré par user).
+function buildConds(userId: string, params: ListParams) {
+  const conds = [eq(media.userId, userId)];
   if (params.query) {
     conds.push(
       or(
         ilike(media.prompt, `%${params.query}%`),
         sql`${media.tags}::text ilike ${"%" + params.query + "%"}`,
-      ),
+      )!,
     );
   }
   if (params.source) conds.push(eq(media.source, params.source));
@@ -108,23 +117,26 @@ function buildConds(params: ListParams) {
   return conds;
 }
 
-export async function listMediaRecords(params: ListParams): Promise<MediaRecord[]> {
-  const conds = buildConds(params);
+export async function listMediaRecords(
+  userId: string,
+  params: ListParams,
+): Promise<MediaRecord[]> {
+  const conds = buildConds(userId, params);
   const rows = await db
     .select()
     .from(media)
-    .where(conds.length ? and(...conds) : undefined)
+    .where(and(...conds))
     .orderBy(desc(media.createdAt))
     .limit(clampLimit(params.limit))
     .offset(params.offset ?? 0);
   return rows.map(toRecord);
 }
 
-export async function countMediaRecords(params: ListParams): Promise<number> {
-  const conds = buildConds(params);
+export async function countMediaRecords(userId: string, params: ListParams): Promise<number> {
+  const conds = buildConds(userId, params);
   const [row] = await db
     .select({ c: count() })
     .from(media)
-    .where(conds.length ? and(...conds) : undefined);
+    .where(and(...conds));
   return row?.c ?? 0;
 }

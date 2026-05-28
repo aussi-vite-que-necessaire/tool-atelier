@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { listStyles } from "@/lib/styles/repository";
+import { requireUserId } from "@/lib/session";
 import {
   createStyleAction,
   updateStyleAction,
@@ -8,7 +9,8 @@ import {
 } from "./actions";
 
 export default async function StylesPage() {
-  const styles = await listStyles();
+  const userId = await requireUserId();
+  const styles = await listStyles(userId);
 
   return (
     <div className="max-w-2xl space-y-8">

@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { jsonResult } from "@/lib/mcp/result";
+import { userIdFrom } from "@/lib/mcp/auth";
 import { aggregatePdf } from "@/lib/pdf/aggregate";
 
 export function registerPdfTools(server: McpServer): void {
@@ -20,8 +21,9 @@ export function registerPdfTools(server: McpServer): void {
           ),
       },
     },
-    async ({ image_ids }) => {
-      const rec = await aggregatePdf(image_ids);
+    async ({ image_ids }, extra) => {
+      const userId = userIdFrom(extra);
+      const rec = await aggregatePdf(userId, image_ids);
       return jsonResult({ id: rec.id, url: rec.url });
     },
   );

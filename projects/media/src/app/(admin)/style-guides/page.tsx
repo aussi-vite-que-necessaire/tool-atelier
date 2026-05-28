@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { listGuides } from "@/lib/style-guides/repository";
+import { requireUserId } from "@/lib/session";
 import {
   createGuideAction,
   updateGuideAction,
@@ -8,7 +9,8 @@ import {
 } from "./actions";
 
 export default async function StyleGuidesPage() {
-  const guides = await listGuides();
+  const userId = await requireUserId();
+  const guides = await listGuides(userId);
 
   return (
     <div className="max-w-2xl space-y-8">

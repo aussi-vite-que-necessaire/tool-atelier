@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getUserId } from "@/lib/session";
+
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (session) redirect("/gallery");
+  const userId = await getUserId();
+  if (userId) redirect("/gallery");
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">

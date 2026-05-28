@@ -1,6 +1,6 @@
 // Seed de démo (preview uniquement, jamais en prod).
-// Insère : marque, 2 styles visuels, 1 charte, 1 template LinkedIn.
-// Idempotent : ON CONFLICT (id) DO NOTHING sur toutes les tables.
+// Insère pour le PREVIEW_USER_ID ("preview-user") : marque, 2 styles, 1 charte,
+// 1 template LinkedIn. Idempotent : ON CONFLICT DO NOTHING.
 import postgres from "postgres";
 
 const url = process.env.DATABASE_URL;
@@ -9,29 +9,35 @@ if (!url) {
   process.exit(0);
 }
 
+// L'auth est déléguée au SSO ; en preview, l'app court-circuite avec ce userId
+// stable (cf. src/lib/auth/preview.ts).
+const USER_ID = "preview-user";
+
 const sql = postgres(url, { max: 1 });
 
 try {
-  // --- Marque (id fixe lu par l'app via BRAND_ID = "brand") ---
+  // --- Marque (PK = user_id désormais) ---
   const brandResult = await sql`
-    INSERT INTO brand (id, name, signature, logo_url, updated_at)
-    VALUES ('brand', 'AVQN', '— Manu', NULL, now())
-    ON CONFLICT (id) DO NOTHING
-    RETURNING id
+    INSERT INTO brand (user_id, name, signature, logo_url, updated_at)
+    VALUES (${USER_ID}, 'AVQN', '— Manu', NULL, now())
+    ON CONFLICT (user_id) DO NOTHING
+    RETURNING user_id
   `;
 
   // --- Styles visuels ---
   const stylesResult = await sql`
-    INSERT INTO visual_styles (id, name, prompt, created_at, updated_at)
+    INSERT INTO visual_styles (id, user_id, name, prompt, created_at, updated_at)
     VALUES
       (
         'seed-style-3d',
+        ${USER_ID},
         '3D doux',
         'Rendu 3D photoréaliste mais doux : éclairage studio diffus, ombres portées légères, formes arrondies et volumes généreux, palette pastel désaturée. Matières lisses ou légèrement texturées, profondeur de champ douce, fond neutre clair.',
         now(), now()
       ),
       (
         'seed-style-flat2d',
+        ${USER_ID},
         'Flat 2D',
         'Illustration vectorielle flat 2D : couleurs unies franches sans dégradés, formes géométriques simples, contours nets ou absents. Composition aérée, palette limitée à 4–6 teintes, aucune ombre réaliste.',
         now(), now()
@@ -42,9 +48,10 @@ try {
 
   // --- Charte graphique ---
   const guideResult = await sql`
-    INSERT INTO style_guides (id, name, content, created_at, updated_at)
+    INSERT INTO style_guides (id, user_id, name, content, created_at, updated_at)
     VALUES (
       'seed-guide-avqn',
+      ${USER_ID},
       'Charte AVQN',
       ${'# Charte AVQN\n\n## Palette\n- `#0A0A0A` — Noir profond (texte, bordures)\n- `#F5F5F0` — Blanc cassé (fond)\n- `#1A1AFF` — Bleu électrique (accent)\n- `#525252` — Gris moyen (signatures, métadonnées)\n\n## Typographie\n- **Titres** : Clash Display 700 — tranchant, espacé\n- **Corps** : General Sans 400 — lisible, neutre\n\n## Ton\nDirect, concis, sans jargon inutile. Affirme plutôt que suggère. Sentence case partout.'},
       now(), now()
@@ -166,9 +173,10 @@ try {
 
   const templateResult = await sql`
     INSERT INTO visual_templates
-      (id, slug, label, platform, width, height, body_html, css, variables_schema, sample_vars, style_guide_id, created_at, updated_at)
+      (id, user_id, slug, label, platform, width, height, body_html, css, variables_schema, sample_vars, style_guide_id, created_at, updated_at)
     VALUES (
       'seed-tpl-linkedin-horizontal',
+      ${USER_ID},
       'linkedin-horizontal',
       'LinkedIn — Horizontal image à droite (1.91:1)',
       'linkedin',

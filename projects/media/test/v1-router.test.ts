@@ -33,7 +33,11 @@ describe("handleV1 — routing", () => {
     expect(res.status).toBe(404);
   });
   it("400 corps invalide sur generate (prompt manquant)", async () => {
-    const res = await handleV1(req("/v1/generate", "POST", `Bearer ${KEY}`, {}));
+    const res = await handleV1(req("/v1/generate", "POST", `Bearer ${KEY}`, { userId: "u1" }));
+    expect(res.status).toBe(400);
+  });
+  it("400 corps invalide sur generate (userId manquant)", async () => {
+    const res = await handleV1(req("/v1/generate", "POST", `Bearer ${KEY}`, { prompt: "x" }));
     expect(res.status).toBe(400);
   });
   it("400 corps non-JSON sur generate", async () => {

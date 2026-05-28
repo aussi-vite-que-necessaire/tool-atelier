@@ -9,7 +9,10 @@ export async function attachMediaTool(
   userId: string,
   input: { postId: string; mediaId?: string; mediaUrl?: string },
 ) {
-  const ref = await resolveMediaRef({ mediaId: input.mediaId, mediaUrl: input.mediaUrl }, getMedia);
+  const ref = await resolveMediaRef(
+    { mediaId: input.mediaId, mediaUrl: input.mediaUrl },
+    (id) => getMedia(userId, id),
+  );
   return setPostMedia(userId, input.postId, ref);
 }
 

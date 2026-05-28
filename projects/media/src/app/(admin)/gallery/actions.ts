@@ -8,6 +8,7 @@ import { validateUpload } from "@/lib/media/validate-upload";
 import { generateImage, editImage } from "@/lib/gemini";
 import { getStyle } from "@/lib/styles/repository";
 import { composePrompt } from "@/lib/styles/compose";
+import { requireUserId } from "@/lib/session";
 
 // État renvoyé par les actions IA, consommé par useActionState côté client.
 interface AiResult {
@@ -17,6 +18,7 @@ interface AiResult {
 }
 
 export async function uploadAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return;
 
@@ -25,6 +27,7 @@ export async function uploadAction(formData: FormData): Promise<void> {
   if (!result.ok) throw new Error(result.error);
 
   await store({
+    userId,
     bytes,
     mimeType: file.type,
     kind: result.kind,
@@ -41,6 +44,7 @@ export async function generateAction(
   _prev: AiResult,
   formData: FormData,
 ): Promise<AiResult> {
+  const userId = await requireUserId();
   const prompt = String(formData.get("prompt") ?? "").trim();
   if (!prompt) return { error: "Le prompt est requis." };
   const aspectRatio = String(formData.get("aspectRatio") ?? "1:1") || "1:1";
@@ -49,12 +53,13 @@ export async function generateAction(
   try {
     let stylePrompt: string | undefined;
     if (styleId) {
-      const st = await getStyle(styleId);
+      const st = await getStyle(userId, styleId);
       stylePrompt = st?.prompt;
     }
     const composed = composePrompt(prompt, stylePrompt);
     const { bytes, mimeType } = await generateImage(composed, aspectRatio);
     const rec = await store({
+      userId,
       bytes,
       mimeType,
       kind: "image",
@@ -75,18 +80,20 @@ export async function editAction(
   _prev: AiResult,
   formData: FormData,
 ): Promise<AiResult> {
+  const userId = await requireUserId();
   const sourceId = String(formData.get("sourceId") ?? "").trim();
   const prompt = String(formData.get("prompt") ?? "").trim();
   if (!sourceId) return { error: "Image source manquante." };
   if (!prompt) return { error: "Le prompt est requis." };
 
   try {
-    const source = await getMediaRecord(sourceId);
+    const source = await getMediaRecord(userId, sourceId);
     if (!source) return { error: `Image introuvable : ${sourceId}` };
     const src = await getImageBytes(source.r2_key);
     if (!src) return { error: "Fichier source absent du bucket." };
     const { bytes, mimeType } = await editImage(src.bytes, src.contentType, prompt);
     const rec = await store({
+      userId,
       bytes,
       mimeType,
       kind: "image",
@@ -103,12 +110,13 @@ export async function editAction(
 }
 
 export async function deleteMediaAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const id = (formData.get("id") as string | null) ?? "";
   if (!id) return;
 
-  const rec = await getMediaRecord(id);
+  const rec = await getMediaRecord(userId, id);
   if (rec) {
-    await deleteMediaRow(id);
+    await deleteMediaRow(userId, id);
     await deleteObject(rec.r2_key);
   }
 

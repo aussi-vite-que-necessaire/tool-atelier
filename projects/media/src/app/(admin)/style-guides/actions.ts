@@ -6,30 +6,34 @@ import {
   updateGuide,
   deleteGuide,
 } from "@/lib/style-guides/repository";
+import { requireUserId } from "@/lib/session";
 
 export async function createGuideAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const name = (formData.get("name") as string | null)?.trim() ?? "";
   const content = (formData.get("content") as string | null)?.trim() ?? "";
   if (name && content) {
-    await createGuide({ name, content });
+    await createGuide(userId, { name, content });
   }
   revalidatePath("/style-guides");
 }
 
 export async function updateGuideAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const id = (formData.get("id") as string | null) ?? "";
   const name = (formData.get("name") as string | null)?.trim() ?? "";
   const content = (formData.get("content") as string | null)?.trim() ?? "";
   if (id) {
-    await updateGuide(id, { name, content });
+    await updateGuide(userId, id, { name, content });
   }
   revalidatePath("/style-guides");
 }
 
 export async function deleteGuideAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const id = (formData.get("id") as string | null) ?? "";
   if (id) {
-    await deleteGuide(id);
+    await deleteGuide(userId, id);
   }
   revalidatePath("/style-guides");
 }

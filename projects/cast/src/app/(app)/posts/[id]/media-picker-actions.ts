@@ -17,8 +17,8 @@ export async function searchMediaAction(params: {
   limit?: number;
   offset?: number;
 }): Promise<SearchResult> {
-  await requireUserId();
-  return listMedia({
+  const userId = await requireUserId();
+  return listMedia(userId, {
     q: params.q,
     kind: params.kind ? (params.kind as MediaKind) : undefined,
     tag: params.tag,
@@ -36,7 +36,7 @@ export async function attachMediaAction(
 ): Promise<{ status: 'success' } | { status: 'error'; message: string }> {
   const userId = await requireUserId();
   try {
-    const ref = await resolveMediaRef({ mediaId }, getMedia);
+    const ref = await resolveMediaRef({ mediaId }, (id) => getMedia(userId, id));
     await setPostMedia(userId, postId, ref);
     revalidatePath(`/posts/${postId}`);
     return { status: 'success' };

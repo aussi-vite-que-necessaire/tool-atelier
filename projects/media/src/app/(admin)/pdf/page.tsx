@@ -1,15 +1,17 @@
 export const dynamic = "force-dynamic";
 
 import { listMediaRecords } from "@/lib/media/repository";
+import { requireUserId } from "@/lib/session";
 import { Composer, type PickerImage } from "./composer";
 
 // buildPdf n'embarque que PNG et JPEG : ne proposer que ces formats.
 const PDF_MIMES = new Set(["image/png", "image/jpeg"]);
 
 export default async function PdfPage() {
+  const userId = await requireUserId();
   const [images, renders] = await Promise.all([
-    listMediaRecords({ kind: "image", limit: 100 }),
-    listMediaRecords({ kind: "render", limit: 100 }),
+    listMediaRecords(userId, { kind: "image", limit: 100 }),
+    listMediaRecords(userId, { kind: "render", limit: 100 }),
   ]);
 
   const items: PickerImage[] = [...images, ...renders]

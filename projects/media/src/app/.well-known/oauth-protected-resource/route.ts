@@ -1,4 +1,10 @@
-import { oAuthProtectedResourceMetadata } from "better-auth/plugins";
-import { auth } from "@/lib/auth";
+import { env } from "@/lib/env";
 
-export const GET = oAuthProtectedResourceMetadata(auth);
+// media est une ressource protégée par OAuth du provider central.
+export function GET(): Response {
+  return Response.json({
+    resource: env.APP_URL,
+    authorization_servers: [env.AUTH_URL],
+    bearer_methods_supported: ["header"],
+  });
+}

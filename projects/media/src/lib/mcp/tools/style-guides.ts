@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { jsonResult } from "@/lib/mcp/result";
+import { userIdFrom } from "@/lib/mcp/auth";
 import { createGuide, getGuide, listGuides, updateGuide, deleteGuide } from "@/lib/style-guides/repository";
 
 export function registerStyleGuideTools(server: McpServer): void {
@@ -12,8 +13,9 @@ export function registerStyleGuideTools(server: McpServer): void {
         "qu'un template peut lier pour garder une cohérence de marque.",
       inputSchema: {},
     },
-    async () => {
-      return jsonResult(await listGuides());
+    async (_args, extra) => {
+      const userId = userIdFrom(extra);
+      return jsonResult(await listGuides(userId));
     },
   );
 
@@ -30,8 +32,9 @@ export function registerStyleGuideTools(server: McpServer): void {
           .describe("id de la charte à récupérer (issu de list_style_guides ou create_style_guide)."),
       },
     },
-    async ({ guide_id }) => {
-      const guide = await getGuide(guide_id);
+    async ({ guide_id }, extra) => {
+      const userId = userIdFrom(extra);
+      const guide = await getGuide(userId, guide_id);
       if (!guide) return jsonResult({ error: `Charte introuvable: ${guide_id}` });
       return jsonResult(guide);
     },
@@ -52,8 +55,9 @@ export function registerStyleGuideTools(server: McpServer): void {
           ),
       },
     },
-    async ({ name, content }) => {
-      const row = await createGuide({ name, content });
+    async ({ name, content }, extra) => {
+      const userId = userIdFrom(extra);
+      const row = await createGuide(userId, { name, content });
       return jsonResult(row);
     },
   );
@@ -71,8 +75,9 @@ export function registerStyleGuideTools(server: McpServer): void {
         content: z.string().optional().describe("Nouveau contenu markdown de la charte."),
       },
     },
-    async ({ guide_id, name, content }) => {
-      const row = await updateGuide(guide_id, {
+    async ({ guide_id, name, content }, extra) => {
+      const userId = userIdFrom(extra);
+      const row = await updateGuide(userId, guide_id, {
         ...(name !== undefined ? { name } : {}),
         ...(content !== undefined ? { content } : {}),
       });
@@ -93,8 +98,9 @@ export function registerStyleGuideTools(server: McpServer): void {
           .describe("id de la charte à supprimer (issu de list_style_guides)."),
       },
     },
-    async ({ guide_id }) => {
-      await deleteGuide(guide_id);
+    async ({ guide_id }, extra) => {
+      const userId = userIdFrom(extra);
+      await deleteGuide(userId, guide_id);
       return jsonResult({ deleted: true });
     },
   );

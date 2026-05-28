@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { visualTemplates } from "@/db/schema";
 import { newId } from "@/lib/ids";
@@ -21,13 +21,17 @@ export interface CreateTemplateInput {
 
 export type UpdateTemplatePatch = Partial<CreateTemplateInput>;
 
-export async function createTemplate(data: CreateTemplateInput): Promise<VisualTemplate> {
+export async function createTemplate(
+  userId: string,
+  data: CreateTemplateInput,
+): Promise<VisualTemplate> {
   // Valide le schéma de variables avant insertion (throw si mal formé / nom dupliqué).
   parseVariablesSchema(data.variablesSchema ?? []);
   const [row] = await db
     .insert(visualTemplates)
     .values({
       id: newId(),
+      userId,
       slug: data.slug,
       label: data.label,
       platform: data.platform ?? "linkedin",
@@ -43,29 +47,45 @@ export async function createTemplate(data: CreateTemplateInput): Promise<VisualT
   return row!;
 }
 
-export async function getTemplate(id: string): Promise<VisualTemplate | undefined> {
-  const rows = await db.select().from(visualTemplates).where(eq(visualTemplates.id, id)).limit(1);
-  return rows[0];
-}
-
-export async function getTemplateBySlug(slug: string): Promise<VisualTemplate | undefined> {
+export async function getTemplate(
+  userId: string,
+  id: string,
+): Promise<VisualTemplate | undefined> {
   const rows = await db
     .select()
     .from(visualTemplates)
-    .where(eq(visualTemplates.slug, slug))
+    .where(and(eq(visualTemplates.id, id), eq(visualTemplates.userId, userId)))
     .limit(1);
   return rows[0];
 }
 
-export async function listTemplates(opts: { styleGuideId?: string } = {}): Promise<VisualTemplate[]> {
-  const base = db.select().from(visualTemplates);
-  const rows = opts.styleGuideId
-    ? await base.where(eq(visualTemplates.styleGuideId, opts.styleGuideId)).orderBy(desc(visualTemplates.createdAt))
-    : await base.orderBy(desc(visualTemplates.createdAt));
-  return rows;
+export async function getTemplateBySlug(
+  userId: string,
+  slug: string,
+): Promise<VisualTemplate | undefined> {
+  const rows = await db
+    .select()
+    .from(visualTemplates)
+    .where(and(eq(visualTemplates.slug, slug), eq(visualTemplates.userId, userId)))
+    .limit(1);
+  return rows[0];
+}
+
+export async function listTemplates(
+  userId: string,
+  opts: { styleGuideId?: string } = {},
+): Promise<VisualTemplate[]> {
+  const conds = [eq(visualTemplates.userId, userId)];
+  if (opts.styleGuideId) conds.push(eq(visualTemplates.styleGuideId, opts.styleGuideId));
+  return db
+    .select()
+    .from(visualTemplates)
+    .where(and(...conds))
+    .orderBy(desc(visualTemplates.createdAt));
 }
 
 export async function updateTemplate(
+  userId: string,
   id: string,
   patch: UpdateTemplatePatch,
 ): Promise<VisualTemplate | undefined> {
@@ -75,11 +95,13 @@ export async function updateTemplate(
   const rows = await db
     .update(visualTemplates)
     .set({ ...patch, updatedAt: new Date() })
-    .where(eq(visualTemplates.id, id))
+    .where(and(eq(visualTemplates.id, id), eq(visualTemplates.userId, userId)))
     .returning();
   return rows[0];
 }
 
-export async function deleteTemplate(id: string): Promise<void> {
-  await db.delete(visualTemplates).where(eq(visualTemplates.id, id));
+export async function deleteTemplate(userId: string, id: string): Promise<void> {
+  await db
+    .delete(visualTemplates)
+    .where(and(eq(visualTemplates.id, id), eq(visualTemplates.userId, userId)));
 }

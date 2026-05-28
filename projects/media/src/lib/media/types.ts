@@ -5,6 +5,7 @@ export type MediaSource =
 
 export interface MediaRecord {
   id: string;
+  user_id: string;
   r2_key: string;
   url: string;
   kind: MediaKind;
