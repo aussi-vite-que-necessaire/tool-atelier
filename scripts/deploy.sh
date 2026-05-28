@@ -2,10 +2,15 @@
 # Déploie un projet sur lab. Exécuté SUR lab (copié par la CI). Le serveur ne build jamais :
 # il pull l'image construite par la CI, auto-provisionne les données déclarées dans lab.json,
 # puis compose up + écrit la route Caddy.
-# Usage: deploy.sh <projet> <env> <image-ref>
+#
+# Usage: deploy.sh <projet> <env> <images>
+#   <images> peut être :
+#     - mono   : "ghcr.io/.../atelier-<projet>:<env>"          → IMAGE=… dans .env (historique)
+#     - multi  : "web=ghcr.io/...,worker=ghcr.io/..."          → IMAGE_<ROLE>=… dans .env
+#   En multi, l'image one-shot `migrate`/`seed` est celle du rôle `web` (à défaut le 1er rôle).
 set -euo pipefail
 
-PROJ="$1"; ENV="$2"; IMAGE="$3"
+PROJ="$1"; ENV="$2"; IMAGES="$3"
 APPDIR="/opt/lab/apps/${PROJ}-${ENV}"
 UPSTREAM="${PROJ}-${ENV}"
 if [ "$ENV" = "prod" ]; then HOST="${PROJ}.lab.avqn.ch"; else HOST="${PROJ}-${ENV}.lab.avqn.ch"; fi
@@ -22,15 +27,40 @@ if [ -f /opt/lab/ghcr.env ]; then
   printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
 fi
 
-docker pull "$IMAGE"
+# Parse <images> : mono (pas de '=') ou multi ("role=ref,role=ref"). Pull chaque image,
+# stocke les paires dans deux tableaux parallèles ROLES/REFS, et choisit MIGRATE_IMAGE :
+# rôle `web` si présent, sinon premier rôle, sinon (mono) l'image elle-même.
+ROLES=(); REFS=(); MIGRATE_IMAGE=""
+if [ "${IMAGES#*=}" = "$IMAGES" ]; then
+  # mono — pas de '='
+  ROLES=(""); REFS=("$IMAGES"); MIGRATE_IMAGE="$IMAGES"
+else
+  IFS=',' read -ra _PAIRS <<< "$IMAGES"
+  for pair in "${_PAIRS[@]}"; do
+    role="${pair%%=*}"; ref="${pair#*=}"
+    [ -n "$role" ] && [ -n "$ref" ] || { echo "::error::pair invalide: $pair"; exit 1; }
+    ROLES+=("$role"); REFS+=("$ref")
+    [ "$role" = "web" ] && MIGRATE_IMAGE="$ref"
+  done
+  [ -n "$MIGRATE_IMAGE" ] || MIGRATE_IMAGE="${REFS[0]}"
+fi
+for ref in "${REFS[@]}"; do docker pull "$ref"; done
 
 mkdir -p "$APPDIR"
 umask 077
-cat > "$APPDIR/.env" <<EOF
-IMAGE=$IMAGE
-UPSTREAM=$UPSTREAM
-APP_ENV=$ENV
-EOF
+{
+  echo "UPSTREAM=$UPSTREAM"
+  echo "APP_ENV=$ENV"
+  # mono : variable historique IMAGE=… ; multi : une variable IMAGE_<ROLE> par rôle.
+  if [ "${#ROLES[@]}" -eq 1 ] && [ -z "${ROLES[0]}" ]; then
+    echo "IMAGE=${REFS[0]}"
+  else
+    for i in "${!ROLES[@]}"; do
+      role_upper="$(printf '%s' "${ROLES[$i]}" | tr '[:lower:]' '[:upper:]')"
+      echo "IMAGE_${role_upper}=${REFS[$i]}"
+    done
+  fi
+} > "$APPDIR/.env"
 
 # Besoins déclarés par le projet (lab.json absent => projet sans base ni redis)
 DB=false; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""; DOMAIN=""
@@ -101,12 +131,13 @@ APP_ORIGIN="https://${HOST}"
 if [ "$ENV" = "prod" ] && [ -n "$DOMAIN" ]; then APP_ORIGIN="https://${DOMAIN}"; fi
 printf 'APP_URL=%s\n' "$APP_ORIGIN" >> "$APPDIR/.env"
 
-# Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab
+# Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab.
+# En multi-image, le rôle `web` porte drizzle + scripts (cf. Dockerfile target `web`).
 if [ -n "$MIGRATE" ]; then
-  docker run --rm --network lab --env-file "$APPDIR/.env" "$IMAGE" sh -c "$MIGRATE"
+  docker run --rm --network lab --env-file "$APPDIR/.env" "$MIGRATE_IMAGE" sh -c "$MIGRATE"
 fi
 if [ -n "$SEED" ] && [ "$ENV" != "prod" ]; then
-  docker run --rm --network lab --env-file "$APPDIR/.env" "$IMAGE" sh -c "$SEED"
+  docker run --rm --network lab --env-file "$APPDIR/.env" "$MIGRATE_IMAGE" sh -c "$SEED"
 fi
 
 # --force-recreate : applique les changements de .env (secrets) même quand l'image est identique
@@ -127,4 +158,4 @@ docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 # conteneur (prod ou preview active). En échec, on n'invalide pas un déploiement réussi.
 docker image prune -f >/dev/null 2>&1 || true
 
-echo "✓ déployé : https://${HOST}  (image ${IMAGE})"
+echo "✓ déployé : https://${HOST}  (images ${IMAGES})"
