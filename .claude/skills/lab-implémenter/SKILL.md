@@ -53,7 +53,7 @@ digraph lab_impl {
 
 ## Déroulé
 
-1. **Lire le plan** (dernier fichier dans `docs/superpowers/plans/` ou path fourni).
+1. **Lire le plan** (dernier fichier dans `docs/plans/` ou path fourni).
 2. **Pour chaque tâche du plan** :
    - **Dispatch implementer sub-agent**. Tool `Agent`, `subagent_type:
      general-purpose`. Prompt = contenu de `implementer-prompt.md` + référence à

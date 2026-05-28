@@ -18,7 +18,7 @@ par `/lab-cadrer`, produit le plan, commit, chaîne sur `/lab-implémenter`.
 
 ## Déroulé
 
-1. **Lire la spec.** Dernier fichier dans `docs/superpowers/specs/` (ou path
+1. **Lire la spec.** Dernier fichier dans `docs/specs/` (ou path
    fourni par `/lab-cadrer`).
 2. **Cartographier les fichiers** : créer/modifier/supprimer, avec leur
    responsabilité. Boundaries claires, petits fichiers focalisés. Suivre les
@@ -29,7 +29,7 @@ par `/lab-cadrer`, produit le plan, commit, chaîne sur `/lab-implémenter`.
 4. **Écrire chaque step en plein** : code complet, commandes exactes, sortie
    attendue. **Aucun placeholder** ("TODO", "implement later", "similar to Task N").
    Si une tâche change du code, le code apparaît dans le step.
-5. **Écrire le plan** dans `docs/superpowers/plans/AAAA-MM-JJ-<sujet>.md` avec
+5. **Écrire le plan** dans `docs/plans/AAAA-MM-JJ-<sujet>.md` avec
    l'en-tête standard :
 
    ```
@@ -41,7 +41,7 @@ par `/lab-cadrer`, produit le plan, commit, chaîne sur `/lab-implémenter`.
    **Architecture:** ...
    **Tech Stack:** ...
 
-   Spec de référence : `docs/superpowers/specs/<spec>.md`.
+   Spec de référence : `docs/specs/<spec>.md`.
    ```
 
 6. **Self-review du plan** (inline) : couverture de la spec, scan placeholders,
