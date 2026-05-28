@@ -9,8 +9,10 @@ import {
   getTemplate,
 } from "@/lib/templates/repository";
 import { renderTemplate } from "@/lib/templates/render";
+import { requireUserId } from "@/lib/session";
 
 export async function createTemplateAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const slug = (formData.get("slug") as string | null)?.trim() ?? "";
   const label = (formData.get("label") as string | null)?.trim() ?? "";
   const width = parseInt((formData.get("width") as string | null) ?? "1200", 10);
@@ -19,7 +21,7 @@ export async function createTemplateAction(formData: FormData): Promise<void> {
 
   if (!slug || !label) return;
 
-  const created = await createTemplate({
+  const created = await createTemplate(userId, {
     slug,
     label,
     width,
@@ -35,6 +37,7 @@ export async function createTemplateAction(formData: FormData): Promise<void> {
 }
 
 export async function saveTemplateAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const id = (formData.get("id") as string | null) ?? "";
   if (!id) return;
 
@@ -58,7 +61,7 @@ export async function saveTemplateAction(formData: FormData): Promise<void> {
 
   const styleGuideIdRaw = (formData.get("style_guide_id") as string | null) ?? "";
 
-  await updateTemplate(id, {
+  await updateTemplate(userId, id, {
     slug: (formData.get("slug") as string | null)?.trim() ?? "",
     label: (formData.get("label") as string | null)?.trim() ?? "",
     platform: (formData.get("platform") as string | null)?.trim() ?? "linkedin",
@@ -75,9 +78,10 @@ export async function saveTemplateAction(formData: FormData): Promise<void> {
 }
 
 export async function deleteTemplateAction(formData: FormData): Promise<void> {
+  const userId = await requireUserId();
   const id = (formData.get("id") as string | null) ?? "";
   if (id) {
-    await deleteTemplate(id);
+    await deleteTemplate(userId, id);
   }
   revalidatePath("/templates");
 }
@@ -86,11 +90,12 @@ export async function previewTemplateAction(
   _prev: unknown,
   formData: FormData,
 ): Promise<{ url?: string; error?: string }> {
+  const userId = await requireUserId();
   const id = String(formData.get("id"));
   try {
-    const t = await getTemplate(id);
+    const t = await getTemplate(userId, id);
     if (!t) return { error: "Template introuvable" };
-    const rec = await renderTemplate(id, (t.sampleVars ?? {}) as Record<string, unknown>, {
+    const rec = await renderTemplate(userId, id, (t.sampleVars ?? {}) as Record<string, unknown>, {
       imagesOptional: true,
     });
     return { url: rec.url };

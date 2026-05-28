@@ -8,21 +8,23 @@ import type { MediaRecord } from "@/lib/media/types";
 
 // Compile un template + variables + marque → HTML → image (via browserless) → store.
 export async function renderTemplate(
+  userId: string,
   templateId: string,
   vars: Record<string, unknown>,
   opts: { imagesOptional?: boolean } = {},
 ): Promise<MediaRecord> {
-  const template = await getTemplate(templateId);
+  const template = await getTemplate(userId, templateId);
   if (!template) throw new Error(`Template introuvable: ${templateId}`);
 
   const schema = parseVariablesSchema(template.variablesSchema);
   const validated = variablesSchemaToZod(schema, opts).parse(vars) as Record<string, unknown>;
   const filled = fillVarDefaults(schema, validated);
-  const brand = await getBrandContext();
+  const brand = await getBrandContext(userId);
 
   const html = compileTemplate({ template, vars: filled, brand });
   const { bytes, mimeType } = await renderHtml({ html, width: template.width, height: template.height });
   return store({
+    userId,
     bytes,
     mimeType,
     kind: "render",

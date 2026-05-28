@@ -4,7 +4,7 @@ import { EMPTY_BRAND } from "@/lib/brand/context";
 
 function tpl(over: Partial<{ bodyHtml: string; css: string; width: number; height: number }> = {}) {
   return {
-    id: "t1", slug: "s", label: "L", platform: "linkedin",
+    id: "t1", userId: "u1", slug: "s", label: "L", platform: "linkedin",
     // Espace avant `}` final : sinon Handlebars lit `{{accent}}}` comme un triple-stache.
     width: 1200, height: 627, bodyHtml: "<h1>{{escape titre}}</h1>", css: "h1{ color:{{accent}} }",
     variablesSchema: [], sampleVars: {}, styleGuideId: null,

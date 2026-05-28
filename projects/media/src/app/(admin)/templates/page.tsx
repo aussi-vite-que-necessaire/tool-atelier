@@ -2,10 +2,12 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { listTemplates } from "@/lib/templates/repository";
+import { requireUserId } from "@/lib/session";
 import { createTemplateAction, deleteTemplateAction } from "./actions";
 
 export default async function TemplatesPage() {
-  const templates = await listTemplates();
+  const userId = await requireUserId();
+  const templates = await listTemplates(userId);
 
   return (
     <div className="max-w-3xl space-y-8">

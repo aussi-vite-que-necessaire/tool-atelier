@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { jsonResult } from "@/lib/mcp/result";
+import { userIdFrom } from "@/lib/mcp/auth";
 import { variableSpecSchema } from "@/lib/templates/dsl";
 import {
   createTemplate,
@@ -33,8 +34,11 @@ export function registerTemplateTools(server: McpServer): void {
           .describe("Filtre : ne renvoie que les templates rattachés à cette charte."),
       },
     },
-    async ({ style_guide_id }) => {
-      return jsonResult(await listTemplates(style_guide_id ? { styleGuideId: style_guide_id } : {}));
+    async ({ style_guide_id }, extra) => {
+      const userId = userIdFrom(extra);
+      return jsonResult(
+        await listTemplates(userId, style_guide_id ? { styleGuideId: style_guide_id } : {}),
+      );
     },
   );
 
@@ -47,8 +51,9 @@ export function registerTemplateTools(server: McpServer): void {
         template_id: z.string().min(1).describe("id du template à récupérer."),
       },
     },
-    async ({ template_id }) => {
-      const tpl = await getTemplate(template_id);
+    async ({ template_id }, extra) => {
+      const userId = userIdFrom(extra);
+      const tpl = await getTemplate(userId, template_id);
       return jsonResult(tpl ?? { error: `Template introuvable: ${template_id}` });
     },
   );
@@ -89,8 +94,9 @@ export function registerTemplateTools(server: McpServer): void {
           .describe("id d'une charte (style guide) à rattacher au template."),
       },
     },
-    async ({ slug, label, platform, width, height, body_html, css, variables_schema, sample_vars, style_guide_id }) => {
-      const row = await createTemplate({
+    async ({ slug, label, platform, width, height, body_html, css, variables_schema, sample_vars, style_guide_id }, extra) => {
+      const userId = userIdFrom(extra);
+      const row = await createTemplate(userId, {
         slug,
         label,
         platform,
@@ -127,7 +133,8 @@ export function registerTemplateTools(server: McpServer): void {
         style_guide_id: z.string().nullable().optional().describe("Nouvelle charte rattachée (null pour détacher)."),
       },
     },
-    async ({ template_id, slug, label, platform, width, height, body_html, css, variables_schema, sample_vars, style_guide_id }) => {
+    async ({ template_id, slug, label, platform, width, height, body_html, css, variables_schema, sample_vars, style_guide_id }, extra) => {
+      const userId = userIdFrom(extra);
       const patch = {
         ...(slug !== undefined ? { slug } : {}),
         ...(label !== undefined ? { label } : {}),
@@ -140,7 +147,7 @@ export function registerTemplateTools(server: McpServer): void {
         ...(sample_vars !== undefined ? { sampleVars: sample_vars } : {}),
         ...(style_guide_id !== undefined ? { styleGuideId: style_guide_id } : {}),
       };
-      const row = await updateTemplate(template_id, patch);
+      const row = await updateTemplate(userId, template_id, patch);
       if (!row) return jsonResult({ error: `Template introuvable: ${template_id}` });
       return jsonResult(row);
     },
@@ -154,8 +161,9 @@ export function registerTemplateTools(server: McpServer): void {
         template_id: z.string().min(1).describe("id du template à supprimer."),
       },
     },
-    async ({ template_id }) => {
-      await deleteTemplate(template_id);
+    async ({ template_id }, extra) => {
+      const userId = userIdFrom(extra);
+      await deleteTemplate(userId, template_id);
       return jsonResult({ deleted: true });
     },
   );
@@ -174,8 +182,9 @@ export function registerTemplateTools(server: McpServer): void {
           .describe("Valeurs des variables du template, par nom. Validées contre le variables_schema."),
       },
     },
-    async ({ template_id, vars }) => {
-      const rec = await renderTemplate(template_id, vars);
+    async ({ template_id, vars }, extra) => {
+      const userId = userIdFrom(extra);
+      const rec = await renderTemplate(userId, template_id, vars);
       return jsonResult({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
     },
   );

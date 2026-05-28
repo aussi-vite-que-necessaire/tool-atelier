@@ -4,6 +4,7 @@ import Link from "next/link";
 import { listMediaRecords } from "@/lib/media/repository";
 import { listStyles } from "@/lib/styles/repository";
 import type { MediaKind } from "@/lib/media/types";
+import { requireUserId } from "@/lib/session";
 import { uploadAction } from "./actions";
 import { GenerateForm } from "./generate-form";
 import { GalleryGrid } from "./gallery-grid";
@@ -15,14 +16,15 @@ export default async function GalleryPage({
 }: {
   searchParams: Promise<{ kind?: string }>;
 }) {
+  const userId = await requireUserId();
   const { kind: kindParam } = await searchParams;
   const kind: MediaKind | undefined = KINDS.includes(kindParam as MediaKind)
     ? (kindParam as MediaKind)
     : undefined;
 
   const [items, styles] = await Promise.all([
-    listMediaRecords({ kind, limit: 100 }),
-    listStyles(),
+    listMediaRecords(userId, { kind, limit: 100 }),
+    listStyles(userId),
   ]);
 
   return (

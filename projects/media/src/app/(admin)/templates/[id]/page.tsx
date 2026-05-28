@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { getTemplate } from "@/lib/templates/repository";
 import { listGuides } from "@/lib/style-guides/repository";
+import { requireUserId } from "@/lib/session";
 import { saveTemplateAction } from "../actions";
 import { TemplatePreview } from "./template-preview";
 
@@ -11,11 +12,12 @@ export default async function TemplateEditorPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const userId = await requireUserId();
   const { id } = await params;
-  const template = await getTemplate(id);
+  const template = await getTemplate(userId, id);
   if (!template) notFound();
 
-  const guides = await listGuides();
+  const guides = await listGuides(userId);
 
   return (
     <div className="max-w-3xl space-y-8">

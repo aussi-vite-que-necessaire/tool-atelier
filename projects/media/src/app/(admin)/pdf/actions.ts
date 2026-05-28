@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { aggregatePdf } from "@/lib/pdf/aggregate";
+import { requireUserId } from "@/lib/session";
 
 export type ComposePdfResult =
   | { ok: true; id: string; url: string }
@@ -24,9 +25,10 @@ export async function composePdfAction(
   if (!Array.isArray(imageIds) || imageIds.length === 0) {
     return { ok: false, error: "Sélectionne au moins une image." };
   }
+  const userId = await requireUserId();
 
   try {
-    const rec = await aggregatePdf(imageIds, normalizeTags(tagsRaw));
+    const rec = await aggregatePdf(userId, imageIds, normalizeTags(tagsRaw));
     revalidatePath("/gallery");
     return { ok: true, id: rec.id, url: rec.url };
   } catch (err) {

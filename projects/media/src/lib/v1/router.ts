@@ -23,7 +23,10 @@ function jsonResponse(data: unknown, status = 200): Response {
 
 // ── Schémas Zod ────────────────────────────────────────────────────────────────
 
+const UserIdSchema = z.string().min(1);
+
 const GenerateSchema = z.object({
+  userId: UserIdSchema,
   prompt: z.string().min(1),
   // Pass-through : le ratio est validé par Gemini, pas figé ici (les appelants
   // de service, ex. ContentOS, ont leur propre palette : 1:1, 4:5, 16:9…).
@@ -33,22 +36,26 @@ const GenerateSchema = z.object({
 });
 
 const EditSchema = z.object({
+  userId: UserIdSchema,
   sourceId: z.string().min(1),
   prompt: z.string().min(1),
 });
 
 const RenderHtmlSchema = z.object({
+  userId: UserIdSchema,
   html: z.string().min(1),
   width: z.number().int().positive(),
   height: z.number().int().positive(),
 });
 
 const RenderTemplateSchema = z.object({
+  userId: UserIdSchema,
   templateId: z.string().min(1),
   vars: z.record(z.string(), z.unknown()).default({}),
 });
 
 const PdfSchema = z.object({
+  userId: UserIdSchema,
   imageIds: z.array(z.string()).min(1),
 });
 
@@ -65,16 +72,17 @@ async function handleGenerate(request: Request): Promise<Response> {
   if (!parsed.success) {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
-  const { prompt, aspectRatio, stylePrompt, styleId } = parsed.data;
+  const { userId, prompt, aspectRatio, stylePrompt, styleId } = parsed.data;
   // Résolution du style : stylePrompt explicite prioritaire, sinon résolution depuis l'id.
   let stylePromptResolved: string | undefined = stylePrompt;
   if (!stylePromptResolved && styleId) {
-    const st = await getStyle(styleId);
+    const st = await getStyle(userId, styleId);
     stylePromptResolved = st?.prompt;
   }
   const composed = composePrompt(prompt, stylePromptResolved);
   const { bytes, mimeType } = await generateImage(composed, aspectRatio);
   const rec = await store({
+    userId,
     bytes,
     mimeType,
     kind: "image",
@@ -98,13 +106,14 @@ async function handleEdit(request: Request): Promise<Response> {
   if (!parsed.success) {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
-  const { sourceId, prompt } = parsed.data;
-  const source = await getMediaRecord(sourceId);
+  const { userId, sourceId, prompt } = parsed.data;
+  const source = await getMediaRecord(userId, sourceId);
   if (!source) return jsonResponse({ error: `Image introuvable: ${sourceId}` }, 404);
   const src = await getImageBytes(source.r2_key);
   if (!src) return jsonResponse({ error: `Fichier source absent du bucket: ${source.r2_key}` }, 404);
   const { bytes, mimeType } = await editImage(src.bytes, src.contentType, prompt);
   const rec = await store({
+    userId,
     bytes,
     mimeType,
     kind: "image",
@@ -127,9 +136,10 @@ async function handleRenderHtml(request: Request): Promise<Response> {
   if (!parsed.success) {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
-  const { html, width, height } = parsed.data;
+  const { userId, html, width, height } = parsed.data;
   const { bytes, mimeType } = await renderHtml({ html, width, height });
   const rec = await store({
+    userId,
     bytes,
     mimeType,
     kind: "render",
@@ -154,9 +164,9 @@ async function handleRenderTemplate(request: Request): Promise<Response> {
   if (!parsed.success) {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
-  const { templateId, vars } = parsed.data;
+  const { userId, templateId, vars } = parsed.data;
   try {
-    const rec = await renderTemplate(templateId, vars);
+    const rec = await renderTemplate(userId, templateId, vars);
     return jsonResponse({ id: rec.id, url: rec.url, width: rec.width, height: rec.height });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Échec du rendu du template";
@@ -166,7 +176,10 @@ async function handleRenderTemplate(request: Request): Promise<Response> {
   }
 }
 
-async function handleUpload(request: Request): Promise<Response> {
+async function handleUpload(request: Request, url: URL): Promise<Response> {
+  // userId vient du query string (POST avec corps binaire, pas un JSON).
+  const userId = url.searchParams.get("userId");
+  if (!userId) return jsonResponse({ error: "userId manquant (query string requis)" }, 400);
   // Normalise le MIME : retire les paramètres éventuels (ex. "; charset=binary").
   const rawContentType = request.headers.get("content-type") ?? "application/octet-stream";
   const mime = rawContentType.split(";")[0].trim();
@@ -175,6 +188,7 @@ async function handleUpload(request: Request): Promise<Response> {
   const result = validateUpload(mime, bytes.byteLength);
   if (!result.ok) return jsonResponse({ error: result.error }, 400);
   const rec = await store({
+    userId,
     bytes,
     mimeType: mime,
     kind: result.kind,
@@ -197,9 +211,9 @@ async function handlePdf(request: Request): Promise<Response> {
   if (!parsed.success) {
     return jsonResponse({ error: parsed.error.issues[0]?.message ?? "Paramètres invalides" }, 400);
   }
-  const { imageIds } = parsed.data;
+  const { userId, imageIds } = parsed.data;
   try {
-    const rec = await aggregatePdf(imageIds);
+    const rec = await aggregatePdf(userId, imageIds);
     return jsonResponse({ id: rec.id, url: rec.url });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Échec de la construction du PDF";
@@ -210,6 +224,8 @@ async function handlePdf(request: Request): Promise<Response> {
 
 async function handleListMedia(url: URL): Promise<Response> {
   const p = url.searchParams;
+  const userId = p.get("userId");
+  if (!userId) return jsonResponse({ error: "userId manquant (query string requis)" }, 400);
   const kindParam = p.get("kind");
   const kind = (kindParam === "image" || kindParam === "video" || kindParam === "pdf" || kindParam === "render") ? (kindParam as MediaKind) : undefined;
   const oParam = p.get("orientation");
@@ -217,21 +233,26 @@ async function handleListMedia(url: URL): Promise<Response> {
   const limit = Math.min(Math.max(Number(p.get("limit") ?? 30) || 30, 1), 100);
   const offset = Math.max(Number(p.get("offset") ?? 0) || 0, 0);
   const params = { query: p.get("q") || undefined, tags: p.get("tag") ? [p.get("tag")!] : undefined, kind, orientation, limit, offset };
-  const [items, total] = await Promise.all([listMediaRecords(params), countMediaRecords(params)]);
+  const [items, total] = await Promise.all([
+    listMediaRecords(userId, params),
+    countMediaRecords(userId, params),
+  ]);
   const view = items.map((r) => ({ id: r.id, url: r.url, kind: r.kind, width: r.width, height: r.height, prompt: r.prompt, tags: r.tags, created_at: r.created_at }));
   return jsonResponse({ items: view, total, limit, offset });
 }
 
-async function handleGetMedia(id: string): Promise<Response> {
-  const rec = await getMediaRecord(id);
+async function handleGetMedia(userId: string | null, id: string): Promise<Response> {
+  if (!userId) return jsonResponse({ error: "userId manquant (query string requis)" }, 400);
+  const rec = await getMediaRecord(userId, id);
   if (!rec) return jsonResponse({ error: "Média introuvable" }, 404);
   return jsonResponse({ id: rec.id, url: rec.url, kind: rec.kind, width: rec.width, height: rec.height, prompt: rec.prompt, tags: rec.tags, created_at: rec.created_at });
 }
 
-async function handleDelete(id: string): Promise<Response> {
-  const rec = await getMediaRecord(id);
+async function handleDelete(userId: string | null, id: string): Promise<Response> {
+  if (!userId) return jsonResponse({ error: "userId manquant (query string requis)" }, 400);
+  const rec = await getMediaRecord(userId, id);
   if (!rec) return jsonResponse({ deleted: false });
-  const deleted = await deleteMediaRow(id);
+  const deleted = await deleteMediaRow(userId, id);
   if (deleted) {
     await deleteObject(rec.r2_key);
   }
@@ -262,7 +283,7 @@ export async function handleV1(request: Request): Promise<Response> {
     return handleRenderTemplate(request);
   }
   if (method === "POST" && pathname === "/v1/upload") {
-    return handleUpload(request);
+    return handleUpload(request, url);
   }
   if (method === "POST" && pathname === "/v1/pdf") {
     return handlePdf(request);
@@ -271,12 +292,14 @@ export async function handleV1(request: Request): Promise<Response> {
   // DELETE /v1/object/:id
   const deleteMatch = pathname.match(/^\/v1\/object\/([^/]+)$/);
   if (method === "DELETE" && deleteMatch) {
-    return handleDelete(deleteMatch[1]);
+    return handleDelete(url.searchParams.get("userId"), deleteMatch[1]);
   }
 
   if (method === "GET" && pathname === "/v1/media") return handleListMedia(url);
   const getMatch = pathname.match(/^\/v1\/media\/([^/]+)$/);
-  if (method === "GET" && getMatch) return handleGetMedia(getMatch[1]);
+  if (method === "GET" && getMatch) {
+    return handleGetMedia(url.searchParams.get("userId"), getMatch[1]);
+  }
 
   return jsonResponse({ error: "Not found" }, 404);
 }

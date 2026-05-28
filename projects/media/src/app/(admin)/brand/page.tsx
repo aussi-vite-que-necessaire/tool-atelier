@@ -1,10 +1,12 @@
 export const dynamic = "force-dynamic";
 
 import { getBrand } from "@/lib/brand/repository";
+import { requireUserId } from "@/lib/session";
 import { saveBrandAction } from "./actions";
 
 export default async function BrandPage() {
-  const brand = await getBrand();
+  const userId = await requireUserId();
+  const brand = await getBrand(userId);
 
   return (
     <div className="max-w-lg space-y-6">

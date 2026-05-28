@@ -5,6 +5,7 @@ import { insertMedia } from "./media/repository";
 import type { MediaRecord, MediaKind, MediaSource } from "./media/types";
 
 export interface StoreInput {
+  userId: string;
   bytes: Uint8Array;
   mimeType: string;
   kind: MediaKind;
@@ -34,6 +35,7 @@ export async function store(input: StoreInput): Promise<MediaRecord> {
 
   const record: MediaRecord = {
     id,
+    user_id: input.userId,
     r2_key: key,
     url: publicUrl(key),
     kind: input.kind,
