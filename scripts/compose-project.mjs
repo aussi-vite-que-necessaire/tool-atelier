@@ -40,7 +40,7 @@ function fill(s, name, description) {
 
 export async function compose({ name, description, modules = [], authMethods = [], mcp = null, outDir }) {
   if (!/^[a-z][a-z0-9-]*$/.test(name)) throw new Error(`nom de projet invalide: ${name}`);
-  const dst = outDir ?? path.join(ROOT, name);
+  const dst = outDir ?? path.join(ROOT, "projects", name);
   await fs.cp(path.join(STARTERS, "base"), dst, { recursive: true });
 
   const resolved = await resolveModules(modules, authMethods);

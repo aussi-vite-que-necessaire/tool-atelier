@@ -1,9 +1,11 @@
 # tool-atelier — routeur de l'atelier
 
-Monorepo incubateur des projets de Manu, **pilotable par agents**. **Un dossier = un projet**
-(ex. `hello/`, `counter/`), avec son propre `CLAUDE.md` chargé à la volée quand on l'ouvre.
+Monorepo incubateur des projets de Manu, **pilotable par agents**. **Un dossier dans `projects/`
+= un projet** (ex. `projects/hello/`, `projects/counter/`), avec son propre `CLAUDE.md` chargé à
+la volée quand on l'ouvre. Le reste de la racine (`bin/`, `docs/`, `scripts/`, `secrets/`,
+`starters/`, `test/`, `tools/`) est la plomberie de l'atelier.
 
-Le projet **`skills/`** est le **hub central des skills agentiques** de la suite de tools
+Le projet **`projects/skills/`** est le **hub central des skills agentiques** de la suite de tools
 (`contentos`, `ressources`, `media`) : il est la **source de vérité** des skills (un dossier
 par skill, avec `manifest.json` + `SKILL.md`), expose une page publique listant les skills
 disponibles, et sert chaque skill en zip versionné (`<skill>-v<n>.zip`) après login OTP.
@@ -24,7 +26,7 @@ décide**, à l'intérieur. Trois rails, trois skills :
 
 Utilitaires : **`/start`** (router de session), **`/lab-work <projet>`** (focalise sur un projet, utilisé par `/lab-ship`), **`/lab-deploy`** (déploie le projet courant), **`/lab-secret`** (secrets), **`/lab-ssh`** (diagnostic serveur).
 
-La liste des projets se déduit en scannant les `*/lab.json` à la racine — chaque projet déclare sa description dans son `lab.json`.
+La liste des projets se déduit en scannant les `projects/*/lab.json` — chaque projet déclare sa description dans son `lab.json`.
 
 ## Workflow & isolation — RÈGLE ABSOLUE
 
@@ -68,7 +70,7 @@ déploiement. Par défaut c'est le host attribué par la plateforme
 (`https://<projet>-<env>.lab.avqn.ch` en preview, `https://<projet>.lab.avqn.ch` en prod lab).
 Si `lab.json` déclare **`domain`**, la **prod** prend ce domaine public custom comme `APP_URL`
 (le DNS du domaine doit pointer vers le lab) ; les previews gardent leur host `*.lab.avqn.ch`.
-Preview = base vide + seed, droppée au teardown. Exemples : `hello/` (rien), `counter/` (db).
+Preview = base vide + seed, droppée au teardown. Exemples : `projects/hello/` (rien), `projects/counter/` (db).
 
 ## Secrets applicatifs — `/lab-secret`
 
