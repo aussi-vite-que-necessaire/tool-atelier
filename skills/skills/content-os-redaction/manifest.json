@@ -1,0 +1,9 @@
+{
+  "name": "content-os-redaction",
+  "tool": "contentos",
+  "version": 1,
+  "tagline": "Cerveau éditorial — écrire et relire dans la voix de Manu, avec son visuel.",
+  "description": "Produit, réécrit ou relit du contenu éditorial signé Manu (posts LinkedIn, emails, pages). Charge voix, writing-template et marque visuelle depuis ContentOS via MCP ; pose le draft et accompagne le post de son visuel.",
+  "requires_mcp": ["contentos", "media"],
+  "latest_changes": "Première version centralisée dans le hub."
+}

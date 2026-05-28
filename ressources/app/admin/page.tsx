@@ -113,11 +113,10 @@ export default async function AdminDashboard() {
           Outils
         </h2>
         <a
-          href="/api/admin/skill"
-          download
+          href="https://skills.lab.avqn.ch"
           className="press inline-flex items-center gap-2 border-2 border-ink bg-paper px-4 py-2.5 text-sm font-bold uppercase tracking-wide shadow-brutal-sm"
         >
-          <Download className="size-4" strokeWidth={2.5} /> Skill « créer-une-ressource » (.zip)
+          <Download className="size-4" strokeWidth={2.5} /> Récupérer le skill sur skills.lab.avqn.ch
         </a>
       </section>
     </div>

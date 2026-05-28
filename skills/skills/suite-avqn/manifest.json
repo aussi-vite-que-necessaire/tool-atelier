@@ -1,0 +1,9 @@
+{
+  "name": "suite-avqn",
+  "tool": "suite",
+  "version": 1,
+  "tagline": "Orchestrateur — articule les trois outils de la suite AVQN sur les workflows croisés.",
+  "description": "Décide par où commencer quand une tâche traverse ressources + contentos + media. Quatre workflows : ressource → série de posts, idée → post + visuel, visuel → post, cours → PDF. Ne remplace aucun skill — les chapeaute.",
+  "requires_mcp": ["avqn_res", "contentos", "media"],
+  "latest_changes": "Première version."
+}

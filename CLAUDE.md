@@ -3,6 +3,12 @@
 Monorepo incubateur des projets de Manu, **pilotable par agents**. **Un dossier = un projet**
 (ex. `hello/`, `counter/`), avec son propre `CLAUDE.md` chargé à la volée quand on l'ouvre.
 
+Le projet **`skills/`** est le **hub central des skills agentiques** de la suite de tools
+(`contentos`, `ressources`, `media`) : il est la **source de vérité** des skills (un dossier
+par skill, avec `manifest.json` + `SKILL.md`), expose une page publique listant les skills
+disponibles, et sert chaque skill en zip versionné (`<skill>-v<n>.zip`) après login OTP.
+Prod : `https://skills.lab.avqn.ch`.
+
 ## Au démarrage : qu'est-ce qu'on fait ?
 
 L'entrée de l'atelier est le lanceur **`Atelier.command`** (double-clic macOS, ou exécuté au

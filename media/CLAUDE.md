@@ -11,6 +11,11 @@ un **front-end d'admin** (derrière le login). Prod : `https://media.lab.avqn.ch
 `docs/superpowers/specs/2026-05-27-media-migration-contentos-design.md` (centre des médias).
 **Plan** : `docs/superpowers/plans/2026-05-27-media-migration-contentos.md`.
 
+
+## Skill agentique
+
+Le skill `creer-un-visuel` (mode d'emploi du service media — générer, éditer, rendre, agréger en PDF) vit dans le hub central de l'atelier : `skills/skills/creer-un-visuel/`. Téléchargeable sur `https://skills.lab.avqn.ch` après connexion OTP.
+
 ## Stack
 
 - **Next.js 16** en sortie `standalone` → image Docker slim, écoute `:8080`.
