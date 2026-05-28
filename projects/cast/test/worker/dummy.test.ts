@@ -10,9 +10,9 @@ let queueEvents: QueueEvents;
 
 beforeAll(async () => {
   // Même préfixe que l'app (src/lib/queue/client.ts + src/worker/index.ts) : sans ça,
-  // l'enqueue (préfixe "contentos") et le Worker/QueueEvents (préfixe BullMQ "bull")
+  // l'enqueue (préfixe "cast") et le Worker/QueueEvents (préfixe BullMQ "bull")
   // visent des namespaces Redis distincts et le round-trip ne se boucle jamais.
-  const prefix = process.env.QUEUE_PREFIX || 'contentos';
+  const prefix = process.env.QUEUE_PREFIX || 'cast';
   connection = new IORedis(process.env.REDIS_URL!, { maxRetriesPerRequest: null });
   worker = new Worker('dummy', processDummy, { connection, prefix, concurrency: 1 });
   queueEvents = new QueueEvents('dummy', { connection: { url: process.env.REDIS_URL }, prefix });

@@ -83,16 +83,16 @@ Corrige toute erreur de build avant de pousser. Reviens à la racine de l'atelie
 
 ```bash
 git add projects/<nom> && git commit -m "🤖 nouveau projet <nom>"
-git push                                  # → preview https://<nom>-<branche>.lab.avqn.ch
+git push                                  # → preview https://<nom>-<branche>.preview.contentos.ch
 gh pr create --fill                       # titre : ✨ nouveau projet <nom>
 gh run watch                              # attendre la CI verte (build + deploy preview)
 gh pr merge <#> --squash                  # → prod ; la branche distante s'auto-supprime
 gh run watch                              # attendre la CI de prod
 ```
 
-Renvoie à Manu le **lien prod** `https://<nom>.lab.avqn.ch`. Pour une app avec auth en prod,
+Renvoie à Manu le **lien prod** `https://<nom>.contentos.ch`. Pour une app avec auth en prod,
 `BETTER_AUTH_SECRET` doit exister (`/lab-secret`, scope `<nom>`, `openssl rand -base64 32`) ;
 sans lui l'auth tourne sur un secret par défaut non sûr.
 
 Le projet est **déviable** : Manu peut tout modifier ensuite, les modules ne sont qu'un point de
-départ. Pas de DNS à créer (le wildcard `*.lab.avqn.ch` couvre). Build uniquement sur la CI.
+départ. Pas de DNS à créer (les wildcards `*.contentos.ch` + `*.preview.contentos.ch` couvrent). Build uniquement sur la CI.

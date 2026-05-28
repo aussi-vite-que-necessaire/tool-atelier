@@ -7,9 +7,9 @@ export const redisConnection = new IORedis(env.REDIS_URL, {
 });
 
 // Redis central multi-tenant : on préfixe toutes les clés BullMQ par projet
-// (par défaut "contentos") pour éviter les collisions entre apps de l'atelier.
+// (par défaut "cast") pour éviter les collisions entre apps de l'atelier.
 // Le worker DOIT utiliser le même préfixe (voir src/worker/index.ts).
-const queuePrefix = process.env.QUEUE_PREFIX || 'contentos';
+const queuePrefix = process.env.QUEUE_PREFIX || 'cast';
 
 export const dummyQueue = new Queue<{ message: string }, { ok: true; echoed: string }>('dummy', {
   connection: redisConnection,

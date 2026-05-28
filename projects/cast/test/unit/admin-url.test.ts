@@ -3,7 +3,7 @@ import { adminUrl, dbNameFromUrl } from '@/lib/db/admin-url';
 
 describe('adminUrl', () => {
   test('remplace le nom de base par "postgres", conserve creds/host/port', () => {
-    expect(adminUrl('postgres://app:app@localhost:5432/contentos_test')).toBe(
+    expect(adminUrl('postgres://app:app@localhost:5432/cast_test')).toBe(
       'postgres://app:app@localhost:5432/postgres',
     );
   });
@@ -15,8 +15,8 @@ describe('adminUrl', () => {
 
 describe('dbNameFromUrl', () => {
   test('extrait le nom de la base cible', () => {
-    expect(dbNameFromUrl('postgres://app:app@localhost:5432/contentos_test')).toBe(
-      'contentos_test',
+    expect(dbNameFromUrl('postgres://app:app@localhost:5432/cast_test')).toBe(
+      'cast_test',
     );
   });
 });

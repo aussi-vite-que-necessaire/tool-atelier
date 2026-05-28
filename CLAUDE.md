@@ -5,11 +5,13 @@ Monorepo incubateur des projets de Manu, **pilotable par agents**. **Un dossier 
 la volée quand on l'ouvre. Le reste de la racine (`bin/`, `docs/`, `scripts/`, `secrets/`,
 `starters/`, `test/`, `tools/`) est la plomberie de l'atelier.
 
-Le projet **`projects/skills/`** est le **hub central des skills agentiques** de la suite de tools
-(`contentos`, `ressources`, `media`) : il est la **source de vérité** des skills (un dossier
-par skill, avec `manifest.json` + `SKILL.md`), expose une page publique listant les skills
-disponibles, et sert chaque skill en zip versionné (`<skill>-v<n>.zip`) après login OTP.
-Prod : `https://skills.lab.avqn.ch`.
+Les projets de la **suite contentos** (`cast`, `ressources`, `media`, `skills`, `www`) vivent sous
+`*.contentos.ch`. Le projet **`projects/www/`** sert la page d'accueil sur `contentos.ch` +
+`www.contentos.ch`. Le projet **`projects/skills/`** est le **hub central des skills agentiques**
+de la suite : il est la **source de vérité** des skills (un dossier par skill, avec
+`manifest.json` + `SKILL.md`), expose une page publique listant les skills disponibles, et sert
+chaque skill en zip versionné (`<skill>-v<n>.zip`) après login OTP. Prod :
+`https://skills.contentos.ch`.
 
 ## Au démarrage : qu'est-ce qu'on fait ?
 
@@ -31,8 +33,8 @@ La liste des projets se déduit en scannant les `projects/*/lab.json` — chaque
 ## Workflow & isolation — RÈGLE ABSOLUE
 
 - **Jamais de commit sur `main`.** On code sur une **branche**, on ouvre une **PR**.
-- **Push de branche → preview** : `https://<projet>-<branche>.lab.avqn.ch` (détruite à la suppression de la branche).
-- **Merge de PR → prod** : `https://<projet>.lab.avqn.ch`.
+- **Push de branche → preview** : `https://<projet>-<branche>.preview.contentos.ch` (détruite à la suppression de la branche).
+- **Merge de PR → prod** : `https://<projet>.contentos.ch` (cas spécial `www` → `contentos.ch` + `www.contentos.ch`).
 - **Merger** : `gh pr merge <#> --squash`. La branche distante se supprime seule (le dépôt a `delete_branch_on_merge`). Côté local, on retire le worktree : `git worktree remove <chemin>` puis `git branch -D <branche>`. Le drapeau `--delete-branch` est inutile et échoue en contexte worktree (gh tente de basculer le checkout sur `main`, déjà occupé).
 - **Une session = un worktree isolé + une branche.** Le lanceur s'appuie sur le worktree natif de Claude Code (`claude --worktree`) ; voir « Collaboration multi-agents ». Le hook `branch-guard` bloque les commits sur `main` et les push qui mettraient `main` à jour (la suppression d'une branche distante reste permise), ainsi que le dev projet dans le checkout principal partagé.
 
@@ -53,24 +55,23 @@ La liste des projets se déduit en scannant les `projects/*/lab.json` — chaque
 → `scripts/deploy.sh`. Le serveur **ne build jamais** : il *pull* l'image déjà construite. Suivre
 avec `gh run watch`. Logs d'un projet : `lab-ssh "docker logs <projet>-<env>-app-1"` (skill `/lab-ssh`).
 
-**DNS — à venir.** Le schéma de sous-domaines plat sous `*.lab.avqn.ch` (wildcard) ne demande
-**aucun enregistrement DNS par projet**. Une compétence DNS (domaines personnalisés) pourra être
-ajoutée plus tard si le besoin se présente.
+**DNS.** Deux wildcards Infomaniak sur `contentos.ch` : `*.contentos.ch` (prod) et
+`*.preview.contentos.ch` (previews) pointent sur le lab — aucun enregistrement DNS par projet.
+La zone contentos.ch est pilotable via l'API Infomaniak (token `sysadmin/INFOMANIAK_API_TOKEN`).
 
 ## Données — `lab.json`
 
 Un projet déclare ses besoins dans **`lab.json`** :
-`{ "description": "...", "db": true, "redis": false, "email": false, "browser": false, "domain": "monprojet.com", "migrate": "npm run migrate", "seed": "npm run seed" }`
+`{ "description": "...", "db": true, "redis": false, "email": false, "browser": false, "migrate": "npm run migrate", "seed": "npm run seed" }`
 Au déploiement, `deploy.sh` crée la base `<projet>_<env>` (Postgres central), injecte
 `DATABASE_URL` (auto), lance `migrate` puis `seed` (hors prod) ; `redis: true` → `REDIS_URL` +
 `REDIS_PREFIX` ; `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` (Resend, clé de plateforme) ;
 `browser: true` → `BROWSER_URL` (Chromium partagé browserless, central sur le réseau `lab`).
 Quel que soit `lab.json`, `deploy.sh` injecte aussi **`APP_URL`** = l'origine publique du
-déploiement. Par défaut c'est le host attribué par la plateforme
-(`https://<projet>-<env>.lab.avqn.ch` en preview, `https://<projet>.lab.avqn.ch` en prod lab).
-Si `lab.json` déclare **`domain`**, la **prod** prend ce domaine public custom comme `APP_URL`
-(le DNS du domaine doit pointer vers le lab) ; les previews gardent leur host `*.lab.avqn.ch`.
-Preview = base vide + seed, droppée au teardown. Exemples : `projects/hello/` (rien), `projects/counter/` (db).
+déploiement : `https://<projet>-<branche>.preview.contentos.ch` en preview,
+`https://<projet>.contentos.ch` en prod (cas spécial `www` → `https://contentos.ch`).
+Preview = base vide + seed, droppée au teardown. Exemples : `projects/hello/` (rien),
+`projects/counter/` (db).
 
 ## Secrets applicatifs — `/lab-secret`
 

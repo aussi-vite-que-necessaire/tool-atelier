@@ -37,7 +37,7 @@ la référence si un sub-agent essaie d'introduire un gate non prévu :
 3. **Spec (sans gate).** Écris le design (informé par les réponses) dans `docs/superpowers/specs/AAAA-MM-JJ-<sujet>-design.md`. Commit. Échelle la spec à la taille de la tâche (quelques phrases pour un petit changement).
 4. **Plan (sans gate).** `superpowers:writing-plans` → `docs/superpowers/plans/AAAA-MM-JJ-<sujet>.md`. Commit.
 5. **Implémentation.** `superpowers:subagent-driven-development` : un sub-agent par tâche, revues spec/qualité internes, sans pause humaine. À la fin (dernier code reviewer approuvé), le contrôle revient à `/lab-ship` pour l'étape 6 — **ne pas** invoquer `finishing-a-development-branch`.
-6. **Preview + PR.** `git push -u origin <branche>` → preview `https://<projet>-<branche>.lab.avqn.ch`. Suis la CI (`gh run watch "$(gh run list -L1 --json databaseId -q '.[0].databaseId')" --exit-status`), puis `curl` l'URL preview pour vérifier qu'elle répond. Ouvre la PR (`gh pr create --fill` ou titre/desc soignés). **Ne merge pas** : la prod reste la décision de Manu après test.
+6. **Preview + PR.** `git push -u origin <branche>` → preview `https://<projet>-<branche>.preview.contentos.ch`. Suis la CI (`gh run watch "$(gh run list -L1 --json databaseId -q '.[0].databaseId')" --exit-status`), puis `curl` l'URL preview pour vérifier qu'elle répond. Ouvre la PR (`gh pr create --fill` ou titre/desc soignés). **Ne merge pas** : la prod reste la décision de Manu après test.
 7. **Notifie.** `PushNotification` (titre « <sujet> : PR prête à prévisualiser ») **puis** le message de fin formaté ci-dessous.
 
 ## Message de fin — gabarit fixe

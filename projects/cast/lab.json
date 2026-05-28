@@ -1,9 +1,8 @@
 {
-  "description": "ContentOS (contentos.avqn.ch) — copie lab, web + worker.",
+  "description": "Cast — atelier de publication LinkedIn (suite contentos), web + worker.",
   "db": true,
   "redis": true,
   "email": true,
-  "domain": "contentos.avqn.ch",
   "migrate": "node scripts/migrate.mjs",
   "worker": "node worker-runner.mjs",
   "images": ["web", "worker"]

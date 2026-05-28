@@ -16,7 +16,7 @@ export async function awaitJobResult<T>(
   // Même préfixe que les Queue/Worker (Redis central multi-tenant).
   const events = new QueueEvents(queueName, {
     connection,
-    prefix: process.env.QUEUE_PREFIX || 'contentos',
+    prefix: process.env.QUEUE_PREFIX || 'cast',
   });
   try {
     await events.waitUntilReady();

@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
-# Image contentos en DEUX variantes construites via `--target` :
+# Image cast en DEUX variantes construites via `--target` :
 #  - target `web`    : serveur Next standalone (port 8080) + one-shot `migrate`.
 #  - target `worker` : consumers BullMQ (src/worker/index.ts via tsx).
-# Le workflow CI build les deux et push `atelier-contentos-web` + `atelier-contentos-worker`.
+# Le workflow CI build les deux et push `atelier-cast-web` + `atelier-cast-worker`.
 # Les stages amont (deps, build, proddeps) sont partagés → le cache buildx les réutilise
 # entre les deux targets.
 
@@ -22,7 +22,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-ARG APP_URL=https://contentos.lab.avqn.ch
+ARG APP_URL=https://cast.contentos.ch
 ENV APP_URL=${APP_URL}
 ENV DATABASE_URL=postgres://build:build@localhost:5432/build \
     REDIS_URL=redis://localhost:6379 \

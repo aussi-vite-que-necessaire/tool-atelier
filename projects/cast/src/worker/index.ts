@@ -10,7 +10,7 @@ const connection = new IORedis(env.REDIS_URL, { maxRetriesPerRequest: null });
 
 // Redis central multi-tenant : même préfixe que les Queue côté enqueue
 // (src/lib/queue/client.ts) — sinon le worker ne voit pas les jobs.
-const prefix = process.env.QUEUE_PREFIX || 'contentos';
+const prefix = process.env.QUEUE_PREFIX || 'cast';
 
 const publishFn = env.CONTENT_OS_LINKEDIN_STUB === '1' ? publishStub : publish;
 if (env.CONTENT_OS_LINKEDIN_STUB === '1') {

@@ -270,7 +270,11 @@ jobs:
           $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGES'"
       - name: Résumé
         run: |
-          if [ "$ENV" = "prod" ]; then host="${PROJ}.lab.avqn.ch"; else host="${PROJ}-${ENV}.lab.avqn.ch"; fi
+          if [ "$ENV" = "prod" ]; then
+            if [ "$PROJ" = "www" ]; then host="contentos.ch"; else host="${PROJ}.contentos.ch"; fi
+          else
+            host="${PROJ}-${ENV}.preview.contentos.ch"
+          fi
           echo "🚀 **${PROJ}** (\`${ENV}\`) déployé → https://${host}" >> "$GITHUB_STEP_SUMMARY"
 
   teardown:

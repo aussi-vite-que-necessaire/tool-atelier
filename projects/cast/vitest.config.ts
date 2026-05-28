@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 
 // Charge .env une seule fois dans le process parent. Les vars d'env sont
 // ensuite propagées à tous les workers de projets (unit/integration/worker).
-// .env.test (committé) force DATABASE_URL sur contentos_test : les tests ne
+// .env.test (committé) force DATABASE_URL sur cast_test : les tests ne
 // touchent jamais la base de dev.
 loadEnv();
 loadEnv({ path: '.env.test', override: true });

@@ -1,9 +1,6 @@
-# ressources (copie lab)
+# ressources
 
-Plateforme de lead magnets d'AVQN — **copie lab** du produit `ressources`, tournant **en
-parallèle de la prod** sur `https://ressources.lab.avqn.ch`. La prod (`ressources.avqn.ch`)
-n'est jamais touchée par ce dossier : c'est un environnement d'itération isolé.
-
+Plateforme de lead magnets de la suite **contentos** (`https://ressources.contentos.ch`).
 Une ressource = une arborescence de pages faites de modules typés, servie sur `/r/<slug>`
 par un reader SSR. Accès gaté par OTP email. Pilotage par agent via serveur MCP.
 
@@ -29,12 +26,12 @@ ressources/
 
 ## Skill agentique
 
-Le skill `creer-une-ressource` (cerveau qui pilote `ressources` via MCP) vit maintenant dans le hub central de l'atelier : `skills/skills/creer-une-ressource/`. Téléchargeable sur `https://skills.lab.avqn.ch` après connexion OTP.
+Le skill `creer-une-ressource` (cerveau qui pilote `ressources` via MCP) vit dans le hub central de l'atelier : `skills/skills/creer-une-ressource/`. Téléchargeable sur `https://skills.contentos.ch` après connexion OTP.
 
 ## Déployer
 
-`git push` sur une branche → preview `https://ressources-<branche>.lab.avqn.ch`. Merge de la
-PR → prod lab `https://ressources.lab.avqn.ch`. Jamais de commit direct sur `main`. La CI
+`git push` sur une branche → preview `https://ressources-<branche>.preview.contentos.ch`. Merge de la
+PR → prod `https://ressources.contentos.ch`. Jamais de commit direct sur `main`. La CI
 build l'image (`docker build`) → GHCR → pull sur `lab` ; le serveur ne build jamais.
 
 ## Données & secrets
@@ -43,16 +40,16 @@ build l'image (`docker build`) → GHCR → pull sur `lab` ; le serveur ne build
 central) et injecte **`DATABASE_URL`** automatiquement. Le one-shot **`migrate`** applique
 `drizzle/` avant le démarrage. `"email": true` signale le besoin d'envoi d'emails (Resend).
 
-Les autres secrets ne sont pas auto-injectés : ils viennent de
-**`/opt/lab/secrets/ressources.env`** sur `lab` (posé hors dépôt, jamais committé) :
+Les autres secrets viennent du coffre `ressources` de l'atelier (`/lab-secret`, scope `ressources`),
+déchiffrés et injectés par `deploy.sh` :
 
 - `BETTER_AUTH_SECRET` — clé de signature des sessions (≥ 32 caractères, `openssl rand -base64 32`)
-- `BETTER_AUTH_URL` — URL publique de l'app (ex. `https://ressources.lab.avqn.ch`)
-- `APP_URL` — base des liens (MCP/partage), idem URL publique
-- `RESEND_API_KEY` — clé Resend (sinon le code OTP est loggé côté serveur)
+- `BETTER_AUTH_URL` — URL publique de l'app (ex. `https://ressources.contentos.ch`)
 - `RESEND_FROM_EMAIL` — expéditeur, ex. `Ressources <noreply@…>`
 
-`NEXT_PUBLIC_BETTER_AUTH_URL` est **inlinée au build** (figée à `https://ressources.lab.avqn.ch`
+`APP_URL` et `RESEND_API_KEY` sont auto-injectés par la plateforme.
+
+`NEXT_PUBLIC_BETTER_AUTH_URL` est **inlinée au build** (figée à `https://ressources.contentos.ch`
 via l'ARG du Dockerfile). Faire évoluer le schéma : éditer `db/schema/`, `npm run db:generate`,
 committer — le prochain déploiement applique la migration.
 

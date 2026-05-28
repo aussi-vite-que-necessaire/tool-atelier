@@ -6,12 +6,14 @@ import { schema } from "@/db/schema";
 import { sendOtpEmail } from "@/lib/email";
 
 // URL publique dérivée de l'environnement de déploiement (APP_ENV injecté par deploy.sh) :
-// prod → media.lab.avqn.ch ; preview → media-<branche>.lab.avqn.ch. Indispensable pour que
-// l'OAuth émette des URLs absolues correctes sur chaque environnement.
+// prod → media.contentos.ch ; preview → media-<branche>.preview.contentos.ch. Indispensable
+// pour que l'OAuth émette des URLs absolues correctes sur chaque environnement.
 const APP_ENV = process.env.APP_ENV ?? "dev";
 const baseURL =
   process.env.BETTER_AUTH_URL ??
-  (APP_ENV === "prod" ? "https://media.lab.avqn.ch" : `https://media-${APP_ENV}.lab.avqn.ch`);
+  (APP_ENV === "prod"
+    ? "https://media.contentos.ch"
+    : `https://media-${APP_ENV}.preview.contentos.ch`);
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),

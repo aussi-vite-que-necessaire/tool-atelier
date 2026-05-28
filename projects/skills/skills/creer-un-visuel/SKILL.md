@@ -10,7 +10,7 @@ description: >
 
 # Créer un visuel (media)
 
-Tu pilotes le service **media** (`https://media.lab.avqn.ch`) via son MCP pour produire un visuel.
+Tu pilotes le service **media** (`https://media.contentos.ch`) via son MCP pour produire un visuel.
 Le service stocke images, PDF, templates visuels (Handlebars), styles de génération et chartes
 graphiques ; tu accèdes au tout via une douzaine d'outils MCP. Tu **ne touches jamais** au code
 du projet `media` lui-même.
