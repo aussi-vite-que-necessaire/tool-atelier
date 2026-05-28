@@ -93,3 +93,5 @@ qui touche au dossier, l'inclure aussi.
 
 `git push` sur une branche → preview `https://skills-<branche>.lab.avqn.ch`. Merge de la PR
 → prod `https://skills.lab.avqn.ch`. Jamais de commit sur `main`.
+
+<!-- redeploy: BETTER_AUTH_SECRET injecté (preview/prod) -->
