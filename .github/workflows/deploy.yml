@@ -22,6 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       projects: ${{ steps.changed.outputs.projects }}
+      node_projects: ${{ steps.changed.outputs.node_projects }}
       env: ${{ steps.env.outputs.env }}
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +43,17 @@ jobs:
             | jq -R . | jq -cs .)"
           echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "projets changés: $projects"
+          # Sous-ensemble testable côté Node : exige package.json + package-lock.json (sinon
+          # `npm ci` ou `setup-node@cache:npm` échouent). Les projets non-Node (ex. `hello/`
+          # = simple server.js) ou sans lockfile (`counter/`) restent buildés et déployés,
+          # mais ne passent pas par le job `test`.
+          node_projects="$(printf '%s\n' "$projects" | jq -r '.[]' \
+            | while read -r d; do
+                [ -f "projects/$d/package.json" ] && [ -f "projects/$d/package-lock.json" ] && printf '%s\n' "$d"
+              done \
+            | jq -R . | jq -cs .)"
+          echo "node_projects=$node_projects" >> "$GITHUB_OUTPUT"
+          echo "projets testés (Node): $node_projects"
       - id: env
         run: |
           ref='${{ github.ref_name }}'
@@ -111,14 +123,16 @@ jobs:
 
   # Gate de tests (host) : unit + integration + worker + smoke e2e. Tourne en
   # parallèle du build ; le build host ici sert uniquement au smoke e2e.
+  # Ne tourne que pour les projets Node (package.json + package-lock.json). Les autres
+  # (ex. `hello/` server.js pur) sont buildés et déployés sans passer par ce gate.
   test:
     needs: detect
-    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+    if: needs.detect.outputs.node_projects != '' && needs.detect.outputs.node_projects != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJson(needs.detect.outputs.projects) }}
+        project: ${{ fromJson(needs.detect.outputs.node_projects) }}
     services:
       postgres:
         image: postgres:17
@@ -186,10 +200,14 @@ jobs:
           fi
 
   # Deploy = pull (l'image est déjà construite par le job `build` et testée par
-  # `test`). Aucun build ici → ~45s.
+  # `test` si Node). Aucun build ici → ~45s.
   deploy:
     needs: [detect, build, test]
-    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+    # `test` peut être skippé (aucun projet Node testable) ; on autorise alors le deploy.
+    if: |
+      needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+      && needs.build.result == 'success'
+      && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
