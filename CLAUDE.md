@@ -5,8 +5,8 @@ Monorepo incubateur des projets de Manu, **pilotable par agents**. **Un dossier 
 la volée quand on l'ouvre. Le reste de la racine (`bin/`, `docs/`, `scripts/`, `secrets/`,
 `starters/`, `test/`, `tools/`) est la plomberie de l'atelier.
 
-Le projet **`projects/skills/`** est le **hub central des skills agentiques** de la suite de tools
-(`contentos`, `ressources`, `media`) : il est la **source de vérité** des skills (un dossier
+Le projet **`projects/skills/`** est le **hub central des skills agentiques** de la **suite
+Contentos** (voir « Marque publique ») : il est la **source de vérité** des skills (un dossier
 par skill, avec `manifest.json` + `SKILL.md`), expose une page publique listant les skills
 disponibles, et sert chaque skill en zip versionné (`<skill>-v<n>.zip`) après login OTP.
 Prod : `https://skills.lab.avqn.ch`.
@@ -47,15 +47,44 @@ La liste des projets se déduit en scannant les `projects/*/lab.json` — chaque
 - **Frameworks invités.** superpowers et consorts accélèrent mais défèrent à ce contrat : leurs skills de worktree utilisent le worktree natif (`claude --worktree`), leur « fin de branche » défère à `/lab-deploy` + PR.
 - **Amorçage cloud.** Une fois : connecter GitHub (`/web-setup`). L'environnement cloud lance `scripts/cloud-setup.sh` au démarrage (installe les deps par projet). `LAB_SECRETS_KEY` est une variable d'environnement de l'environnement cloud — visible, assumé : c'est elle qui fait d'une session cloud un opérateur de plein droit.
 
+## Marque publique — Contentos
+
+`contentos.ch` est la marque-suite publique des outils contenu de l'atelier. La **suite
+Contentos** regroupe les projets qui aident à concevoir, produire et diffuser du contenu ; le
+lab continue d'héberger en parallèle tout ce qui ne relève pas du contenu (`hello`, `counter`,
+futurs projets `/lab-new`), sous `*.lab.avqn.ch`.
+
+**Schéma de sous-domaines** (chaque projet pose son host via `"domain"` dans son `lab.json`,
+previews exclues — voir « Données ») :
+
+- `cast.contentos.ch` — diffusion multi-réseaux (LinkedIn, Insta, FB, X, Threads, Mastodon, TikTok, YouTube)
+- `media.contentos.ch` — production média (images, vidéos, PDF, rendus templates)
+- `res.contentos.ch` — ressources (docs, guides, deals)
+- `skills.contentos.ch` — hub des skills agentiques de la suite
+
+**Rename `contentos → cast` en cours.** Le projet de diffusion vit encore sous
+`projects/contentos/` ; son container (`contentos-<env>-app-1`), son scope `lab-secret`
+(`contentos`), son MCP (« AVQN Contentos ») et son callback OAuth LinkedIn portent ce nom. Le
+rename vers `projects/cast/` est planifié en PR dédiée ; tant qu'il n'est pas fait,
+`cast.contentos.ch` n'a pas de cible.
+
+**Lab vs suite.** `*.lab.avqn.ch` reste l'origine par défaut de tout projet sans `domain`
+(infra interne, previews). `*.contentos.ch` n'est utilisé que par les projets de la suite, en
+prod, via `lab.json.domain`. Les previews restent toujours sur `*.lab.avqn.ch` quel que soit
+le projet.
+
 ## Déployer (build sur la CI uniquement)
 
 `git push` → GitHub Action build l'image du/des projet(s) modifié(s) → **GHCR** → SSH vers `lab`
 → `scripts/deploy.sh`. Le serveur **ne build jamais** : il *pull* l'image déjà construite. Suivre
 avec `gh run watch`. Logs d'un projet : `lab-ssh "docker logs <projet>-<env>-app-1"` (skill `/lab-ssh`).
 
-**DNS — à venir.** Le schéma de sous-domaines plat sous `*.lab.avqn.ch` (wildcard) ne demande
-**aucun enregistrement DNS par projet**. Une compétence DNS (domaines personnalisés) pourra être
-ajoutée plus tard si le besoin se présente.
+**DNS.** Deux wildcards `A` pointent vers le lab (`178.105.243.250`) : `*.lab.avqn.ch` (origine
+par défaut de tout projet, infra interne) et `*.contentos.ch` (marque publique de la suite
+contenu — voir « Marque publique »). Aucun enregistrement DNS par projet : un projet de la
+suite Contentos déclare `"domain": "<x>.contentos.ch"` dans son `lab.json` et son host public
+prod est servi sans intervention supplémentaire. Une compétence DNS (domaines hors `*.lab.avqn.ch`
+et `*.contentos.ch`) pourra être ajoutée plus tard si le besoin se présente.
 
 ## Données — `lab.json`
 
