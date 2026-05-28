@@ -35,7 +35,7 @@ par `/lab-cadrer`, produit le plan, commit, chaîne sur `/lab-implémenter`.
    ```
    # <Feature> — Plan d'implémentation
 
-   > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+   > **Exécution :** invoque `/lab-implémenter` pour exécuter ce plan tâche par tâche. Les steps utilisent la syntaxe checkbox (`- [ ]`) pour le suivi.
 
    **Goal:** ...
    **Architecture:** ...
