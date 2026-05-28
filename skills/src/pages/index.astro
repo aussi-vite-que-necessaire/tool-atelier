@@ -29,15 +29,13 @@ const skills = await listSkills();
             Hub des skills agentiques de la suite — contentos, ressources, media.
           </p>
         </div>
-        <form method="post" action="/api/auth/sign-out" class="contents">
-          <button
-            type="submit"
-            class="text-xs text-gray-500 hover:text-gray-900"
-            title={session.user?.email ?? ""}
-          >
-            se déconnecter
-          </button>
-        </form>
+        <button
+          id="sign-out"
+          class="text-xs text-gray-500 hover:text-gray-900"
+          title={session.user?.email ?? ""}
+        >
+          se déconnecter
+        </button>
       </header>
 
       {
@@ -75,5 +73,15 @@ const skills = await listSkills();
         )
       }
     </main>
+    <script>
+      document.getElementById("sign-out")?.addEventListener("click", async () => {
+        await fetch("/api/auth/sign-out", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{}",
+        });
+        location.href = "/sign-in";
+      });
+    </script>
   </body>
 </html>
