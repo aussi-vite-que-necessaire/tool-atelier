@@ -69,8 +69,9 @@ déchiffrés et injectés par `deploy.sh` :
 - `AUTH_URL` — URL du provider d'auth de la suite (défaut `https://auth.contentos.ch`).
 - `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_API_VERSION` — publication LinkedIn
 - `TOKEN_ENCRYPTION_KEY` — chiffrement des tokens LinkedIn stockés
-- `MEDIA_ENGINE_URL`, `MEDIA_ENGINE_SERVICE_KEY` — service **media** (`https://media.contentos.ch`) :
-  lecture du catalogue (`GET /v1/media`) pour le picker, et fetch des octets pour la publication
+- `MEDIA_ENGINE_SERVICE_KEY` — Bearer du service **media** (`https://media.contentos.ch`) :
+  lecture du catalogue (`GET /v1/media`) pour le picker. L'URL du service est codée en défaut
+  (`MEDIA_ENGINE_URL` = `https://media.contentos.ch`, surchargeable par env pour le dev local)
 - `QUEUE_PREFIX` — défaut `cast` (à laisser tel quel sauf collision)
 - stubs CI/dev : `CONTENT_OS_AI_STUB`, `CONTENT_OS_LINKEDIN_STUB`
 
