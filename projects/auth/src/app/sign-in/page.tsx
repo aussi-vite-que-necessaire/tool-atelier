@@ -32,7 +32,11 @@ export default function SignInPage() {
             className={btn}
             disabled={!email}
             onClick={async () => {
-              await authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
+              const r = await authClient.emailOtp.sendVerificationOtp({ email, type: "sign-in" });
+              if (r.error) {
+                setMsg(r.error.message ?? "Erreur lors de l'envoi du code.");
+                return;
+              }
               setOtpSent(true);
               setMsg("Code envoyé (000000 en preview).");
             }}
@@ -53,8 +57,12 @@ export default function SignInPage() {
               disabled={otp.length < 6}
               onClick={async () => {
                 const r = await signIn.emailOtp({ email, otp });
-                setMsg(r.error ? "Code invalide." : "Connecté.");
-                if (!r.error) location.href = "/";
+                if (r.error) {
+                  setMsg(r.error.message ?? "Code invalide.");
+                  return;
+                }
+                setMsg("Connecté.");
+                location.href = "/";
               }}
             >
               Valider le code
