@@ -19,13 +19,17 @@ ressources/
 ├── Dockerfile        multi-stage : deps → build → runner (standalone, non-root, :8080)
 ├── compose.yml       service app sur le réseau lab (alias ${UPSTREAM}, image ${IMAGE})
 ├── lab.json          description + db:true + email:true + migrate
-├── next.config.ts    output:"standalone" + outputFileTracingIncludes (skill download)
+├── next.config.ts    output:"standalone"
 ├── drizzle/          migrations SQL committées (appliquées au déploiement)
 ├── scripts/migrate.mjs  applique drizzle/ à la base (migrator drizzle-orm/postgres-js)
 ├── app/              App Router (dont healthz/route.ts → GET /healthz : 200 "ok", sans DB)
 ├── db/ lib/ components/  schéma, accès données, auth, UI
-└── skills/creer-une-ressource/  embarqué au build (route /api/admin/skill)
 ```
+
+
+## Skill agentique
+
+Le skill `creer-une-ressource` (cerveau qui pilote `ressources` via MCP) vit maintenant dans le hub central de l'atelier : `skills/skills/creer-une-ressource/`. Téléchargeable sur `https://skills.lab.avqn.ch` après connexion OTP.
 
 ## Déployer
 

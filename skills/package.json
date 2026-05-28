@@ -1,0 +1,33 @@
+{
+  "name": "skills",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "start": "node ./dist/server/entry.mjs",
+    "preview": "astro preview",
+    "astro": "astro",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "migrate": "node scripts/migrate.mjs",
+    "db:test:prepare": "node scripts/db-test-prepare.mjs",
+    "seed": "node scripts/seed.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.6.0",
+    "@astrojs/node": "^9.4.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "tailwindcss": "^4.3.0",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9",
+    "resend": "^6.12.3",
+    "better-auth": "^1.6.11",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3",
+    "drizzle-kit": "^0.31.10"
+  }
+}

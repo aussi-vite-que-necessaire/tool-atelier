@@ -44,15 +44,10 @@ ENV HOSTNAME=0.0.0.0
 # Même clé qu'au build (cohérence des Server Actions).
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=Uh/a226WHYYubDLev4Kg4PMV+YnbcyyHbaW6rSD+o/U=
 
-# Sortie standalone de Next : serveur + node_modules tracés + fichiers du skill
-# (next.config.ts : outputFileTracingIncludes pour /api/admin/skill).
+# Sortie standalone de Next : serveur + node_modules tracés.
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
-
-# Filet de sécurité : la route /api/admin/skill lit ./skills/creer-une-ressource au runtime
-# (process.cwd()) — on garantit sa présence même si le tracing évoluait.
-COPY --from=build --chown=node:node /app/skills ./skills
 
 # Migrations + script + deps de prod, pour le conteneur one-shot `migrate`
 # (la même image sert au migrate : scripts/migrate.mjs require drizzle-orm + postgres).

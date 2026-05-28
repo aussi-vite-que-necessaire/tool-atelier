@@ -1,0 +1,9 @@
+{
+  "name": "creer-un-visuel",
+  "tool": "media",
+  "version": 1,
+  "tagline": "Mode d'emploi du service media — générer, éditer, rendre, agréger.",
+  "description": "Choisit le bon outil MCP de media selon le besoin (génération depuis un prompt, édition d'une image existante, rendu HTML→image, instanciation de template, construction de PDF). Mini-recettes prêtes à l'emploi.",
+  "requires_mcp": ["media"],
+  "latest_changes": "Première version."
+}

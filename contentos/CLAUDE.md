@@ -40,6 +40,11 @@ schéma `src/lib/db/schema.ts`, client paresseux `src/lib/db/client.ts`) + **bet
 dans `drizzle/`, appliquées au déploiement par le one-shot `scripts/migrate.mjs`
 (`drizzle-orm/node-postgres`, deps de prod — pas de drizzle-kit). `GET /healthz` → `ok` sans DB.
 
+
+## Skill agentique
+
+Le skill `content-os-redaction` (cerveau éditorial qui pilote ContentOS et media via MCP) vit dans le hub central de l'atelier : `skills/skills/content-os-redaction/`. Téléchargeable sur `https://skills.lab.avqn.ch` après connexion OTP.
+
 ## Déployer (via l'atelier)
 
 `git push` sur une branche → preview `https://contentos-<branche>.lab.avqn.ch`. Merge de la PR
