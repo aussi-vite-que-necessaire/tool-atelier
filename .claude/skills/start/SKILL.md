@@ -7,18 +7,50 @@ description: Entrée de session de l'atelier — demande à Manu ce qu'il veut f
 
 Entrée **principale** de toute session de l'atelier. Le lanceur `Atelier.command` ouvre une
 session isolée locale et déclenche cette skill ; en session cloud (web), on la lance soi-même.
-C'est ici qu'on décide quoi faire. Une session déjà focalisée sur un projet n'a pas besoin d'y
-repasser.
+Une session déjà focalisée sur un projet n'a pas besoin d'y repasser.
 
-Demande à Manu ce qu'il veut faire, puis oriente :
+Trois rails, trois skills :
 
-1. **Lancer une tâche (feature-work)** — nouveau projet, évolution d'un projet, ou plomberie de l'atelier → **`/lab-ship`**. Décris l'idée ; il pose la vague de questions de cadrage, puis enchaîne spec → plan → implémentation (sub-agents) → PR prévisualisable **en autonomie**, sans autre validation. `/lab-ship` met en place l'isolation et appelle `/lab-new` (nouveau) ou `/lab-work` (existant) selon le cas.
-2. **Lister les projets** → `/lab-list`.
-3. **Infra / plateforme** → gérée **hors de l'atelier** ; les secrets applicatifs via `/lab-secret`.
-4. **Autre** → demande en prose.
+| Choix | Skill |
+|---|---|
+| Travailler sur un projet existant | `/lab-ship <projet>` |
+| Créer un nouveau projet | `/lab-new` |
+| Plomberie de l'atelier (skills, CLAUDE.md, scripts) | `/lab-meta` |
 
-Pose la question via `AskUserQuestion`. **En session cloud** (où l'UI de question peut ne pas
-s'afficher), si l'outil n'est pas disponible, pose la même question **en prose** et attends la
-réponse.
+## Flow
+
+**Étape 1 — Pose la question principale** via `AskUserQuestion` (en cloud sans UI : en prose) :
+
+> Qu'est-ce qu'on fait dans cette session ?
+> - Travailler sur un projet existant
+> - Créer un nouveau projet
+> - Plomberie de l'atelier
+
+**Étape 2 — Selon le choix :**
+
+### A) Projet existant
+
+Scanne les projets à la racine en lisant chaque `*/lab.json` :
+
+```bash
+for f in */lab.json; do
+  dir=$(dirname "$f")
+  desc=$(jq -r '.description // ""' "$f")
+  printf '%s — %s\n' "$dir" "$desc"
+done
+```
+
+Présente la liste numérotée en prose (nom + description courte). Attends la réponse de Manu
+(numéro ou nom), puis invoque `/lab-ship <projet>`.
+
+### B) Nouveau projet
+
+Invoque `/lab-new` directement — il pose ses propres questions de cadrage (nom, description,
+capacités, thème) et déploie jusqu'en prod.
+
+### C) Plomberie
+
+Invoque `/lab-meta` — il demande en prose ce que tu veux modifier dans l'atelier (skills,
+CLAUDE.md, scripts, hooks) et avance librement.
 
 **Règle transverse :** jamais de commit sur `main`. Branche → push = preview ; PR mergée = prod.

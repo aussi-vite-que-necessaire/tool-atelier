@@ -5,7 +5,7 @@ description: Se mettre à travailler sur un projet existant de l'atelier — foc
 
 # /lab-work <projet> — bosser sur un projet
 
-1. Si le projet n'est pas donné, lance `/lab-list` et demande lequel.
+1. Si le projet n'est pas donné, scanne `*/lab.json` à la racine et demande lequel (nom + description courte).
 2. Vérifie que `<projet>/` existe (dossier top-level avec un `Dockerfile`).
 3. **Crée une branche dédiée** (jamais sur main) : `git switch -c work/<projet>-<court-libellé>`.
    (En session d'arrière-plan, Claude isole automatiquement le worktree — plusieurs agents ne se marchent pas dessus.)
