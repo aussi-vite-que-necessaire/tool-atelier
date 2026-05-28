@@ -1,22 +1,12 @@
-"use client";
-
-import { signOut } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
-
-export function SignOutButton() {
-  const router = useRouter();
-
-  async function handleSignOut() {
-    await signOut();
-    router.push("/sign-in");
-  }
-
+// Le logout est centralisé sur auth.contentos.ch : on renvoie l'utilisateur
+// vers la home du provider (qui propose la déconnexion + retour propre).
+export function SignOutButton({ authUrl }: { authUrl: string }) {
   return (
-    <button
-      onClick={handleSignOut}
+    <a
+      href={authUrl}
       className="text-sm text-gray-500 hover:text-gray-900"
     >
       Déconnexion
-    </button>
+    </a>
   );
 }

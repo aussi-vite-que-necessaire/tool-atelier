@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth-guard";
+import { requireUserId } from "@/lib/session";
+import { env } from "@/lib/env";
 import { SignOutButton } from "./sign-out-button";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,8 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireSession();
+  // Garde de session : redirige vers le SSO si absente.
+  await requireUserId();
 
   return (
     <div className="flex min-h-screen">
@@ -36,7 +38,7 @@ export default async function AdminLayout({
           ))}
         </nav>
         <div className="mt-auto">
-          <SignOutButton />
+          <SignOutButton authUrl={env.AUTH_URL} />
         </div>
       </aside>
       <main className="flex-1 p-6">{children}</main>
