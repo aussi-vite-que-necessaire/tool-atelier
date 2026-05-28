@@ -16,18 +16,15 @@ terminal). Il ne fait qu'une chose : **sandboxer le dev**. Il ouvre une session 
 machine — worktree natif de Claude Code (`claude --worktree`) — et y lance **`/start`**.
 
 Le lanceur ne décide d'aucune tâche : **ce qu'on fait dans la session, c'est `/start` qui le
-décide**, à l'intérieur. Skills disponibles :
+décide**, à l'intérieur. Trois rails, trois skills :
 
-- **`/start`** — entrée de session : demande quoi faire et oriente.
-- **`/lab-ship`** — flow autonome de feature-work : questions de cadrage, puis spec → plan → implémentation (sub-agents) → PR prévisualisable, sans validation intermédiaire. Orchestre `/lab-new` ou `/lab-work` selon le cas.
-- **`/lab-list`** — liste les projets + leur état (régénère `PROJECTS.md`).
-- **`/lab-new`** — crée un projet en composant une base Next.js + des capacités (`db`/`redis`/`auth`/`mcp`), avec thème écrit par l'IA, et le déploie jusqu'en prod.
-- **`/lab-work <projet>`** — focalise la session sur un projet (branche dédiée).
-- **`/lab-deploy`** — déploie le projet courant (preview/prod).
+- **`/lab-ship <projet>`** — feature sur un **projet existant** : cadrage → spec → plan → implémentation (sub-agents) → PR prévisualisable, sans validation intermédiaire. Seul point d'arrêt humain : la vague de questions de cadrage.
+- **`/lab-new`** — créer un **nouveau projet** en composant une base Next.js + des capacités (`db`/`redis`/`auth`/`mcp`), avec thème écrit par l'IA, et le déployer jusqu'en prod.
+- **`/lab-meta`** — **plomberie de l'atelier** (skills, `CLAUDE.md`, scripts, hooks, lanceur). Flow libre, pas de rail forcé.
 
-Le feature-work passe par **`/lab-ship`** (autonome de bout en bout) ; son seul point d'arrêt humain est la vague de questions de cadrage.
+Utilitaires : **`/start`** (router de session), **`/lab-work <projet>`** (focalise sur un projet, utilisé par `/lab-ship`), **`/lab-deploy`** (déploie le projet courant), **`/lab-secret`** (secrets), **`/lab-ssh`** (diagnostic serveur).
 
-`PROJECTS.md` = carte vivante (projets, stack, état, URL). **Artefact généré (gitignoré), jamais édité à la main** : régénéré au démarrage de chaque session et par `/lab-list`.
+La liste des projets se déduit en scannant les `*/lab.json` à la racine — chaque projet déclare sa description dans son `lab.json`.
 
 ## Workflow & isolation — RÈGLE ABSOLUE
 
