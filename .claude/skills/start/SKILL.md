@@ -1,13 +1,11 @@
 ---
 name: start
-description: Entrée de session de l'atelier — demande à Manu ce qu'il veut faire dans cette session et l'oriente vers la bonne skill. Le lanceur Atelier.command la déclenche automatiquement à l'ouverture d'une session locale ; en session cloud (web), lance-la toi-même.
+description: Entrée de session de l'atelier — demande à Manu ce qu'il veut faire dans cette session et l'oriente vers la bonne skill.
 ---
 
 # /start — entrée de session
 
-Entrée **principale** de toute session de l'atelier. Le lanceur `Atelier.command` ouvre une
-session isolée locale et déclenche cette skill ; en session cloud (web), on la lance soi-même.
-Une session déjà focalisée sur un projet n'a pas besoin d'y repasser.
+Entrée **principale** de toute session de l'atelier. Une session déjà focalisée sur un projet n'a pas besoin d'y repasser.
 
 Trois rails, trois skills :
 
@@ -19,7 +17,7 @@ Trois rails, trois skills :
 
 ## Flow
 
-**Étape 1 — Pose la question principale** via `AskUserQuestion` (en cloud sans UI : en prose) :
+**Étape 1 — Pose la question principale** via `AskUserQuestion` (ou en prose si pas d'UI interactive) :
 
 > Qu'est-ce qu'on fait dans cette session ?
 > - Travailler sur un projet existant
@@ -40,17 +38,14 @@ for f in projects/*/lab.json; do
 done
 ```
 
-Présente la liste numérotée en prose (nom + description courte). Attends la réponse de Manu
-(numéro ou nom), puis invoque `/lab-ship <projet>`.
+Présente la liste numérotée en prose (nom + description courte). Attends la réponse de Manu (numéro ou nom), puis invoque `/lab-ship <projet>`.
 
 ### B) Nouveau projet
 
-Invoque `/lab-new` directement — il pose ses propres questions de cadrage (nom, description,
-capacités, thème) et déploie jusqu'en prod.
+Invoque `/lab-new` directement — il pose ses propres questions de cadrage (nom, description, capacités, thème) et déploie jusqu'en prod.
 
 ### C) Plomberie
 
-Invoque `/lab-meta` — il demande en prose ce que tu veux modifier dans l'atelier (skills,
-CLAUDE.md, scripts, hooks) et avance librement.
+Invoque `/lab-meta` — il demande en prose ce que tu veux modifier dans l'atelier (skills, CLAUDE.md, scripts, hooks) et avance librement.
 
 **Règle transverse :** jamais de commit sur `main`. Branche → push = preview ; PR mergée = prod.
