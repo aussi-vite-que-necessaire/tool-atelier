@@ -6,8 +6,9 @@ import "@/styles/global.css";
 export const prerender = false;
 
 const session = await auth.api.getSession({ headers: Astro.request.headers });
+if (!session) return Astro.redirect("/sign-in");
+
 const skills = await listSkills();
-const connected = !!session;
 ---
 <html lang="fr">
   <head>
@@ -28,15 +29,15 @@ const connected = !!session;
             Hub des skills agentiques de la suite — contentos, ressources, media.
           </p>
         </div>
-        {
-          connected ? (
-            <span class="text-xs text-gray-500" title={session?.user?.email ?? ""}>
-              connecté
-            </span>
-          ) : (
-            <a href="/sign-in" class="text-sm underline">Se connecter</a>
-          )
-        }
+        <form method="post" action="/api/auth/sign-out" class="contents">
+          <button
+            type="submit"
+            class="text-xs text-gray-500 hover:text-gray-900"
+            title={session.user?.email ?? ""}
+          >
+            se déconnecter
+          </button>
+        </form>
       </header>
 
       {
@@ -61,25 +62,12 @@ const connected = !!session;
                       </p>
                     )}
                   </div>
-                  <div class="shrink-0">
-                    {
-                      connected ? (
-                        <a
-                          href={`/api/skills/${s.name}/download`}
-                          class="rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50"
-                        >
-                          télécharger
-                        </a>
-                      ) : (
-                        <a
-                          href="/sign-in"
-                          class="rounded border border-gray-200 px-3 py-1 text-xs text-gray-500 hover:bg-gray-50"
-                        >
-                          se connecter
-                        </a>
-                      )
-                    }
-                  </div>
+                  <a
+                    href={`/api/skills/${s.name}/download`}
+                    class="shrink-0 rounded border border-gray-300 px-3 py-1 text-xs hover:bg-gray-50"
+                  >
+                    télécharger
+                  </a>
                 </div>
               </li>
             ))}
