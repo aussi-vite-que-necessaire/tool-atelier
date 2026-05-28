@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { LogOut } from "lucide-react"
-import { requireAdmin } from "@/lib/admin/guard"
+import { requireAdmin } from "@/lib/auth/admin"
 import { signOutAction } from "@/lib/actions/account"
 import { Logo } from "@/components/brand/logo"
 

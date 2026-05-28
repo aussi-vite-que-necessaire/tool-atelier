@@ -1,6 +1,5 @@
 import { pgTable, uuid, text, timestamp, unique } from "drizzle-orm/pg-core"
 import { resources } from "./content"
-import { user } from "./auth"
 
 export const resourceAccess = pgTable(
   "resource_access",
@@ -15,13 +14,13 @@ export const resourceAccess = pgTable(
   (t) => [unique("resource_access_resource_email").on(t.resourceId, t.email)],
 )
 
+// userId : ID utilisateur frappé par auth.contentos.ch. Pas de FK locale (le
+// user vit dans le projet auth, base séparée). On garde le text et l'unicité.
 export const subscriptions = pgTable(
   "subscriptions",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
     resourceId: uuid("resource_id")
       .notNull()
       .references(() => resources.id, { onDelete: "cascade" }),

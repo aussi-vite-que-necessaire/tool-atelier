@@ -13,7 +13,7 @@ import { planPages, type PageInput } from "./plan"
 import type { ModuleInput } from "./module-input"
 
 function appBaseUrl(): string {
-  return (process.env.APP_URL ?? process.env.BETTER_AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "")
+  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "")
 }
 
 export function resourceUrl(slug: string): string {
