@@ -52,8 +52,13 @@ jobs:
           echo "env=$e" >> "$GITHUB_OUTPUT"
 
   # Build + push de l'image. Tourne EN PARALLÈLE du job `test` : le deploy ne fait
-  # que pull cette image, il ne rebuild jamais. (Pas de cache de couches GHA : son
-  # export pèse plus que le npm ci qu'il économise, surtout sur le chemin froid.)
+  # que pull cette image, il ne rebuild jamais.
+  #
+  # Cache buildx GHA actif : les couches `npm ci` et `next build` sont réutilisées
+  # entre builds chauds (scope par projet+rôle pour éviter l'éviction croisée).
+  # Multi-image : si `lab.json` déclare `images: [<role>, ...]`, build une image
+  # par target et push `atelier-<projet>-<role>:<env>`. Sinon, image unique
+  # `atelier-<projet>:<env>` (pas de --target, comportement historique).
   build:
     needs: detect
     if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
@@ -64,13 +69,45 @@ jobs:
         project: ${{ fromJson(needs.detect.outputs.projects) }}
     steps:
       - uses: actions/checkout@v4
-      - name: Login GHCR
-        run: printf '%s' '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
-      - name: Build + push
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build + push (mono-image ou multi-target selon lab.json)
+        env:
+          PROJ: ${{ matrix.project }}
+          ENV_TAG: ${{ needs.detect.outputs.env }}
+          OWNER: ${{ github.repository_owner }}
         run: |
-          IMAGE="ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:${{ needs.detect.outputs.env }}"
-          docker build -t "$IMAGE" "${{ matrix.project }}"
-          docker push "$IMAGE"
+          set -euo pipefail
+          # Liste des targets : depuis lab.json (.images), ou [""] = mono-image.
+          if [ -f "$PROJ/lab.json" ]; then
+            TARGETS="$(jq -r '(.images // [""]) | .[]' "$PROJ/lab.json")"
+          else
+            TARGETS=""
+          fi
+          [ -n "$TARGETS" ] || TARGETS=""
+          # `read` boucle même si TARGETS est vide → simulé par echo "" si besoin.
+          printf '%s\n' "$TARGETS" | while IFS= read -r tgt; do
+            if [ -z "$tgt" ]; then
+              IMG="ghcr.io/$OWNER/atelier-$PROJ:$ENV_TAG"
+              SCOPE="$PROJ"
+              TARGET_FLAG=""
+            else
+              IMG="ghcr.io/$OWNER/atelier-$PROJ-$tgt:$ENV_TAG"
+              SCOPE="$PROJ-$tgt"
+              TARGET_FLAG="--target=$tgt"
+            fi
+            echo "::group::build $IMG"
+            # shellcheck disable=SC2086
+            docker buildx build $TARGET_FLAG \
+              --cache-from "type=gha,scope=$SCOPE" \
+              --cache-to   "type=gha,mode=max,scope=$SCOPE" \
+              --tag "$IMG" --push "$PROJ"
+            echo "::endgroup::"
+          done
 
   # Gate de tests (host) : unit + integration + worker + smoke e2e. Tourne en
   # parallèle du build ; le build host ici sert uniquement au smoke e2e.
@@ -124,6 +161,13 @@ jobs:
           fi
       - name: Unit + integration + worker
         run: npm test --if-present
+      - name: Cache .next/cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.project }}/.next/cache
+          key: next-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles(format('{0}/package-lock.json', matrix.project)) }}-${{ github.sha }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles(format('{0}/package-lock.json', matrix.project)) }}-
       - name: Build (requis pour le smoke e2e)
         run: npm run build --if-present
       - name: Cache navigateurs Playwright
@@ -154,13 +198,30 @@ jobs:
     env:
       PROJ: ${{ matrix.project }}
       ENV: ${{ needs.detect.outputs.env }}
-      IMAGE: ghcr.io/${{ github.repository_owner }}/atelier-${{ matrix.project }}:${{ needs.detect.outputs.env }}
+      OWNER: ${{ github.repository_owner }}
     steps:
       - uses: actions/checkout@v4
+      - name: Compute IMAGES (mono ou multi-rôles)
+        id: images
+        run: |
+          set -euo pipefail
+          IMAGES_PARAM=""
+          if [ -f "$PROJ/lab.json" ] && [ "$(jq -r '.images // [] | length' "$PROJ/lab.json")" -gt 0 ]; then
+            # Format multi : "web=ghcr.io/...,worker=ghcr.io/..."
+            IMAGES_PARAM="$(jq -r --arg owner "$OWNER" --arg proj "$PROJ" --arg env "$ENV" \
+              '.images | map("\(.)=ghcr.io/\($owner)/atelier-\($proj)-\(.):\($env)") | join(",")' \
+              "$PROJ/lab.json")"
+          else
+            # Format mono (historique)
+            IMAGES_PARAM="ghcr.io/$OWNER/atelier-$PROJ:$ENV"
+          fi
+          echo "param=$IMAGES_PARAM" >> "$GITHUB_OUTPUT"
+          echo "IMAGES=$IMAGES_PARAM"
       - name: Deploy to lab
         env:
           LAB_SSH_KEY: ${{ secrets.LAB_SSH_KEY }}
           LAB_HOST: ${{ secrets.LAB_HOST }}
+          IMAGES: ${{ steps.images.outputs.param }}
         run: |
           install -m700 -d ~/.ssh
           printf '%s\n' "$LAB_SSH_KEY" > ~/.ssh/id_ed25519
@@ -188,7 +249,7 @@ jobs:
           else
             $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/${PROJ}.env.age"
           fi
-          $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGE'"
+          $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGES'"
       - name: Résumé
         run: |
           if [ "$ENV" = "prod" ]; then host="${PROJ}.lab.avqn.ch"; else host="${PROJ}-${ENV}.lab.avqn.ch"; fi
