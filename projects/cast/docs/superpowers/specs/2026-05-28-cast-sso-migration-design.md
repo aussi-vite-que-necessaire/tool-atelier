@@ -158,20 +158,18 @@ Dans `projects/cast/src/lib/env.ts` :
 
 ### Données — migration en prod
 
-Script `projects/cast/scripts/sso-migrate-user.mjs` exécutable manuellement après le déploiement :
+Runbook one-shot manuel exécuté **avant le merge** (cast tourne encore sur l'ancien code, donc
+la table `user` locale existe encore et porte `OLD_ID`) :
 
-1. Lire `OLD_ID` : `SELECT id FROM "user" LIMIT 1` (Manu = seul user).
-2. Récupérer `NEW_ID` (param CLI obligatoire) : id de Manu dans auth.contentos.ch — obtenu par login + `SELECT id FROM "user" WHERE email = ?` côté auth.
-3. UPDATE en transaction sur toutes les tables FK : posts, ideas, voice, settings, publications, social_accounts, writing_templates, oauth_application, oauth_access_token, oauth_consent (ou les drop, voir étape 4).
-4. DROP tables : user, session, account, verification, oauth_application, oauth_access_token, oauth_consent (le MCP de cast n'a plus de DB OAuth, c'est auth qui l'héberge).
-5. Drop le schéma `src/lib/db/schemas/auth.ts` + `oidc.ts`.
-6. Générer nouvelle migration Drizzle qui acte tout ça (idempotente — `DROP TABLE IF EXISTS`).
+1. Lire `OLD_ID` côté cast : `SELECT id FROM "user" LIMIT 1` (Manu = seul user).
+2. Login OTP sur `auth.contentos.ch/sign-in` pour créer l'user côté auth.
+3. Lire `NEW_ID` : `SELECT id FROM "user" WHERE email = 'manu@avqn.ch'` dans `auth_prod`.
+4. UPDATE en transaction sur toutes les tables FK de `cast_prod` (posts, ideas, voice, settings, publications, social_accounts, writing_templates) via un one-liner `docker exec` (voir runbook dans le plan).
+5. Merger la PR → la migration Drizzle 0025 drop les tables auth locales (`user`, `session`, `account`, `verification`, `oauth_application`, `oauth_access_token`, `oauth_consent`) — idempotent (`DROP TABLE IF EXISTS`).
+6. Vérifier : `SELECT COUNT(*) FROM posts WHERE user_id = '<NEW_ID>';` etc.
 
-Ordre d'exécution en prod :
-1. Déployer la PR (qui retire les imports auth de cast — donc les tables locales ne sont plus écrites mais existent encore).
-2. Login dans auth.contentos.ch pour obtenir `NEW_ID`.
-3. Lancer le script `sso-migrate-user.mjs <NEW_ID>` via `lab-ssh`.
-4. Vérifier : `SELECT COUNT(*) FROM posts WHERE user_id = '<NEW_ID>';` etc.
+Pas de script embarqué dans l'image cast : une fois le merge fait, la migration 0025 supprime
+la table que le script aurait dû lire, donc l'embarquer serait dead-on-arrival.
 
 En preview : pas de migration de data nécessaire (base seedée avec `PREVIEW_USER_ID`).
 
@@ -220,6 +218,6 @@ En preview : pas de migration de data nécessaire (base seedée avec `PREVIEW_US
 5. Adapter `projects/cast/src/lib/env.ts` : ajouter `AUTH_URL`, retirer `BETTER_AUTH_SECRET`.
 6. Drop schémas `auth.ts` + `oidc.ts` côté cast, retirer les imports, générer migration `DROP IF EXISTS`.
 7. Retirer les fichiers obsolètes : `src/lib/auth/server.ts`, `src/lib/auth/client.ts`, `otp-form.tsx`.
-8. Écrire `scripts/sso-migrate-user.mjs` (one-shot prod).
+8. Runbook one-shot manuel (pas de script embarqué) pour le remap FK en prod.
 9. Smoke build local : `npm install && npm run db:generate && npm run build` doivent passer pour `cast` ET `auth`.
 10. CLAUDE.md de cast : refléter le nouveau modèle d'auth (lien vers spec, suppression mention `BETTER_AUTH_SECRET`).

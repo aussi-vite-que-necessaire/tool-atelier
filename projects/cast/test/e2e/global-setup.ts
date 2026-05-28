@@ -9,7 +9,6 @@ async function globalSetup(): Promise<() => Promise<void>> {
     env: {
       ...process.env,
       E2E_TESTING: 'true',
-      RESEND_API_KEY: '',
       // Stub LinkedIn : publishStub retourne un faux URN sans appel réseau.
       CONTENT_OS_LINKEDIN_STUB: '1',
     },

@@ -23,7 +23,6 @@ export default defineConfig({
     reuseExistingServer: false,
     env: {
       E2E_TESTING: 'true',
-      RESEND_API_KEY: '',
       CONTENT_OS_LINKEDIN_STUB: '1',
       CONTENT_OS_MEDIA_STUB: 'fs',
       DATABASE_URL: process.env.DATABASE_URL!,

@@ -734,89 +734,12 @@ Tous les fichiers qui appelaient `auth.api.getSession({ headers: await headers()
 
 ---
 
-## Task 10 — Script migration data en prod (one-shot manuel)
+## Task 10 — Migration data prod : runbook only (pas de script)
 
-- [ ] **Step 10.1** — Créer `projects/cast/scripts/sso-migrate-user.mjs` :
-  ```js
-  // One-shot manuel : re-mappe l'ancien user.id de cast vers ton nouveau user.id
-  // côté auth.contentos.ch. Le DROP des tables locales est fait par la migration
-  // Drizzle au déploiement — ce script ne fait QUE le remap des FK.
-  //
-  // Usage (depuis lab via lab-ssh) :
-  //   docker exec cast-prod-web-1 node scripts/sso-migrate-user.mjs <NEW_USER_ID>
-  //
-  // NEW_USER_ID = id de Manu dans la table user de auth.contentos.ch, obtenu après
-  // login OTP. Exemple :
-  //   docker exec lab-platform-postgres-1 psql -U postgres -d auth_prod \
-  //     -c "SELECT id FROM \"user\" WHERE email='manu@avqn.ch';"
-  //
-  // IMPORTANT : exécuter AVANT que la migration drizzle 0025 ne drop la table user.
-  // Donc avant de déployer la PR. Si déjà déployée, la table user est tombée et
-  // le script ne peut plus lire OLD_ID : il faut récupérer OLD_ID depuis un dump
-  // ou un backup.
-
-  import postgres from 'postgres';
-
-  const NEW = process.argv[2];
-  if (!NEW) {
-    console.error('usage: node sso-migrate-user.mjs <NEW_USER_ID>');
-    process.exit(1);
-  }
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    console.error('DATABASE_URL manquant');
-    process.exit(1);
-  }
-
-  const sql = postgres(url, { max: 1 });
-  try {
-    // Vérifie qu'il existe encore une table user (i.e., migration 0025 pas encore appliquée).
-    const tables = await sql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='user'`;
-    if (tables.length === 0) {
-      console.error('Refus : table "user" inexistante. La migration drop a déjà été appliquée — récupérer OLD_ID depuis un backup.');
-      process.exit(1);
-    }
-    const users = await sql`SELECT id, email FROM "user"`;
-    if (users.length === 0) {
-      console.log('Aucun user local — rien à migrer.');
-      process.exit(0);
-    }
-    if (users.length > 1) {
-      console.error(`Refus : ${users.length} users locaux. Adapter le script pour mapping multiple.`);
-      process.exit(1);
-    }
-    const OLD = users[0].id;
-    console.log(`Migration OLD=${OLD} (${users[0].email}) → NEW=${NEW}`);
-
-    await sql.begin(async (t) => {
-      const tables = [
-        'posts',
-        'ideas',
-        'voice',
-        'settings',
-        'publications',
-        'social_accounts',
-        'writing_templates',
-      ];
-      for (const tbl of tables) {
-        const r = await t.unsafe(`UPDATE "${tbl}" SET user_id = $1 WHERE user_id = $2`, [NEW, OLD]);
-        console.log(`  ${tbl}: ${r.count} lignes`);
-      }
-    });
-    console.log('Migration FK OK. Le prochain déploiement appliquera le DROP des tables auth locales.');
-  } catch (e) {
-    console.error('Migration failed:', e.message);
-    process.exit(1);
-  } finally {
-    await sql.end();
-  }
-  ```
-
-- [ ] **Step 10.2** — Commit :
-  ```bash
-  git add projects/cast/scripts/sso-migrate-user.mjs
-  git commit -m "📜 cast: script sso-migrate-user.mjs (one-shot prod)"
-  ```
+Pas de fichier `scripts/sso-migrate-user.mjs` : la migration drizzle 0025 drop la table `user`
+au démarrage du conteneur, donc un script embarqué dans l'image serait inutilisable (la table
+qu'il doit lire a déjà disparu). Le remap des FK se fait par le one-liner du runbook (section
+"Hors plan : runbook") **avant** le merge, pendant que cast tourne encore sur l'ancien code.
 
 ---
 
@@ -965,7 +888,7 @@ Le flux recommandé :
      })();
    \"'"
    ```
-   *(Le script `sso-migrate-user.mjs` n'est dispo qu'après merge — d'où ce one-liner.)*
+   *(Le remap se fait en one-liner — pas de script embarqué, voir Task 10.)*
 6. **Merger la PR** → déploiement, drizzle 0025 drop les tables auth locales.
 7. **Vérifier** :
    ```bash
@@ -975,4 +898,4 @@ Le flux recommandé :
    Puis ouvrir le navigateur → redirect → OTP → revient sur cast connecté.
 8. **Tester la création d'un post** → `posts.user_id` = NEW_ID.
 
-Alternative plus sûre (si tu veux que le script handle tout) : faire deux PRs séparées — d'abord la PR sans le DROP (migration 0025 absente), Migrer les FK avec `sso-migrate-user.mjs`, puis une seconde PR pour le DROP. Mais le contrat de cette mission est "tout dans une PR" — donc on fait le one-liner ci-dessus.
+Alternative plus sûre (si on voulait un script embarqué) : faire deux PRs séparées — d'abord la PR sans le DROP (migration 0025 absente) avec un script `sso-migrate-user.mjs` pour les FK, puis une seconde PR pour le DROP. Le contrat "tout dans une PR" rend cette voie hors scope ; le one-liner ci-dessus suffit.
