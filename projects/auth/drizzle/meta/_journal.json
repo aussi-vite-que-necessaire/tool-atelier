@@ -8,6 +8,13 @@
       "when": 1779977300064,
       "tag": "0000_bored_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779982698904,
+      "tag": "0001_outgoing_jubilee",
+      "breakpoints": true
     }
   ]
 }
