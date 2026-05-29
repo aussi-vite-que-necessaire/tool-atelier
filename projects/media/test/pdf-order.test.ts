@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { addImage, removeAt, moveUp, moveDown } from "@/app/(admin)/pdf/order";
+import { addImage, removeAt, moveUp, moveDown } from "@/app/(admin)/gallery/new/order";
 
 describe("addImage", () => {
   it("ajoute un id en fin de liste", () => {

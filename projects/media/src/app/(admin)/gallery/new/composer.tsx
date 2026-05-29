@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { addImage, removeAt, moveUp, moveDown } from "./order";
-import { composePdfAction, type ComposePdfResult } from "./actions";
+import { composePdfAction, type ComposePdfResult } from "./pdf-actions";
 
 export type PickerImage = { id: string; url: string };
 

@@ -2,11 +2,8 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { listMediaRecords } from "@/lib/media/repository";
-import { listStyles } from "@/lib/styles/repository";
 import type { MediaKind } from "@/lib/media/types";
 import { requireUserId } from "@/lib/session";
-import { uploadAction } from "./actions";
-import { GenerateForm } from "./generate-form";
 import { GalleryGrid } from "./gallery-grid";
 
 const KINDS: MediaKind[] = ["image", "video", "pdf", "render"];
@@ -22,21 +19,24 @@ export default async function GalleryPage({
     ? (kindParam as MediaKind)
     : undefined;
 
-  const [items, styles] = await Promise.all([
-    listMediaRecords(userId, { kind, limit: 100 }),
-    listStyles(userId),
-  ]);
+  const items = await listMediaRecords(userId, { kind, limit: 100 });
 
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div>
+      <div className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold">
           Galerie{" "}
           <span className="text-sm font-normal text-gray-500">
             ({items.length} élément{items.length !== 1 ? "s" : ""})
           </span>
         </h1>
+        <Link
+          href="/gallery/new"
+          className="rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
+        >
+          + Ajouter à la galerie
+        </Link>
       </div>
 
       {/* Filtres par kind */}
@@ -64,36 +64,6 @@ export default async function GalleryPage({
             {k}
           </Link>
         ))}
-      </div>
-
-      {/* Ajout : upload manuel | génération IA */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="border border-gray-200 rounded p-4 space-y-3">
-          <h2 className="text-sm font-medium">Uploader un fichier</h2>
-          <form action={uploadAction} className="space-y-2">
-            <div>
-              <input
-                type="file"
-                name="file"
-                accept="image/png,image/jpeg,image/webp,application/pdf,video/mp4"
-                required
-                className="block text-sm text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-sm file:bg-white file:text-gray-700 hover:file:bg-gray-50"
-              />
-            </div>
-            <p className="text-xs text-gray-400">
-              Types acceptés : PNG, JPEG, WebP (≤ 10 Mo), PDF (≤ 100 Mo), MP4 (≤ 100 Mo via l&apos;UI).
-              Pour les vidéos jusqu&apos;à 500 Mo, utiliser l&apos;API <code>/v1/upload</code>.
-            </p>
-            <button
-              type="submit"
-              className="bg-gray-800 text-white text-sm rounded px-3 py-1.5 hover:bg-gray-700"
-            >
-              Uploader
-            </button>
-          </form>
-        </div>
-
-        <GenerateForm styles={styles.map((s) => ({ id: s.id, name: s.name }))} />
       </div>
 
       {/* Grille des médias */}
