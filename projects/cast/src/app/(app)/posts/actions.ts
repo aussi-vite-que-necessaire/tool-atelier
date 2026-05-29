@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireUserId } from '@/lib/auth/session';
-import type { ActionState } from '../ideas/actions-core';
+import type { ActionState } from './actions-core';
 import {
   type CreatePostState,
   createPostCore,
