@@ -1,6 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { getSettings } from '@/lib/db/repositories/settings';
 import {
   createWritingTemplate,
   deleteWritingTemplate,
@@ -10,7 +9,6 @@ import {
 import { handle } from '../register';
 
 export const configImpl = {
-  getSettings: (userId: string) => getSettings(userId),
   listWritingTemplates: (userId: string) => listWritingTemplates(userId),
   createWritingTemplate: (
     userId: string,
@@ -38,11 +36,6 @@ export const configImpl = {
 };
 
 export function registerConfigTools(server: McpServer): void {
-  server.registerTool(
-    'get_settings',
-    { title: 'Lire les réglages', description: 'Réglages du compte.', inputSchema: {} },
-    (_i, extra) => handle(extra, (u) => configImpl.getSettings(u)),
-  );
   server.registerTool(
     'list_writing_templates',
     {

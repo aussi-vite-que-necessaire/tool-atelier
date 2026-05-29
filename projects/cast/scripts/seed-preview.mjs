@@ -2,7 +2,7 @@
 // `pg` (dep de prod) + SQL brut, comme migrate.mjs — l'image `web` ne contient
 // PAS les sources TS (src/), donc on ne peut pas réutiliser seedDev ici.
 // Insère, pour CHAQUE opérateur de preview (preview-op-1, preview-op-2) :
-// settings (marque), 1 voix, 1 template d'écriture, 2 posts d'exemple.
+// 1 voix, 1 template d'écriture, 2 posts d'exemple.
 // Idempotent (ids préfixés par userId + ON CONFLICT DO NOTHING).
 import pg from 'pg';
 
@@ -35,7 +35,7 @@ const SAMPLE_POSTS = [
   {
     title: 'Documenter avant de coder',
     content:
-      "Documenter une spec avant de coder, ça paraît lent. En réalité ça évite trois allers-retours.",
+      'Documenter une spec avant de coder, ça paraît lent. En réalité ça évite trois allers-retours.',
   },
   {
     title: 'Une base de test dédiée',
@@ -45,13 +45,6 @@ const SAMPLE_POSTS = [
 ];
 
 async function seedForUser(client, userId, label) {
-  await client.query(
-    `INSERT INTO settings (user_id, brand_name, brand_signature, updated_at)
-     VALUES ($1, $2, $3, now())
-     ON CONFLICT (user_id) DO NOTHING`,
-    [userId, `AVQN (${label})`, `— ${label}`],
-  );
-
   await client.query(
     `INSERT INTO voice (id, user_id, name, content, created_at, updated_at)
      VALUES ($1, $2, 'Voix principale', $3, now(), now())
@@ -78,7 +71,7 @@ async function seedForUser(client, userId, label) {
     );
     posts += res.rowCount ?? 0;
   }
-  console.log(`seed[${userId}]: settings + voix + template assurés, ${posts} posts insérés`);
+  console.log(`seed[${userId}]: voix + template assurés, ${posts} posts insérés`);
 }
 
 const pool = new pg.Pool({ connectionString: url, max: 1 });

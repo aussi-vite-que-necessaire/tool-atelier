@@ -1,17 +1,15 @@
 import { describe, expect, test } from 'vitest';
 import { listPosts } from '@/lib/db/repositories/posts';
-import { getSettings } from '@/lib/db/repositories/settings';
 import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
 import { seedDev } from '@/lib/db/seeds/dev-sample';
 import { createTestUser } from './helpers/seed';
 
 describe('seedDev', () => {
-  test('peuple settings + template + posts, et reste idempotent', async () => {
+  test('peuple template + posts, et reste idempotent', async () => {
     const userId = await createTestUser('seeddev');
 
     await seedDev(userId);
     const posts1 = await listPosts(userId);
-    expect(await getSettings(userId)).toBeTruthy();
     expect((await listWritingTemplates(userId)).length).toBeGreaterThan(0);
     expect(posts1.length).toBeGreaterThan(0);
 

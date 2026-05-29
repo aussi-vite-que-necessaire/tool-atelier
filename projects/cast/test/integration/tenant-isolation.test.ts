@@ -13,7 +13,6 @@ import {
   listPublications,
   updatePublication,
 } from '@/lib/db/repositories/publications';
-import { getSettings, updateSettings, upsertSettings } from '@/lib/db/repositories/settings';
 import {
   createVoice,
   deleteVoice,
@@ -30,32 +29,6 @@ import {
 } from '@/lib/db/repositories/writing-templates';
 import { createTestUser } from './helpers/seed';
 import { runTenantIsolationSuite } from './helpers/tenant-isolation-harness';
-
-// Tests bespoke pour settings (singleton par user, pas de create/list/delete).
-// La table user vit côté auth.contentos.ch — ici on travaille directement avec
-// des user_id stables (FK locale supprimée).
-describe('settings — tenant isolation', () => {
-  test('user A ne voit pas les settings de user B', async () => {
-    await upsertSettings('alice');
-    await upsertSettings('bob');
-    await updateSettings('alice', { brandName: 'AliceCorp' });
-    await updateSettings('bob', { brandName: 'BobCorp' });
-
-    const aliceSettings = await getSettings('alice');
-    const bobSettings = await getSettings('bob');
-    expect(aliceSettings?.brandName).toBe('AliceCorp');
-    expect(bobSettings?.brandName).toBe('BobCorp');
-  });
-
-  test('updateSettings sur user A ne touche pas user B', async () => {
-    await upsertSettings('alice');
-    await upsertSettings('bob');
-
-    await updateSettings('alice', { brandName: 'ChangedByAlice' });
-    const bob = await getSettings('bob');
-    expect(bob?.brandName).toBe('');
-  });
-});
 
 // Sentinelle générique pour les tables avec CRUD standard.
 runTenantIsolationSuite('voice', {

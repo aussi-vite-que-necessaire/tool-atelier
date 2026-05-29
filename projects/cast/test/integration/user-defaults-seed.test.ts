@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest';
-import { getSettings } from '@/lib/db/repositories/settings';
 import { listVoices } from '@/lib/db/repositories/voice';
 import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
 import {
@@ -12,13 +11,9 @@ import {
 async function makeUser(_id: string, _email: string) {}
 
 describe('seedUserDefaults', () => {
-  test('crée settings + voice + writing_template par défaut', async () => {
+  test('crée voice + writing_template par défaut', async () => {
     await makeUser('u1', 'a@test.com');
     await seedUserDefaults('u1');
-
-    const settings = await getSettings('u1');
-    expect(settings).toBeDefined();
-    expect(settings?.brandName).toBe('');
 
     const voices = await listVoices('u1');
     expect(voices).toHaveLength(1);
