@@ -8,8 +8,8 @@ description: Déployer le projet courant de l'atelier (preview ou prod). À util
 Le déploiement est **piloté par git** : build sur la CI → image sur GHCR → SSH vers `lab` → `deploy.sh`.
 Le serveur ne build jamais ; pas de build local non plus.
 
-1. Identifie le **projet courant** (le dossier où l'on travaille) et la **branche** courante.
-2. Si la branche est `main` → **STOP** : crée d'abord une branche (`git switch -c work/<projet>-...`). Jamais de commit/push sur main.
+1. Identifie le **projet courant** (le dossier où l'on travaille) et la **branche** courante. Tu es normalement déjà sur ta branche de session.
+2. Si (et seulement si) la branche est `main` → **STOP** : bascule d'abord sur une branche (`git switch -c work/<projet>-...`). Jamais de commit/push sur main.
 3. Commit les changements, puis `git push -u origin <branche>`.
    → déclenche une **preview** : `https://<projet>-<branche>.preview.contentos.ch`.
 4. Suis la CI : `gh run watch "$(gh run list -L1 --json databaseId -q '.[0].databaseId')" --exit-status`, puis `curl` l'URL preview pour vérifier.

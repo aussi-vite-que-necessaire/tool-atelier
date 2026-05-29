@@ -20,11 +20,11 @@ La liste des projets se déduit en scannant `projects/*/lab.json` — chaque pro
 
 **Étoile polaire : deux agents ne touchent jamais la même ressource mutable au même instant.** Le code et la branche s'isolent par session ; la prod (singleton) se sérialise par l'entonnoir PR → merge → CI.
 
-- **Jamais de commit sur `main`.** On code sur une branche, on ouvre une PR.
+- **Une session = un conteneur isolé = une branche.** Chaque session de l'atelier tourne dans son propre conteneur (un clone frais et jetable du dépôt) sur sa propre branche — fournie par le harness en cloud (`claude.ai/code`), ou par le lanceur conteneurisé en local (même modèle). L'isolation est **structurelle** : un agent est seul dans son conteneur, il peut éditer n'importe quel projet et basculer de branche sans gêner personne. Pas de worktree git, pas de checkout partagé.
+- **Jamais de commit sur `main`.** On code sur sa branche de session, on ouvre une PR. C'est le seul garde-fou du hook `branch-guard` : il bloque tout `commit`/`push` qui mettrait `main` à jour. Le reste est permis (le conteneur est privé).
 - **Push de branche → preview** : `https://<projet>-<branche>.preview.contentos.ch` (détruite à la suppression de la branche).
 - **Merge de PR → prod** : `https://<projet>.contentos.ch` (cas `www` → `contentos.ch` + `www.contentos.ch`).
-- **Merger** : `gh pr merge <#> --squash`. La branche distante se supprime seule (`delete_branch_on_merge`). Côté local, `git worktree remove <chemin>` puis `git branch -D <branche>`. Pas de `--delete-branch` en contexte worktree (gh tente un checkout sur `main`, déjà occupé).
-- **Une session = un worktree isolé + une branche.** Le checkout principal est réservé à la plomberie de l'atelier (CLAUDE.md, skills, scripts) — pas de dev projet. Le hook `branch-guard` bloque les commits sur `main`, les push qui mettraient `main` à jour, et le dev projet dans le checkout principal.
+- **Merger** : `gh pr merge <#> --squash`. La branche distante se supprime seule (`delete_branch_on_merge`) ; le conteneur de la session est jetable, rien à nettoyer côté local.
 - **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opérateur de plein droit : SSH lecture/diagnostic (`/lab-ssh`), secrets (`/lab-secret`), logs. La clé SSH du lab est tirée du store (`sysadmin/LAB_SSH_KEY_B64`), déchiffrée en mémoire, utilisée, effacée. Local et cloud ont les mêmes privilèges.
 
 ## Déployer (build sur la CI uniquement)

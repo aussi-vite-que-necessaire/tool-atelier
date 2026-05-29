@@ -10,8 +10,8 @@ de `starters/modules/`, tu écris le thème à l'IA, et tu déploies jusqu'en pr
 est déterministe (`scripts/compose-project.mjs`) ; toi tu n'écris que le créatif (thème, outils
 MCP).
 
-Tu tournes dans une session worktree isolée, déjà sur sa branche : **aucun `git switch`**, tu
-commites le projet sur la branche courante.
+Tu tournes dans une session isolée (ton propre conteneur), déjà sur sa branche : **aucun
+`git switch`**, tu commites le projet sur la branche courante.
 
 ## 1. Cadre le projet
 

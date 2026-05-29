@@ -29,10 +29,11 @@ notification.
 
 ## Déroulé
 
-1. **Isolation + focalisation.** Vérifier qu'on est dans un worktree isolé,
-   jamais sur `main`. Si besoin, créer le worktree (`EnterWorktree`). Vérifier
-   que `projects/<projet>/` existe (dossier avec un `Dockerfile`). Créer la
-   branche dédiée : `git switch -c work/<projet>-<libellé-court>`. Annoncer la
+1. **Focalisation.** Tu es déjà dans une session isolée sur ta propre branche
+   (le conteneur de session t'a été fourni dessus) — **ne crée pas de worktree,
+   ne fais aucun `git switch`**. Vérifie juste que tu n'es pas sur `main` (sinon
+   `git switch -c work/<projet>-<libellé-court>` une seule fois) et que
+   `projects/<projet>/` existe (dossier avec un `Dockerfile`). Annoncer la
    focalisation. **Travailler exclusivement dans `projects/<projet>/`** et lire
    son `CLAUDE.md` pour le contexte projet.
 2. **Cadrage (seul gate humain).** Invoquer `/lab-cadrer` via le tool `Skill`.
