@@ -94,7 +94,7 @@ export async function renderResourcePage(
   const next = idx >= 0 && idx < flat.length - 1 ? flat[idx + 1] : null
 
   return (
-    <ReaderShell resourceTitle={data.resource.title} root={root} basePath={basePath} currentId={page.id} toc={toc}>
+    <ReaderShell theme={operator.theme} resourceTitle={data.resource.title} root={root} basePath={basePath} currentId={page.id} toc={toc}>
       {preview && (
         <div className="mb-6 flex items-center gap-2 border-2 border-ink bg-c-warn px-3 py-2 shadow-brutal-sm">
           <Badge variant="accent">Aperçu</Badge>

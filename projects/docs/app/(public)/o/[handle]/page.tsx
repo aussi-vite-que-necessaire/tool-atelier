@@ -6,6 +6,7 @@ import { ResourceCard } from "@/components/resource-card"
 import { LibraryNav } from "@/components/library-nav"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { ThemeStyle } from "@/components/theme-style"
 import { Reveal } from "@/components/ui/reveal"
 
 export const dynamic = "force-dynamic"
@@ -18,11 +19,12 @@ export default async function OperatorSpace({ params }: { params: Promise<{ hand
 
   return (
     <div className="min-h-screen">
+      <ThemeStyle theme={op.theme} />
       <SiteHeader right={<LibraryNav />} />
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
         <section className="border-b-2 border-ink py-16 sm:py-24">
-          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent">{op.name}</p>
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.3em] text-accent">{op.brandName ?? op.name}</p>
           <h1 className="mt-3 max-w-4xl text-5xl font-black leading-[0.95] tracking-tighter sm:text-7xl">
             Ressources pour progresser avec l&apos;IA
           </h1>
