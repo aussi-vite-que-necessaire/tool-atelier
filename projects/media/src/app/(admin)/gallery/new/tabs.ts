@@ -1,4 +1,4 @@
-export const TABS = ["upload", "generate", "pdf"] as const;
+export const TABS = ["upload", "generate", "pdf", "template"] as const;
 export type Tab = (typeof TABS)[number];
 
 // ?tab= inconnu ou absent → onglet par défaut.
