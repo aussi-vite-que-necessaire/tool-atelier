@@ -10,8 +10,7 @@ Les outils vivent sous `*.contentos.ch` en prod. Cas spécial : **`projects/www/
 - **L'atelier ajoute quelques skills dédiées** à sa plomberie :
   - `/nouveau-projet` — créer un projet (base Next.js + capacités, déploiement jusqu'en prod) ;
   - `/noter-idee` — capturer une piste d'amélioration en backlog (`docs/ideas/`) ;
-  - `/travailler-infra` — bosser sur l'atelier lui-même (skills, `CLAUDE.md`, scripts, hooks, CI) ;
-  - `lab-ssh` — exécuter une commande de diagnostic sur le serveur `lab` (`bin/lab-ssh`).
+  - `/travailler-infra` — bosser sur l'atelier lui-même (skills, `CLAUDE.md`, scripts, hooks, CI).
 
 La liste des projets se déduit en scannant `projects/*/lab.json` — chaque projet déclare sa description dans son `lab.json`.
 
@@ -24,11 +23,11 @@ La liste des projets se déduit en scannant `projects/*/lab.json` — chaque pro
 - **Push de branche → preview** : `https://<projet>-<branche>.preview.contentos.ch` (détruite à la suppression de la branche).
 - **Merge de PR → prod** : `https://<projet>.contentos.ch` (cas `www` → `contentos.ch` + `www.contentos.ch`).
 - **Merger** : `gh pr merge <#> --squash`. La branche distante se supprime seule (`delete_branch_on_merge`) ; le conteneur de la session est jetable, rien à nettoyer côté local.
-- **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opérateur de plein droit : SSH lecture/diagnostic (`lab-ssh`), secrets (`bin/lab-secret-add`), logs. La clé SSH du lab est tirée du store (`sysadmin/LAB_SSH_KEY_B64`), déchiffrée en mémoire, utilisée, effacée. Local et cloud ont les mêmes privilèges.
+- **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opératrice de plein droit sur le store de secrets (`bin/lab-secret-add`) : déchiffrement/chiffrement par scope, en mémoire. Local et cloud ont les mêmes privilèges. (Pas d'accès SSH au lab depuis l'atelier : l'egress des sessions cloud ne sort qu'en HTTP/HTTPS, le port 22 est inatteignable. Le diagnostic serveur se fait hors atelier.)
 
 ## Déployer (build sur la CI uniquement)
 
-`git push` → GitHub Action build l'image du/des projet(s) modifié(s) → **GHCR** → SSH vers `lab` → `scripts/deploy.sh`. Le serveur ne build jamais : il *pull* l'image déjà construite. Suivre avec `gh run watch`. Logs d'un projet : `bin/lab-ssh "docker logs <projet>-<env>-app-1"`.
+`git push` → GitHub Action build l'image du/des projet(s) modifié(s) → **GHCR** → SSH vers `lab` → `scripts/deploy.sh`. Le serveur ne build jamais : il *pull* l'image déjà construite. Suivre avec `gh run watch`.
 
 **DNS.** Deux wildcards Infomaniak sur `contentos.ch` : `*.contentos.ch` (prod) et `*.preview.contentos.ch` (previews) pointent sur le lab — aucun enregistrement DNS par projet. La zone est pilotable via l'API Infomaniak (token `sysadmin/INFOMANIAK_API_TOKEN`).
 
