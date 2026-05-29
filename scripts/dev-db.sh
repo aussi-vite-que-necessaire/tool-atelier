@@ -77,6 +77,7 @@ write_env_local() {
     [ -n "$dburl" ]    && echo "DATABASE_URL=$dburl"
     [ -n "$redisurl" ] && { echo "REDIS_URL=$redisurl"; echo "REDIS_PREFIX=$prefix"; }
   } > "$dir/.env.local"
+  return 0   # sinon le dernier test (redisurl vide → 1) devient le code retour et `set -e` tue le script
 }
 
 proj_dir() {
