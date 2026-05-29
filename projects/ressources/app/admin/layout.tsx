@@ -23,6 +23,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link href="/admin/audience" className="hover:text-ink">
                 Audience
               </Link>
+              <Link href="/admin/settings" className="hover:text-ink">
+                Réglages
+              </Link>
               <Link href={`/o/${op.handle}`} className="hover:text-ink">
                 Espace ↗
               </Link>
