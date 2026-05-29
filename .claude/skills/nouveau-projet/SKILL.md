@@ -91,7 +91,7 @@ gh run watch                              # attendre la CI de prod
 ```
 
 Renvoie à Manu le **lien prod** `https://<nom>.contentos.ch`. Pour une app avec auth en prod,
-`BETTER_AUTH_SECRET` doit exister (`/lab-secret`, scope `<nom>`, `openssl rand -base64 32`) ;
+`BETTER_AUTH_SECRET` doit exister (secret de scope `<nom>` via `bin/lab-secret-add`, `openssl rand -base64 32`) ;
 sans lui l'auth tourne sur un secret par défaut non sûr.
 
 Le projet est **déviable** : Manu peut tout modifier ensuite, les modules ne sont qu'un point de
