@@ -1,9 +1,12 @@
 # ressources
 
-Plateforme de lead magnets de la suite **contentos** (`https://ressources.contentos.ch`).
-Une ressource = une arborescence de pages faites de modules typés, servie sur `/r/<slug>`
-par un reader SSR. Authentification déléguée au SSO central `auth.contentos.ch`. Pilotage
-par agent via serveur MCP.
+Plateforme de lead magnets de la suite **contentos** (`https://ressources.contentos.ch`),
+**multi-tenant** : chaque **opérateur** (client SaaS) possède son espace de ressources,
+partageable via `/o/<handle>`, et son **audience** (les lecteurs qui s'y rattachent). Une
+ressource = une arborescence de pages faites de modules typés, servie sur
+`/o/<handle>/r/<slug>` par un reader SSR. Authentification déléguée au SSO central
+`auth.contentos.ch`. Pilotage par agent via serveur MCP. Voir
+`../../docs/decisions/0002-comptes-operateur-audience-tenancy.md` (ADR-0002).
 
 ## Stack
 
@@ -16,12 +19,13 @@ ressources/
 ├── Dockerfile        multi-stage : deps → build → runner (standalone, non-root, :8080)
 ├── compose.yml       service app sur le réseau lab (alias ${UPSTREAM}, image ${IMAGE})
 ├── lab.json          description + db:true + migrate
-├── middleware.ts     pose le cookie de tracking sur /r/* ; SSO gate sur /admin /compte /bibliotheque
+├── middleware.ts     pose le cookie de tracking sur /o/* ; SSO gate sur /admin /compte /bibliotheque
 ├── next.config.ts    output:"standalone"
 ├── drizzle/          migrations SQL committées (appliquées au déploiement)
 ├── scripts/migrate.mjs  applique drizzle/ à la base (migrator drizzle-orm/postgres-js)
+├── scripts/backfill-operators.mjs  cutover prod single-tenant → multi-tenant (one-shot)
 ├── app/              App Router (dont healthz/route.ts → GET /healthz : 200 "ok", sans DB)
-├── db/ lib/ components/  schéma, accès données, helpers auth/admin, UI
+├── db/ lib/ components/  schéma, accès données, helpers auth/operator, UI
 ```
 
 ## Authentification — SSO contentos
@@ -32,18 +36,27 @@ Les helpers vivent sous `lib/auth/` :
 - `lib/auth/session.ts` : `getSession()`, `requireSession(target?)`, `getUserId()`,
   `requireUserId(target?)`, `signInUrl(target?)`. Fetch `${AUTH_URL}/api/auth/get-session`
   avec le cookie forwardé ; en preview, court-circuite avec `PREVIEW_USER_ID`.
-- `lib/auth/admin.ts` : `userIsAdmin(id)` (via env `ADMIN_USER_IDS`) et `requireAdmin()`.
-- `lib/auth/preview.ts` : `PREVIEW_USER_ID`, `isPreview` (selon `APP_ENV`).
-- `lib/mcp-auth.ts` : `verifyMcpToken(req)` via `${AUTH_URL}/api/auth/mcp/get-session`
-  (le MCP exige en plus que le user soit admin).
+  Le user porte un `accountType` (`operator | audience`, central — ADR-0002), exposé par
+  `get-session` et relayé dans `Session.user.accountType`.
+- `lib/auth/operator.ts` : `requireOperator()`, `getOperator()`, `getOperatorById(id)`,
+  `operatorByHandle(handle)`. **La porte « opérateur » de ressources = présence d'une ligne
+  `operators`** pour ce user (tenancy locale ; marche aussi pour le MCP qui ne porte que
+  `userId`). Provisionnée en tandem avec `accountType='operator'` côté auth.
+- `lib/auth/preview.ts` : `PREVIEW_USER_ID`, `isPreview` (selon `APP_ENV`). En preview, la
+  session est court-circuitée en `operator` (l'opérateur démo `/o/demo`, seedé).
+- `lib/mcp-auth.ts` : `verifyMcpToken(req)` via `${AUTH_URL}/api/auth/mcp/get-session` ; la
+  route MCP exige en plus que le user soit **opérateur** et dépose `operatorId`/`handle` dans
+  `authInfo.extra` (chaque outil n'opère que sur ses ressources).
 - `app/.well-known/oauth-authorization-server` : 302 vers le provider central.
 - `app/.well-known/oauth-protected-resource` : annonce `authorization_servers: [AUTH_URL]`.
 - `app/connexion/page.tsx` : redirige vers `${AUTH_URL}/sign-in?redirect=...` (no-op en preview).
 
-Modèle single-tenant : seul l'admin (un user.id frappé par `auth.contentos.ch`, listé dans
-`ADMIN_USER_IDS`) édite les ressources. Les autres comptes connectés ne sont que des
-visiteurs qui peuvent s'abonner à une ressource (table `subscriptions`, `user_id` text sans
-FK locale puisque le user vit dans la base auth).
+Modèle multi-tenant (ADR-0002) : un **opérateur** (table `operators`, `id` = user.id auth,
+`handle` = slug d'espace) possède ses ressources (`resources.operator_id`, slug unique par
+opérateur) et les édite via `/admin`. Les lecteurs qui accèdent à un espace deviennent son
+**audience** (table `audience_members`, rattachée à l'opérateur) et peuvent s'abonner
+(`subscriptions`). Toute requête est scopée `operator_id` (autorisation à la couche données).
+`user_id`/operator `id` sont du text sans FK locale (le user vit dans la base auth).
 
 ## Skill agentique
 
@@ -68,9 +81,19 @@ central) et injecte **`DATABASE_URL`** automatiquement. Le one-shot **`migrate`*
 Les secrets viennent du coffre `ressources` de l'atelier (`/lab-secret`, scope `ressources`),
 déchiffrés et injectés par `deploy.sh` :
 
-- `ADMIN_USER_IDS` — IDs (auth.contentos.ch) autorisés à accéder à l'admin et au MCP,
-  séparés par virgules. Ex. `mPNwuxFCfdhF5jriE1dqkWCdgcIjsiQ5`.
 - `AUTH_URL` — facultatif, défaut `https://auth.contentos.ch`.
+
+Plus de `ADMIN_USER_IDS` : être opérateur = avoir une ligne `operators` (provisionnée en
+tandem avec `accountType='operator'` côté auth). Pour octroyer le rôle à un user :
+`UPDATE "user" SET account_type='operator'` (base auth) **et** créer son profil `operators`
+(id, handle, name) dans ressources.
+
+**Migration prod (cutover single-tenant → multi-tenant).** La preview part d'une base vide
+seedée (opérateur démo) → rien à faire. Sur prod, le `ADD COLUMN operator_id NOT NULL` de la
+migration 0004 suppose une table vide : jouer le backfill en trois temps — (1) créer
+`operators` + colonne `operator_id` *nullable*, (2) `scripts/backfill-operators.mjs`
+(`SEED_OPERATOR_USER_ID` = ancien admin, `SEED_OPERATOR_HANDLE`, `SEED_OPERATOR_NAME`), (3)
+poser la contrainte `NOT NULL`.
 
 Faire évoluer le schéma : éditer `db/schema/`, `npm run db:generate`, committer — le
 prochain déploiement applique la migration.
@@ -78,8 +101,10 @@ prochain déploiement applique la migration.
 ## Vérifier visuellement (preview / dev)
 
 En preview, `isPreview` court-circuite la session : tout requérant est auto-loggé comme
-`PREVIEW_USER_ID = 'preview-user'`, qui est admin par défaut. En prod, les visiteurs sont
-redirigés vers `${AUTH_URL}/sign-in?redirect=...` ; le SSO les renvoie ensuite ici avec le
-cookie cross-subdomain. Le reader (`app/(public)/r/[slug]/`) adapte sa grille selon le
-nombre de pages / sections (`components/reader/reader-shell.tsx`). Admin sous `app/admin/*` ;
-MCP sous `app/api/[transport]/route.ts`.
+`PREVIEW_USER_ID = 'preview-user'`, **opérateur démo** (`/o/demo`, seedé avec ses ressources).
+En prod, les visiteurs sont redirigés vers `${AUTH_URL}/sign-in?redirect=...` ; le SSO les
+renvoie ensuite ici avec le cookie cross-subdomain. Le reader
+(`app/(public)/o/[handle]/r/[slug]/`) adapte sa grille selon le nombre de pages / sections
+(`components/reader/reader-shell.tsx`). Espace opérateur public sous `app/(public)/o/[handle]/` ;
+admin scopé sous `app/admin/*` (dont `app/admin/audience/`) ; MCP sous
+`app/api/[transport]/route.ts`. Liens legacy `/r/<slug>` → 301 vers `/o/<handle>/r/<slug>`.
