@@ -1,32 +1,46 @@
 # ressources
 
-Plateforme de lead magnets de la suite **contentos** (`https://ressources.contentos.ch`),
-**multi-tenant** : chaque **opérateur** (client SaaS) possède son espace de ressources,
-partageable via `/o/<handle>`, et son **audience** (les lecteurs qui s'y rattachent). Une
-ressource = une arborescence de pages faites de modules typés, servie sur
-`/o/<handle>/r/<slug>` par un reader SSR. Authentification déléguée au SSO central
-`auth.contentos.ch`. Pilotage par agent via serveur MCP. Voir
-`../../docs/decisions/0002-comptes-operateur-audience-tenancy.md` (ADR-0002).
+**Outil d'administration** des ressources de la suite **contentos**
+(`https://ressources.contentos.ch`). Côté **opérateur** (client SaaS) : il édite ici son espace
+de ressources (arborescence de pages faites de modules typés), suit son **audience** et ses
+stats, et pilote le tout par agent via le **serveur MCP**. `ressources` est aussi le
+**propriétaire du schéma** (tables + migrations) de la plateforme.
+
+La **lecture publique** (landing, espaces `/o/<handle>`, reader SSR, bibliothèque/compte
+lecteur) vit dans le projet voisin **`docs`** (`docs.contentos.ch`), qui partage **la même
+base**. Découpage : `ressources` = admin (login **opérateur**) ; `docs` = public (login
+**lecteur/audience**). Voir l'ADR-0002
+(`../../docs/decisions/0002-comptes-operateur-audience-tenancy.md`) et le `CLAUDE.md` de `docs`.
 
 ## Stack
 
 **Next.js 16** (App Router, sortie `standalone`) + **Drizzle ORM** (driver `postgres`,
-postgres-js) + **Tailwind 4**. Schéma dans `db/schema/`, client paresseux dans `db/index.ts`
-(lit `DATABASE_URL` au runtime). Migrations SQL committées dans `drizzle/`.
+postgres-js) + **Tailwind 4** (style brutaliste éditorial dans `app/globals.css`). Schéma dans
+`db/schema/`, client paresseux dans `db/index.ts` (lit `DATABASE_URL` au runtime). Migrations
+SQL committées dans `drizzle/`.
 
 ```
 ressources/
-├── Dockerfile        multi-stage : deps → build → runner (standalone, non-root, :8080)
+├── Dockerfile        multi-stage : deps → build → runner (standalone, non-root, :8080) ; one-shot migrate + seed
 ├── compose.yml       service app sur le réseau lab (alias ${UPSTREAM}, image ${IMAGE})
-├── lab.json          description + db:true + migrate
-├── middleware.ts     pose le cookie de tracking sur /o/* ; SSO gate sur /admin /compte /bibliotheque
+├── lab.json          description + db:true + migrate + seed
+├── middleware.ts     SSO gate sur /admin (et l'entrée /connexion)
 ├── next.config.ts    output:"standalone"
 ├── drizzle/          migrations SQL committées (appliquées au déploiement)
 ├── scripts/migrate.mjs  applique drizzle/ à la base (migrator drizzle-orm/postgres-js)
 ├── scripts/backfill-operators.mjs  cutover prod single-tenant → multi-tenant (one-shot)
-├── app/              App Router (dont healthz/route.ts → GET /healthz : 200 "ok", sans DB)
-├── db/ lib/ components/  schéma, accès données, helpers auth/operator, UI
+├── app/              App Router : /admin/*, /api/[transport] (MCP), /.well-known, /connexion,
+│                     / (→ /admin), healthz/route.ts (GET /healthz : 200 "ok", sans DB)
+├── db/ lib/ components/  schéma, accès données, helpers auth/operator, UI admin
 ```
+
+## Schéma partagé avec `docs`
+
+`ressources` est **seul propriétaire** du schéma et des migrations. `docs` lit la même base et
+embarque une **copie générée** de `db/schema` + `db/index.ts`, synchronisée par
+**`../../scripts/sync-shared.sh`** et vérifiée en CI (job `shared_guard`, `git diff --exit-code`).
+**Faire évoluer le schéma** : éditer `db/schema/`, `npm run db:generate`, committer, puis
+`scripts/sync-shared.sh` (sinon le build casse). Le prochain déploiement applique la migration.
 
 ## Authentification — SSO contentos
 
@@ -36,14 +50,13 @@ Les helpers vivent sous `lib/auth/` :
 - `lib/auth/session.ts` : `getSession()`, `requireSession(target?)`, `getUserId()`,
   `requireUserId(target?)`, `signInUrl(target?)`. Fetch `${AUTH_URL}/api/auth/get-session`
   avec le cookie forwardé ; en preview, court-circuite avec `PREVIEW_USER_ID`.
-  Le user porte un `accountType` (`operator | audience`, central — ADR-0002), exposé par
-  `get-session` et relayé dans `Session.user.accountType`.
+  Le user porte un `accountType` (`operator | audience`, central — ADR-0002).
 - `lib/auth/operator.ts` : `requireOperator()`, `getOperator()`, `getOperatorById(id)`,
   `operatorByHandle(handle)`. **La porte « opérateur » de ressources = présence d'une ligne
   `operators`** pour ce user (tenancy locale ; marche aussi pour le MCP qui ne porte que
   `userId`). Provisionnée en tandem avec `accountType='operator'` côté auth.
 - `lib/auth/preview.ts` : `PREVIEW_USER_ID`, `isPreview` (selon `APP_ENV`). En preview, la
-  session est court-circuitée en `operator` (l'opérateur démo `/o/demo`, seedé).
+  session est court-circuitée en `operator` (l'opérateur démo `/o/demo`, seedé — visible sur `docs`).
 - `lib/mcp-auth.ts` : `verifyMcpToken(req)` via `${AUTH_URL}/api/auth/mcp/get-session` ; la
   route MCP exige en plus que le user soit **opérateur** et dépose `operatorId`/`handle` dans
   `authInfo.extra` (chaque outil n'opère que sur ses ressources).
@@ -53,10 +66,9 @@ Les helpers vivent sous `lib/auth/` :
 
 Modèle multi-tenant (ADR-0002) : un **opérateur** (table `operators`, `id` = user.id auth,
 `handle` = slug d'espace) possède ses ressources (`resources.operator_id`, slug unique par
-opérateur) et les édite via `/admin`. Les lecteurs qui accèdent à un espace deviennent son
-**audience** (table `audience_members`, rattachée à l'opérateur) et peuvent s'abonner
-(`subscriptions`). Toute requête est scopée `operator_id` (autorisation à la couche données).
-`user_id`/operator `id` sont du text sans FK locale (le user vit dans la base auth).
+opérateur) et les édite via `/admin`. Les lecteurs (sur `docs`) qui accèdent à un espace
+deviennent son **audience** (`audience_members`) et peuvent s'abonner (`subscriptions`). Toute
+requête est scopée `operator_id`. `user_id`/operator `id` sont du text sans FK locale.
 
 ## Skill agentique
 
@@ -74,7 +86,8 @@ La CI build l'image (`docker build`) → GHCR → pull sur `lab` ; le serveur ne
 
 `lab.json` déclare `"db": true` → la plateforme crée la base `<projet>_<env>` (Postgres
 central) et injecte **`DATABASE_URL`** automatiquement. Le one-shot **`migrate`** applique
-`drizzle/` avant le démarrage.
+`drizzle/` avant le démarrage ; **`seed`** (hors prod) peuple l'opérateur démo `/o/demo`
+(`node --import tsx db/seed.ts` ; idempotent). C'est cette base que `docs` lit en preview.
 
 `APP_URL` est auto-injecté par la plateforme (= origine publique du déploiement).
 
@@ -95,16 +108,11 @@ migration 0004 suppose une table vide : jouer le backfill en trois temps — (1)
 (`SEED_OPERATOR_USER_ID` = ancien admin, `SEED_OPERATOR_HANDLE`, `SEED_OPERATOR_NAME`), (3)
 poser la contrainte `NOT NULL`.
 
-Faire évoluer le schéma : éditer `db/schema/`, `npm run db:generate`, committer — le
-prochain déploiement applique la migration.
-
-## Vérifier visuellement (preview / dev)
+## Vérifier (preview / dev)
 
 En preview, `isPreview` court-circuite la session : tout requérant est auto-loggé comme
-`PREVIEW_USER_ID = 'preview-user'`, **opérateur démo** (`/o/demo`, seedé avec ses ressources).
-En prod, les visiteurs sont redirigés vers `${AUTH_URL}/sign-in?redirect=...` ; le SSO les
-renvoie ensuite ici avec le cookie cross-subdomain. Le reader
-(`app/(public)/o/[handle]/r/[slug]/`) adapte sa grille selon le nombre de pages / sections
-(`components/reader/reader-shell.tsx`). Espace opérateur public sous `app/(public)/o/[handle]/` ;
-admin scopé sous `app/admin/*` (dont `app/admin/audience/`) ; MCP sous
-`app/api/[transport]/route.ts`. Liens legacy `/r/<slug>` → 301 vers `/o/<handle>/r/<slug>`.
+`PREVIEW_USER_ID = 'preview-user'`, **opérateur démo**. En prod, l'accès à `/admin` redirige
+vers `${AUTH_URL}/sign-in?redirect=...` ; le SSO renvoie ici avec le cookie cross-subdomain.
+Admin scopé sous `app/admin/*` (dont `app/admin/audience/`) ; MCP sous
+`app/api/[transport]/route.ts`. **Le rendu public** (espaces, reader, `/o/<handle>`) se vérifie
+sur `docs` (`docs.contentos.ch` / `docs-<branche>.preview.contentos.ch`), qui lit cette base.

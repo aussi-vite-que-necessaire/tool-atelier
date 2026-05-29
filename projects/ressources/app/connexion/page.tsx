@@ -13,7 +13,7 @@ export default async function ConnexionPage({
   searchParams: Promise<{ redirect?: string; redirectTo?: string }>
 }) {
   const sp = await searchParams
-  const target = sp.redirect || sp.redirectTo || "/bibliotheque"
+  const target = sp.redirect || sp.redirectTo || "/admin"
   const absoluteTarget = target.startsWith("http")
     ? target
     : `${env.APP_URL}${target.startsWith("/") ? target : `/${target}`}`
