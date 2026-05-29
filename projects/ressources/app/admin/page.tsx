@@ -5,6 +5,7 @@ import { getStatsOverview } from "@/lib/stats/queries"
 import { createResourceAction } from "@/lib/actions/admin"
 import { requireOperator } from "@/lib/auth/operator"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 
 export const dynamic = "force-dynamic"
 
@@ -30,7 +31,7 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-10">
-      <h1 className="accent-rule text-4xl font-black tracking-tight">Tableau de bord</h1>
+      <h1 className="text-4xl font-black tracking-tight">Tableau de bord</h1>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Kpi icon={Layers} label="Ressources" value={resources.length} sub={`${published} publiées`} />
@@ -44,7 +45,7 @@ export default async function AdminDashboard() {
           Nouvelle ressource
         </h2>
         <form action={createResourceAction} className="flex flex-col gap-2 sm:flex-row">
-          <input name="title" required placeholder="Titre d'une nouvelle ressource" className="field flex-1" />
+          <Input name="title" required placeholder="Titre d'une nouvelle ressource" className="flex-1" />
           <button
             type="submit"
             className="inline-flex items-center justify-center gap-2 border border-border bg-primary px-5 py-2.5 font-bold text-primary-foreground shadow"

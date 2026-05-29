@@ -11,7 +11,7 @@ export default async function AudiencePage() {
   return (
     <div className="space-y-8">
       <div className="flex items-end justify-between">
-        <h1 className="accent-rule text-4xl font-black tracking-tight">Mon audience</h1>
+        <h1 className="text-4xl font-black tracking-tight">Mon audience</h1>
         <span className="text-sm text-muted-foreground">{members.length.toString().padStart(2, "0")} membre(s)</span>
       </div>
 

@@ -89,7 +89,7 @@ export default async function PageEditor({ params }: { params: Promise<{ slug: s
         >
           <ArrowLeft className="size-3.5" strokeWidth={2.5} /> {data.title}
         </Link>
-        <h1 className="accent-rule mt-3 text-3xl font-black tracking-tight">{page.title}</h1>
+        <h1 className="mt-3 text-3xl font-black tracking-tight">{page.title}</h1>
       </div>
 
       <ul className="space-y-4">

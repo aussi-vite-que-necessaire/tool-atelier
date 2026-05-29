@@ -11,6 +11,9 @@ import {
 } from "@/lib/actions/admin"
 import { PageTreeEditor } from "@/components/admin/page-tree-editor"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 
 export const dynamic = "force-dynamic"
 
@@ -36,7 +39,7 @@ export default async function ResourceEditor({ params }: { params: Promise<{ slu
     <div className="space-y-10">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="accent-rule text-4xl font-black tracking-tight">{data.title}</h1>
+          <h1 className="text-4xl font-black tracking-tight">{data.title}</h1>
           <div className="mt-4 flex flex-wrap gap-1.5">
             <Badge variant={data.published ? "default" : "outline"}>{data.published ? "Publié" : "Brouillon"}</Badge>
             {data.featured && <Badge variant="secondary">★ Featured</Badge>}
@@ -57,17 +60,17 @@ export default async function ResourceEditor({ params }: { params: Promise<{ slu
         <SectionTitle>Métadonnées</SectionTitle>
         <form action={updateResourceMetaAction} className="space-y-4">
           <input type="hidden" name="slug" value={slug} />
-          <div>
-            <label className="label">Titre</label>
-            <input name="title" defaultValue={data.title} className="field" />
+          <div className="space-y-1.5">
+            <Label>Titre</Label>
+            <Input name="title" defaultValue={data.title} />
           </div>
-          <div>
-            <label className="label">Description</label>
-            <textarea name="description" defaultValue={data.description ?? ""} className="field" rows={2} />
+          <div className="space-y-1.5">
+            <Label>Description</Label>
+            <Textarea name="description" defaultValue={data.description ?? ""} rows={2} />
           </div>
-          <div>
-            <label className="label">Image de couverture (URL R2)</label>
-            <input name="coverImageUrl" defaultValue={data.coverImageUrl ?? ""} placeholder="https://…" className="field" />
+          <div className="space-y-1.5">
+            <Label>Image de couverture (URL R2)</Label>
+            <Input name="coverImageUrl" defaultValue={data.coverImageUrl ?? ""} placeholder="https://…" />
           </div>
           <div className="flex flex-wrap items-center gap-5 pt-1">
             <label className="flex items-center gap-2 text-sm font-bold">
@@ -113,7 +116,7 @@ export default async function ResourceEditor({ params }: { params: Promise<{ slu
           </ul>
           <form action={grantAccessAction} className="flex flex-col gap-2 sm:flex-row">
             <input type="hidden" name="resourceSlug" value={slug} />
-            <input name="email" type="email" required placeholder="email@client.com" className="field flex-1" />
+            <Input name="email" type="email" required placeholder="email@client.com" className="flex-1" />
             <button
               type="submit"
               className="border border-border bg-background px-4 py-2 font-bold shadow-sm"
