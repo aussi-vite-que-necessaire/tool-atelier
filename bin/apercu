@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# apercu — l'œil de l'agent : screenshot headless d'une page en cours de dev, pour SE VOIR et
+# critiquer son propre rendu avant de pousser. Cf. la skill /apercu.
+#
+# Chromium headless tourne DANS le conteneur (Playwright), aucune dépendance à la prod ni au
+# browserless du lab, pas de Docker. Pensé pour les sessions cloud. La première utilisation
+# installe Playwright puis télécharge Chromium (une fois, ~quelques dizaines de Mo) ; les appels
+# suivants sont immédiats (sentinelle .browser-ready).
+#
+# Usage :
+#   bin/apercu [url] [options]            # défaut url = http://localhost:3000
+#   bin/apercu --route /reglages          # une page précise
+#   bin/apercu --route / --route /app --viewport mobile   # plusieurs pages / un seul viewport
+#
+# Options : --route <path> · --viewport <mobile|desktop|LxH> · --out <dir> · --no-full ·
+#           --wait <selector> · --wait-ms <n> · --dry-run   (détail : shot.mjs)
+#
+# Pré-requis : le serveur de dev du projet doit tourner (npm run dev). Les captures sont écrites
+# dans /tmp/apercu/<timestamp>/ par défaut ; Read chaque PNG pour le voir.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TOOL="$ROOT/tools/apercu"
+
+case "${1:-}" in
+  -h|--help)
+    grep '^#' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+esac
+
+# Deps Node (Playwright) — installées au premier usage seulement.
+if [ ! -d "$TOOL/node_modules" ]; then
+  echo "→ installation de Playwright (première utilisation)…" >&2
+  ( cd "$TOOL" && npm install --no-audit --no-fund --loglevel=error )
+fi
+
+# Navigateur Chromium — téléchargé une seule fois (sentinelle). On tente avec les deps système
+# (apt, dispo en conteneur cloud root) ; à défaut, le binaire seul suffit souvent.
+if [ ! -f "$TOOL/.browser-ready" ]; then
+  echo "→ téléchargement de Chromium headless (une fois)…" >&2
+  ( cd "$TOOL" && { ./node_modules/.bin/playwright install --with-deps chromium \
+      || ./node_modules/.bin/playwright install chromium; } )
+  touch "$TOOL/.browser-ready"
+fi
+
+exec node "$TOOL/shot.mjs" "$@"

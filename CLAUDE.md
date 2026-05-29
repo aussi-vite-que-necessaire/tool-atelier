@@ -15,7 +15,9 @@ Les outils vivent sous `*.contentos.ch` en prod. Cas spécial : **`projects/www/
   - `/nouveau-projet` — créer un projet (base Next.js + capacités, déploiement jusqu'en prod) ;
   - `/noter-idee` — capturer une piste d'amélioration en backlog (`docs/ideas/`) ;
   - `/travailler-infra` — bosser sur l'atelier lui-même (skills, `CLAUDE.md`, scripts, hooks, CI) ;
+  - `/apercu` — l'œil de l'agent sur le front : rendre une page, la screenshoter (Chromium headless local) et la **voir** pour critiquer son rendu avant de pousser (`bin/apercu`) ;
   - `lab-ssh` — exécuter une commande de diagnostic sur le serveur `lab` (`bin/lab-ssh`).
+- **Qualité front — l'œil de l'agent (RÉFLEXE).** Par défaut tu codes le front **à l'aveugle** : `npm run dev` rend la page, mais rien ne la regarde, et la seule preview visuelle arrive après push (boucle longue). **Toute modif qui change un rendu visuel se termine par un coup d'œil** : tu lances le serveur de dev, tu screenshotes avec `/apercu` (Chromium headless dans le conteneur, mobile **et** desktop), tu **Read** le PNG pour le *voir*, tu critiques (hiérarchie, espacement, responsive, états, cohérence), tu corriges, tu re-screenshotes — *puis* tu pousses. C'est un automatisme du trajet, pas une étape qui rend la main (cf. la surcouche « un seul arrêt humain »). Le standard de jugement est **local au projet** : si le projet utilise `@contentos/ui`/son thème, aligne-toi dessus et réutilise l'existant ; sinon respecte son identité propre (`docs`, `www`). On *match the codebase*, on n'impose pas un look de suite.
 
 La liste des projets se déduit en scannant `projects/*/lab.json` — chaque projet déclare sa description dans son `lab.json`.
 
