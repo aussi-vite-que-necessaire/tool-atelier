@@ -1,6 +1,7 @@
 'use client';
 
-import { ArrowRightIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
+import { ArrowRightIcon, MenuIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -48,6 +49,7 @@ const sections = [
   { id: 'skeleton', label: 'Skeleton' },
   { id: 'modale', label: 'Modale oui/non' },
   { id: 'sidebar', label: 'Sidebar' },
+  { id: 'nav-mobile', label: 'Navigation mobile' },
 ] as const;
 
 const buttonVariants = ['default', 'secondary', 'outline', 'ghost', 'destructive', 'link'] as const;
@@ -376,6 +378,76 @@ function SidebarPreviewSection() {
   );
 }
 
+function MobileNavSection() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="space-y-4">
+      <Muted>
+        Sur mobile, l'AppShell replie la sidebar derrière une top-bar : le bouton hamburger
+        ouvre la navigation dans un drawer coulissant. Cliquer un lien referme le drawer. Sur
+        desktop (≥ lg) la sidebar reste affichée.
+      </Muted>
+
+      {/* Aperçu encadré de la top-bar mobile */}
+      <div className="overflow-hidden rounded-xl ring-1 ring-border">
+        <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
+          <div className="flex h-14 items-center gap-2 border-b border-sidebar-border bg-background/80 px-4 backdrop-blur">
+            <DialogPrimitive.Trigger
+              render={<Button variant="ghost" size="icon" aria-label="Ouvrir la navigation" />}
+            >
+              <MenuIcon />
+            </DialogPrimitive.Trigger>
+            <span className="text-sm">
+              <span className="text-muted-foreground">Contentos · </span>
+              <span className="font-semibold text-foreground">Cast</span>
+            </span>
+          </div>
+          <div className="bg-background px-4 py-8 text-sm text-muted-foreground">
+            Contenu de l'application…
+          </div>
+
+          <DialogPrimitive.Portal>
+            <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/20 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+            <DialogPrimitive.Popup className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[80vw] flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar px-3 py-4 text-sidebar-foreground outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-left data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-left">
+              <DialogPrimitive.Title className="sr-only">Navigation</DialogPrimitive.Title>
+              <DialogPrimitive.Close
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute top-3 right-3"
+                    aria-label="Fermer la navigation"
+                  />
+                }
+              >
+                <XIcon />
+              </DialogPrimitive.Close>
+              <SidebarHeader>
+                <span className="block text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  Contentos
+                </span>
+                <span className="mt-1 block text-lg font-semibold text-sidebar-foreground">Cast</span>
+              </SidebarHeader>
+              <SidebarSection label="Réglages">
+                <SidebarItem render={<a href="#nav-mobile" onClick={() => setOpen(false)} />} active>
+                  Brand
+                </SidebarItem>
+                <SidebarItem render={<a href="#nav-mobile" onClick={() => setOpen(false)} />}>
+                  Voix
+                </SidebarItem>
+                <SidebarItem render={<a href="#nav-mobile" onClick={() => setOpen(false)} />}>
+                  Connexions
+                </SidebarItem>
+              </SidebarSection>
+              <SidebarFooter>← Retour à l'app</SidebarFooter>
+            </DialogPrimitive.Popup>
+          </DialogPrimitive.Portal>
+        </DialogPrimitive.Root>
+      </div>
+    </div>
+  );
+}
+
 export function Styleguide() {
   const [active, setActive] = useState<string>(sections[0].id);
 
@@ -458,6 +530,13 @@ export function Styleguide() {
           </Section>
           <Section id="sidebar" title="Sidebar" description="Organisme de navigation latérale, composable (header, sections, items, footer).">
             <SidebarPreviewSection />
+          </Section>
+          <Section
+            id="nav-mobile"
+            title="Navigation mobile"
+            description="Sur petit écran, l'AppShell replie la sidebar derrière une top-bar et un drawer."
+          >
+            <MobileNavSection />
           </Section>
         </main>
       </div>
