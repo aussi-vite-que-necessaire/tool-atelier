@@ -2,8 +2,31 @@ import { describe, expect, it } from 'vitest';
 import {
   MEDIA_CREATED,
   isMediaCreatedMessage,
+  mediaEmbedOrigin,
   mediaRefFromCreatedMedia,
 } from '@/lib/media-link/embed';
+
+describe('mediaEmbedOrigin', () => {
+  it('en prod : origine de MEDIA_ENGINE_URL', () => {
+    expect(
+      mediaEmbedOrigin({
+        isPreview: false,
+        appUrl: 'https://cast.contentos.ch',
+        mediaEngineUrl: 'https://media.contentos.ch',
+      }),
+    ).toBe('https://media.contentos.ch');
+  });
+
+  it('en preview : media preview de la même branche (cast- → media-)', () => {
+    expect(
+      mediaEmbedOrigin({
+        isPreview: true,
+        appUrl: 'https://cast-ma-branche.preview.contentos.ch',
+        mediaEngineUrl: 'https://media.contentos.ch',
+      }),
+    ).toBe('https://media-ma-branche.preview.contentos.ch');
+  });
+});
 
 describe('isMediaCreatedMessage', () => {
   it('reconnaît un message média créé', () => {

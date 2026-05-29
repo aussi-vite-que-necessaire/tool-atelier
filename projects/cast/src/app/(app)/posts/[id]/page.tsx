@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { requireUserId } from '@/lib/auth/session';
+import { isPreview } from '@/lib/auth/preview';
 import { env } from '@/lib/env';
+import { mediaEmbedOrigin } from '@/lib/media-link/embed';
 import { getPost } from '@/lib/db/repositories/posts';
 import { getLatestPublicationForPost } from '@/lib/db/repositories/publications';
 import { getAuthorIdentity } from '@/lib/linkedin/identity';
@@ -23,10 +25,15 @@ export default async function PostDetailPage({ params }: { params: Promise<{ id:
     ? { kind: (post.mediaKind as MediaKind | null) ?? 'image', url: post.mediaUrl }
     : null;
 
-  // Embarquement de la page de création de media (iframe). On dérive les origines
-  // de l'env serveur : `embedOrigin` = origine du service media (validation des
-  // postMessage), `parentOrigin` = origine publique de cast (transmise à l'iframe).
-  const embedOrigin = new URL(env.MEDIA_ENGINE_URL).origin;
+  // Embarquement de la page de création de media (iframe). `embedOrigin` = origine
+  // du service media à embarquer (media prod en prod ; media preview de la même
+  // branche en preview, qui porte /embed) ; sert aussi à valider les postMessage.
+  // `parentOrigin` = origine publique de cast, transmise à l'iframe (qu'elle valide).
+  const embedOrigin = mediaEmbedOrigin({
+    isPreview,
+    appUrl: env.APP_URL,
+    mediaEngineUrl: env.MEDIA_ENGINE_URL,
+  });
   const embedSrc = `${embedOrigin}/embed/new`;
   const parentOrigin = new URL(env.APP_URL).origin;
 

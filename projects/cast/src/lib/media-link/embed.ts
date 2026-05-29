@@ -14,6 +14,24 @@ export type CreatedMedia = {
   height: number | null;
 };
 
+// Origine du service media à embarquer en iframe pour /embed.
+//  - prod : l'origine de MEDIA_ENGINE_URL (media.contentos.ch).
+//  - preview : la preview media de la MÊME branche (qui porte le nouveau /embed),
+//    dérivée de l'origine cast preview (cast-<slug> → media-<slug>). Sinon l'iframe
+//    pointerait sur media prod, où /embed n'existe pas encore avant le merge.
+//    Bonus : media preview et cast preview partagent le même `preview-user`.
+export function mediaEmbedOrigin(opts: {
+  isPreview: boolean;
+  appUrl: string;
+  mediaEngineUrl: string;
+}): string {
+  if (opts.isPreview) {
+    const host = new URL(opts.appUrl).host;
+    return `https://${host.replace(/^cast-/, "media-")}`;
+  }
+  return new URL(opts.mediaEngineUrl).origin;
+}
+
 const KINDS = new Set<MediaKind>(["image", "video", "pdf", "render"]);
 
 // Vrai si le message reçu par postMessage est bien un « média créé ». Ne valide
