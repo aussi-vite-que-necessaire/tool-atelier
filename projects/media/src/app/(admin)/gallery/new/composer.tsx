@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { addImage, removeAt, moveUp, moveDown } from "./order";
 import { composePdfAction, type ComposePdfResult } from "./pdf-actions";
+import { type CreatedMedia, toCreatedMedia } from "@/lib/embed/contract";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,13 @@ import { cn } from "@/lib/utils";
 
 export type PickerImage = { id: string; url: string };
 
-export function Composer({ images }: { images: PickerImage[] }) {
+export function Composer({
+  images,
+  onCreated,
+}: {
+  images: PickerImage[];
+  onCreated?: (m: CreatedMedia) => void;
+}) {
   const [selected, setSelected] = useState<string[]>([]);
   const [tags, setTags] = useState("");
   const [result, setResult] = useState<ComposePdfResult | null>(null);
@@ -37,6 +44,15 @@ export function Composer({ images }: { images: PickerImage[] }) {
       if (res.ok) {
         setSelected([]);
         setTags("");
+        onCreated?.(
+          toCreatedMedia({
+            id: res.id,
+            url: res.url,
+            kind: res.kind,
+            width: res.width,
+            height: res.height,
+          }),
+        );
       }
     });
   }

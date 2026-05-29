@@ -5,7 +5,7 @@ import { aggregatePdf } from "@/lib/pdf/aggregate";
 import { requireUserId } from "@/lib/session";
 
 export type ComposePdfResult =
-  | { ok: true; id: string; url: string }
+  | { ok: true; id: string; url: string; kind: "pdf"; width: number | null; height: number | null }
   | { ok: false; error: string };
 
 // Tags saisis séparés par des virgules → liste normalisée (trim, sans vide, dédupliquée).
@@ -30,7 +30,7 @@ export async function composePdfAction(
   try {
     const rec = await aggregatePdf(userId, imageIds, normalizeTags(tagsRaw));
     revalidatePath("/gallery");
-    return { ok: true, id: rec.id, url: rec.url };
+    return { ok: true, id: rec.id, url: rec.url, kind: "pdf", width: rec.width, height: rec.height };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Échec de la construction du PDF." };
   }

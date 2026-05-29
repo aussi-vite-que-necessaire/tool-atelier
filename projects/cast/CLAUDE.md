@@ -23,8 +23,14 @@ tout ça vit dans le service **media** (`https://media.contentos.ch`). Un post *
 média via des colonnes (`mediaUrl`, `mediaKind`, `mediaWidth`, `mediaHeight`, `mediaId` optionnel).
 On attache un média :
 
-- **UI** : le picker (`posts/[id]/_components/media-picker.tsx`) liste les médias de `media`
-  (`GET /v1/media`, via `src/lib/media-catalog/`) et appelle `setPostMedia`.
+- **UI** : le picker (`posts/[id]/_components/media-picker.tsx`) a deux onglets. *Choisir*
+  liste les médias de `media` (`GET /v1/media`, via `src/lib/media-catalog/`) et appelle
+  `setPostMedia`. *Créer un média* embarque en **iframe** la page `/embed/new` de `media`
+  (`${MEDIA_ENGINE_URL}/embed/new?parentOrigin=…`) — parité totale avec sa modal d'ajout
+  (upload, génération IA, PDF, template). À la création, l'iframe `postMessage`
+  `{ type: 'contentos:media-created', media }` ; cast valide `event.origin`, puis
+  `attachCreatedMediaAction` construit le `MediaRef` **depuis le payload** (pas de round-trip
+  `/v1` → indépendant du userId/preview) et l'attache. Contrat : `src/lib/media-link/embed.ts`.
 - **MCP** : `attach_media_to_post` (par `media_id` du service, ou n'importe quelle `media_url`) et
   `detach_media`. L'agent trouve les médias via le connecteur MCP de `media`.
 
