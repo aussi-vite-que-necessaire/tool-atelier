@@ -16,6 +16,7 @@
     "db:test:prepare": "node scripts/db-test-prepare.mjs"
   },
   "dependencies": {
+    "@base-ui/react": "^1.5.0",
     "@modelcontextprotocol/sdk": "1.26.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -35,6 +36,7 @@
     "remark-gfm": "^4.0.0",
     "shadcn": "^4.8.3",
     "shiki": "^1.24.0",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "tsx": "^4.19.2",
     "tw-animate-css": "^1.4.0",
