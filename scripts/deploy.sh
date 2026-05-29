@@ -149,6 +149,17 @@ fi
 # secrets pour être autoritative — en --env-file la dernière occurrence d'une clé gagne.
 printf 'APP_URL=https://%s\n' "$PRIMARY_HOST" >> "$APPDIR/.env"
 
+# AUTH_URL : en preview, les clients parlent à l'auth de LEUR branche
+# (auth-<branche>.preview.contentos.ch) — c'est là que sont seedés user1/2/3. On
+# RETIRE d'abord tout AUTH_URL hérité (certains projets en ont un dans leur secret
+# = valeur prod, qui sinon shadowe l'injection via env_file) puis on écrit celui de
+# la branche → une seule valeur, sans ambiguïté de précédence. En prod, on ne touche
+# à rien : le secret (ou le défaut applicatif https://auth.contentos.ch) s'applique.
+if [ "$ENV" != "prod" ]; then
+  sed -i '/^AUTH_URL=/d' "$APPDIR/.env"
+  printf 'AUTH_URL=https://auth-%s.preview.contentos.ch\n' "$ENV" >> "$APPDIR/.env"
+fi
+
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab.
 # En multi-image, le rôle `web` porte drizzle + scripts (cf. Dockerfile target `web`).
 if [ -n "$MIGRATE" ]; then

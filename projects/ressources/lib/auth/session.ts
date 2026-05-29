@@ -1,7 +1,7 @@
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { env } from "@/lib/env"
-import { isPreview, PREVIEW_USER_ID, PREVIEW_USER_EMAIL } from "./preview"
+import { isPreview, loginRedirect, DEFAULT_PREVIEW_USER } from "./preview"
 
 export type AccountType = "operator" | "audience"
 
@@ -10,14 +10,9 @@ export type Session = {
 }
 
 // Récupère la session via fetch HTTP vers auth.contentos.ch (cookie forwardé).
-// En preview, court-circuite avec PREVIEW_USER_ID (operator, pour garder l'accès
-// admin auto comme avant).
+// Même chemin en preview qu'en prod : la connexion est réelle (auto-login user1
+// en preview géré au niveau de la redirection, cf. loginRedirect/middleware).
 export async function fetchSession(h: Headers): Promise<Session | null> {
-  if (isPreview) {
-    return {
-      user: { id: PREVIEW_USER_ID, email: PREVIEW_USER_EMAIL, name: "Preview", accountType: "operator" },
-    }
-  }
   const cookie = h.get("cookie")
   if (!cookie) return null
   const res = await fetch(`${env.AUTH_URL}/api/auth/get-session`, {
@@ -37,9 +32,14 @@ export async function fetchSession(h: Headers): Promise<Session | null> {
   }
 }
 
-function signInRedirectUrl(target?: string): string {
-  const redirectTo = target ?? env.APP_URL
-  return `${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(redirectTo)}`
+function signInRedirectUrl(target?: string, cookieHeader?: string | null): string {
+  return loginRedirect({
+    authUrl: env.AUTH_URL,
+    back: target ?? env.APP_URL,
+    preview: isPreview,
+    cookieHeader: cookieHeader ?? null,
+    defaultUser: DEFAULT_PREVIEW_USER,
+  })
 }
 
 export async function getSession(): Promise<Session | null> {
@@ -47,8 +47,9 @@ export async function getSession(): Promise<Session | null> {
 }
 
 export async function requireSession(target?: string): Promise<Session> {
-  const s = await getSession()
-  if (!s) redirect(signInRedirectUrl(target))
+  const h = await headers()
+  const s = await fetchSession(h)
+  if (!s) redirect(signInRedirectUrl(target, h.get("cookie")))
   return s
 }
 
@@ -62,8 +63,16 @@ export async function requireUserId(target?: string): Promise<string> {
   return s.user.id
 }
 
-// URL absolue vers /sign-in de auth.contentos.ch, utilisable comme href de lien
-// "Se connecter" / "Se déconnecter" (auth gère le sign-out côté provider).
+// URL absolue vers le provider, utilisable comme href de lien "Se connecter".
 export function signInUrl(target?: string): string {
   return signInRedirectUrl(target)
+}
+
+// URL de déconnexion. En preview → preview-logout (efface la session + pose le
+// marqueur, ce qui bascule en mode chooser). En prod → page du provider.
+export function signOutUrl(): string {
+  if (isPreview) {
+    return `${env.AUTH_URL}/preview-logout?redirect=${encodeURIComponent(env.APP_URL)}`
+  }
+  return `${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(env.APP_URL)}`
 }

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { env } from "@/lib/env"
-import { isPreview } from "@/lib/auth/preview"
+import { isPreview, loginRedirect, hasSessionCookie, DEFAULT_PREVIEW_USER } from "@/lib/auth/preview"
 import {
   parseRefFromParams,
   serializeRefCookie,
@@ -36,20 +36,23 @@ export function middleware(req: NextRequest): NextResponse {
     return setRefCookie(req, NextResponse.next())
   }
 
-  // Court-circuit preview : pas de SSO, auto-login local.
-  if (isPreview) return NextResponse.next()
-
-  // Gate SSO sur les zones authentifiées.
+  // Gate SSO sur les zones authentifiées (preview comme prod : connexion réelle ;
+  // en preview, l'absence de cookie déclenche l'auto-login user3 via loginRedirect).
   if (SSO_GATED.test(pathname)) {
     const cookie = req.headers.get("cookie") ?? ""
-    // Cookie posé par auth.contentos.ch (cross-subdomain .contentos.ch).
-    const hasSession = /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(cookie)
-    if (!hasSession) {
+    // Cookie posé par auth.contentos.ch (cross-subdomain .contentos.ch / .preview…).
+    if (!hasSessionCookie(cookie)) {
       // L'URL interne du conteneur derrière le proxy lab fuiterait dans request.url ;
       // on reconstruit depuis APP_URL (origine publique) + pathname + search.
       const url = new URL(req.url)
       const back = `${env.APP_URL}${url.pathname}${url.search}`
-      const dest = `${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(back)}`
+      const dest = loginRedirect({
+        authUrl: env.AUTH_URL,
+        back,
+        preview: isPreview,
+        cookieHeader: cookie,
+        defaultUser: DEFAULT_PREVIEW_USER,
+      })
       return NextResponse.redirect(dest)
     }
   }

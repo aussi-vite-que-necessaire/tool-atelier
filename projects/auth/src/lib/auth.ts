@@ -51,6 +51,11 @@ export const auth = betterAuth({
         advanced: {
           crossSubDomainCookies: { enabled: true, domain: sharedDomain },
           defaultCookieAttributes: { sameSite: "lax", secure: true },
+          // En preview, préfixe de cookie distinct de la prod : le cookie prod
+          // (`__Secure-better-auth.session_token` sur .contentos.ch) fuit sur les
+          // sous-domaines *.preview.contentos.ch et collisionnerait (même nom →
+          // get-session lit le mauvais token → null). Préfixe dédié = pas de collision.
+          ...(isPreview ? { cookiePrefix: "better-auth-preview" } : {}),
         },
       }
     : {}),

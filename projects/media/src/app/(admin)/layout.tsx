@@ -1,4 +1,4 @@
-import { requireUserId } from "@/lib/session";
+import { requireUserId, signOutUrl } from "@/lib/session";
 import { env } from "@/lib/env";
 import { AppShell, type NavSection } from "@/components/ui/app-shell";
 import { centralUrl } from "@/lib/central-url";
@@ -31,7 +31,7 @@ export default async function AdminLayout({
       project="Media"
       homeUrl={centralUrl(env.APP_ENV)}
       sections={sections}
-      footer={<SignOutButton authUrl={env.AUTH_URL} />}
+      footer={<SignOutButton href={signOutUrl()} />}
     >
       {children}
       <Toaster />

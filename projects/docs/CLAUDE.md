@@ -57,12 +57,14 @@ Auth déléguée à `https://auth.contentos.ch` (cookie cross-subdomain `.conten
 sous `lib/auth/` :
 
 - `lib/auth/session.ts` : `getSession()`, `requireSession(target?)`, `getUserId()`,
-  `requireUserId(target?)`, `signInUrl(target?)`. En **preview**, court-circuite avec
-  `PREVIEW_USER_ID` (persona **audience**) ; l'id reste celui de l'opérateur démo seedé (`/o/demo`).
+  `requireUserId(target?)`, `signInUrl(target?)`, `signOutUrl()`. **Même chemin en preview
+  qu'en prod** (connexion réelle). En preview, `loginRedirect` auto-connecte **user3**
+  (`preview-aud-3`, persona **audience**, abonné aux espaces `/o/user1` + `/o/user2`).
 - `lib/auth/operator.ts` : `operatorByHandle(handle)`, `getOperatorById(id)` — **lecture seule**
   ici (résoudre l'espace `/o/<handle>`). Pas d'`requireOperator` côté public (l'admin est dans
   `ressources`).
-- `app/connexion/page.tsx` : redirige vers `${AUTH_URL}/sign-in?redirect=...` (no-op en preview).
+- `app/connexion/page.tsx` : redirige vers le SSO via `loginRedirect` (en preview : auto-login
+  user3, ou chooser si le marqueur de logout est posé).
 
 Un lecteur qui consulte un espace devient l'**audience** de l'opérateur (`audience_members`) et
 peut s'abonner (`subscriptions`) — câblé dans le reader (`app/(public)/.../render.tsx`).
@@ -91,7 +93,8 @@ scripts/dev-db.sh up docs         # pointe le .env de docs sur ressources_dev (n
 (cd projects/docs && npm run dev)  # http://localhost:3000 — /, /o/demo, reader
 ```
 
-`docs` lit la base de `ressources` : sans données seedées dans `ressources_dev`, `/o/demo`
-renvoie 404. Seeder la démo une fois (tsx présent en dev) :
-`(cd projects/ressources && DATABASE_URL=postgres://app:app@127.0.0.1:5432/ressources_dev npx tsx db/seed.ts)`.
-En preview, `isPreview` court-circuite la session (persona audience).
+`docs` lit la base de `ressources` : sans données seedées dans `ressources_dev`, `/o/user1`
+renvoie 404. Seeder une fois (tsx présent en dev) :
+`(cd projects/ressources && DATABASE_URL=postgres://app:app@127.0.0.1:5432/ressources_dev npx tsx db/seed.ts)`
+→ crée les espaces `/o/user1` et `/o/user2` + l'abonnement de user3. En preview, la connexion
+est réelle : auto-login user3 (audience), déconnexion → chooser user1/2/3 (code `000000`).

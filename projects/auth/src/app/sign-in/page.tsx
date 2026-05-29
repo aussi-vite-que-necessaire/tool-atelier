@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { authClient, signIn } from "@/lib/auth-client";
 
@@ -34,6 +34,19 @@ function SignInForm() {
     }
   }
 
+  const redirectParam = searchParams.get("redirect");
+  const rq = redirectParam ? `&redirect=${encodeURIComponent(redirectParam)}` : "";
+  const isPreviewClient =
+    typeof window !== "undefined" && window.location.hostname.endsWith(".preview.contentos.ch");
+
+  // Sur le chooser en preview : pose le marqueur → plus d'auto-login tant qu'il est là.
+  useEffect(() => {
+    if (isPreviewClient) {
+      document.cookie =
+        "cos_preview_login=manual; Domain=.preview.contentos.ch; Path=/; Max-Age=31536000; Secure; SameSite=Lax";
+    }
+  }, [isPreviewClient]);
+
   const input =
     "w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-zinc-700";
   const btn =
@@ -42,6 +55,23 @@ function SignInForm() {
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-8 px-6">
       <h1 className="text-center text-2xl font-bold tracking-tight">Se connecter</h1>
+
+      {isPreviewClient && (
+        <section className="space-y-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+          <p className="text-center text-xs uppercase tracking-wide text-zinc-400">
+            Connexion rapide (preview)
+          </p>
+          <a className={btn + " block text-center"} href={`/preview-login?user=1${rq}`}>
+            Entrer comme user1 (operator)
+          </a>
+          <a className={btn + " block text-center"} href={`/preview-login?user=2${rq}`}>
+            Entrer comme user2 (operator)
+          </a>
+          <a className={btn + " block text-center"} href={`/preview-login?user=3${rq}`}>
+            Entrer comme user3 (audience)
+          </a>
+        </section>
+      )}
 
       <input
         className={input}
