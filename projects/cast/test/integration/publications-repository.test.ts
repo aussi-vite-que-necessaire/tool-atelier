@@ -5,6 +5,7 @@ import {
   deletePublication,
   getLatestPublicationForPost,
   getPublication,
+  getPublishedExternalUrlForPost,
   listPublications,
   listPublicationsForCalendar,
   updatePublication,
@@ -135,5 +136,41 @@ describe('publications repository', () => {
     const byPost = new Map(rows.map((r) => [r.postId, r]));
     expect(byPost.get(withImg.id)?.thumbnailUrl).toBe('https://img/asset.png');
     expect(byPost.get(noImg.id)?.thumbnailUrl).toBeNull();
+  });
+
+  test('getPublishedExternalUrlForPost : null si aucune publication', async () => {
+    const postId = await makePostForUser('uxurl');
+    expect(await getPublishedExternalUrlForPost('uxurl', postId)).toBeNull();
+  });
+
+  test('getPublishedExternalUrlForPost : null si planifié non publié', async () => {
+    const postId = await makePostForUser('uxurl');
+    await createPublication('uxurl', { postId, contentSnapshot: 's', platform: 'linkedin' });
+    expect(await getPublishedExternalUrlForPost('uxurl', postId)).toBeNull();
+  });
+
+  test('getPublishedExternalUrlForPost : URL de la dernière publication publiée', async () => {
+    const postId = await makePostForUser('uxurl');
+    const older = await createPublication('uxurl', {
+      postId,
+      contentSnapshot: 's',
+      platform: 'linkedin',
+    });
+    await updatePublication('uxurl', older.id, {
+      status: 'published',
+      publishedAt: new Date('2026-01-01'),
+      externalUrl: 'https://li/old',
+    });
+    const newer = await createPublication('uxurl', {
+      postId,
+      contentSnapshot: 's',
+      platform: 'linkedin',
+    });
+    await updatePublication('uxurl', newer.id, {
+      status: 'published',
+      publishedAt: new Date('2026-02-01'),
+      externalUrl: 'https://li/new',
+    });
+    expect(await getPublishedExternalUrlForPost('uxurl', postId)).toBe('https://li/new');
   });
 });

@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import type { CalendarPublication } from '@/lib/calendar/month-grid';
 import { db } from '../client';
 import { createId } from '../id';
@@ -99,6 +99,28 @@ export async function getLatestPublicationForPost(
     .orderBy(desc(publications.createdAt))
     .limit(1);
   return rows[0];
+}
+
+// URL publique du post sur la plateforme (LinkedIn) pour la dernière publication
+// effectivement publiée de ce post. null si rien n'a été publié.
+export async function getPublishedExternalUrlForPost(
+  userId: string,
+  postId: string,
+): Promise<string | null> {
+  const rows = await db
+    .select({ externalUrl: publications.externalUrl })
+    .from(publications)
+    .where(
+      and(
+        eq(publications.userId, userId),
+        eq(publications.postId, postId),
+        eq(publications.status, 'published'),
+        isNotNull(publications.externalUrl),
+      ),
+    )
+    .orderBy(desc(publications.publishedAt))
+    .limit(1);
+  return rows[0]?.externalUrl ?? null;
 }
 
 export async function updatePublication(
