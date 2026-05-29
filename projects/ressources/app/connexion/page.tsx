@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { env } from "@/lib/env"
-import { isPreview } from "@/lib/auth/preview"
+import { isPreview, loginRedirect, DEFAULT_PREVIEW_USER } from "@/lib/auth/preview"
 
 export const dynamic = "force-dynamic"
 
 // Page conservée comme point d'entrée nommé "/connexion" : redirige vers le SSO
-// central (auth.contentos.ch) avec le retour demandé. En preview, on retombe
-// directement sur la cible (auto-login implicite via fetchSession court-circuité).
+// central (auth.contentos.ch) avec le retour demandé. En preview, loginRedirect
+// auto-connecte user1 (ou montre le chooser si le marqueur de logout est posé).
 export default async function ConnexionPage({
   searchParams,
 }: {
@@ -18,6 +19,14 @@ export default async function ConnexionPage({
     ? target
     : `${env.APP_URL}${target.startsWith("/") ? target : `/${target}`}`
 
-  if (isPreview) redirect(target)
-  redirect(`${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(absoluteTarget)}`)
+  const cookieHeader = (await headers()).get("cookie")
+  redirect(
+    loginRedirect({
+      authUrl: env.AUTH_URL,
+      back: absoluteTarget,
+      preview: isPreview,
+      cookieHeader,
+      defaultUser: DEFAULT_PREVIEW_USER,
+    }),
+  )
 }

@@ -1,16 +1,16 @@
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js"
 import { env } from "@/lib/env"
-import { isPreview, PREVIEW_USER_ID } from "@/lib/auth/preview"
+import { isPreview, PREVIEW_OP_1_ID } from "@/lib/auth/preview"
 
 // Valide un bearer MCP via auth.contentos.ch. En preview, court-circuite avec
-// PREVIEW_USER_ID (les outils MCP marchent sans OAuth réel).
+// l'opérateur 1 (les outils MCP marchent sans OAuth réel).
 export async function verifyMcpToken(req: Request): Promise<AuthInfo | undefined> {
   if (isPreview) {
     return {
       token: "preview",
       clientId: "preview",
       scopes: [],
-      extra: { userId: PREVIEW_USER_ID },
+      extra: { userId: PREVIEW_OP_1_ID },
     }
   }
   const authz = req.headers.get("authorization")

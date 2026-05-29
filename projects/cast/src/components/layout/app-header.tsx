@@ -11,7 +11,7 @@ const APP_LINKS = [
   { href: '/calendar', label: 'Calendrier', icon: CalendarDays },
 ];
 
-export function AppHeader({ authUrl }: { authUrl: string }) {
+export function AppHeader({ signOutHref }: { signOutHref: string }) {
   const pathname = usePathname();
 
   return (
@@ -44,7 +44,7 @@ export function AppHeader({ authUrl }: { authUrl: string }) {
           <Link href="/settings" className="text-sm text-neutral-600 hover:text-neutral-900">
             Réglages
           </Link>
-          <a href={authUrl} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+          <a href={signOutHref} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
             Se déconnecter
           </a>
         </div>

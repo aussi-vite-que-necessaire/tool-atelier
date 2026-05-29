@@ -28,7 +28,7 @@ const navSections: {
   },
 ];
 
-export function AdminNav({ authUrl }: { authUrl: string }) {
+export function AdminNav({ signOutHref }: { signOutHref: string }) {
   const pathname = usePathname();
   return (
     <Sidebar>
@@ -47,7 +47,7 @@ export function AdminNav({ authUrl }: { authUrl: string }) {
         </SidebarSection>
       ))}
       <SidebarFooter>
-        <SignOutButton authUrl={authUrl} />
+        <SignOutButton href={signOutHref} />
       </SidebarFooter>
     </Sidebar>
   );

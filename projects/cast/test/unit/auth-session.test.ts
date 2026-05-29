@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock du module preview pour pouvoir flipper isPreview proprement.
+// Mock du module preview. loginRedirect/DEFAULT_PREVIEW_USER sont requis par session.ts.
 vi.mock('@/lib/auth/preview', () => ({
   isPreview: false,
-  PREVIEW_USER_ID: 'preview-user',
-  PREVIEW_USER: 'preview@cast.local',
+  DEFAULT_PREVIEW_USER: 1,
+  loginRedirect: () => 'https://auth.example.test/sign-in',
   PREVIEW_OTP: '000000',
 }));
 vi.mock('@/lib/env', () => ({
@@ -39,7 +39,7 @@ describe('fetchSession', () => {
     const s = await fetchSession(mockHeaders('better-auth.session_token=xyz'));
     expect(s).toEqual({ user: { id: 'abc123' } });
     expect(fetchMock).toHaveBeenCalledOnce();
-    const url = fetchMock.mock.calls[0][0] as string;
+    const url = fetchMock.mock.calls[0]?.[0] as string;
     expect(url).toContain('/api/auth/get-session');
   });
 
@@ -54,15 +54,24 @@ describe('fetchSession', () => {
     expect(await fetchSession(mockHeaders('better-auth.session_token=xyz'))).toBeNull();
   });
 
-  it('court-circuite avec PREVIEW_USER_ID quand isPreview=true', async () => {
+  it('ne court-circuite plus en preview : fait la vraie get-session', async () => {
     vi.doMock('@/lib/auth/preview', () => ({
       isPreview: true,
-      PREVIEW_USER_ID: 'preview-user',
-      PREVIEW_USER: 'preview@cast.local',
+      DEFAULT_PREVIEW_USER: 1,
+      loginRedirect: () => 'https://auth.example.test/preview-login?user=1',
       PREVIEW_OTP: '000000',
     }));
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ user: { id: 'real-user' } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
     const { fetchSession } = await import('@/lib/auth/session');
-    const s = await fetchSession(mockHeaders());
-    expect(s).toEqual({ user: { id: 'preview-user' } });
+    // Sans cookie → null (plus de court-circuit qui inventait un user).
+    expect(await fetchSession(mockHeaders())).toBeNull();
+    // Avec cookie → passe par le fetch réel.
+    const s = await fetchSession(mockHeaders('better-auth.session_token=xyz'));
+    expect(s).toEqual({ user: { id: 'real-user' } });
+    expect(fetchMock).toHaveBeenCalled();
   });
 });

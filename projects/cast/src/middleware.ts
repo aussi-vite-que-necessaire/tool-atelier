@@ -1,18 +1,24 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { env } from '@/lib/env';
-import { isPreview } from '@/lib/auth/preview';
+import { isPreview, loginRedirect, DEFAULT_PREVIEW_USER } from '@/lib/auth/preview';
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
-  if (isPreview) return NextResponse.next();
   const cookie = request.headers.get('cookie') ?? '';
-  // Cookie posé par auth.contentos.ch (cross-subdomain .contentos.ch).
+  // Cookie posé par auth.contentos.ch (cross-subdomain .contentos.ch / .preview…).
   const hasSession = /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(cookie);
   if (!hasSession) {
     // L'URL interne du conteneur derrière le proxy lab fuiterait dans request.url ;
     // on reconstruit depuis APP_URL (origine publique) + pathname + search.
     const url = new URL(request.url);
     const back = `${env.APP_URL}${url.pathname}${url.search}`;
-    const dest = `${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(back)}`;
+    // En preview, l'absence de cookie déclenche l'auto-login user1 via loginRedirect.
+    const dest = loginRedirect({
+      authUrl: env.AUTH_URL,
+      back,
+      preview: isPreview,
+      cookieHeader: cookie,
+      defaultUser: DEFAULT_PREVIEW_USER,
+    });
     return NextResponse.redirect(dest);
   }
   return NextResponse.next();

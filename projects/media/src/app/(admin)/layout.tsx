@@ -1,5 +1,4 @@
-import { requireUserId } from "@/lib/session";
-import { env } from "@/lib/env";
+import { requireUserId, signOutUrl } from "@/lib/session";
 import { Toaster } from "@/components/ui/sonner";
 import { AdminNav } from "./admin-nav";
 
@@ -15,7 +14,7 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen">
-      <AdminNav authUrl={env.AUTH_URL} />
+      <AdminNav signOutHref={signOutUrl()} />
       <main className="flex-1 p-6 sm:p-8">{children}</main>
       <Toaster />
     </div>

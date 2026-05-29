@@ -1,12 +1,11 @@
 "use server"
 
 import { redirect } from "next/navigation"
-import { env } from "@/lib/env"
+import { signOutUrl } from "@/lib/auth/session"
 
-// Sign-out de l'opérateur, déléguée à auth.contentos.ch : redirige vers la page de
-// sign-in du provider (qui propose la déconnexion + retour ici via le cookie
-// cross-domain). Les actions d'abonnement lecteur (unsubscribe…) vivent désormais
-// dans le projet `docs`.
+// Sign-out de l'opérateur, déléguée à auth.contentos.ch. En preview, passe par
+// preview-logout (efface la session + pose le marqueur → chooser). Les actions
+// d'abonnement lecteur (unsubscribe…) vivent désormais dans le projet `docs`.
 export async function signOutAction() {
-  redirect(`${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(env.APP_URL)}`)
+  redirect(signOutUrl())
 }

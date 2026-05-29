@@ -1,13 +1,21 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { env } from "@/lib/env";
-import { isPreview } from "@/lib/auth/preview";
+import { isPreview, loginRedirect, DEFAULT_PREVIEW_USER } from "@/lib/auth/preview";
 
 export const dynamic = "force-dynamic";
 
-// /sign-in : en prod, redirige vers le SSO central. En preview, court-circuite
-// (le middleware laisse déjà passer, et requireUserId court-circuite avec
-// PREVIEW_USER_ID) → renvoie directement vers l'admin.
-export default function SignInPage() {
-  if (isPreview) redirect("/gallery");
-  redirect(`${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(env.APP_URL)}`);
+// /sign-in : tremplin vers le SSO central. En preview, loginRedirect auto-connecte
+// user1 (ou montre le chooser si le marqueur de logout est posé).
+export default async function SignInPage() {
+  const cookieHeader = (await headers()).get("cookie");
+  redirect(
+    loginRedirect({
+      authUrl: env.AUTH_URL,
+      back: env.APP_URL,
+      preview: isPreview,
+      cookieHeader,
+      defaultUser: DEFAULT_PREVIEW_USER,
+    }),
+  );
 }

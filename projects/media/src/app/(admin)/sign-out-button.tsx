@@ -1,8 +1,8 @@
-// Le logout est centralisé sur auth.contentos.ch : on renvoie l'utilisateur
-// vers la home du provider (qui propose la déconnexion + retour propre).
-export function SignOutButton({ authUrl }: { authUrl: string }) {
+// Le logout est centralisé sur auth.contentos.ch (href calculé côté serveur :
+// preview-logout en preview, home du provider en prod — cf. signOutUrl()).
+export function SignOutButton({ href }: { href: string }) {
   return (
-    <a href={authUrl} className="text-muted-foreground hover:text-foreground">
+    <a href={href} className="text-muted-foreground hover:text-foreground">
       Déconnexion
     </a>
   );

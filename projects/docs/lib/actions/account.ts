@@ -2,8 +2,7 @@
 
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
-import { env } from "@/lib/env"
-import { getSession } from "@/lib/auth/session"
+import { getSession, signOutUrl } from "@/lib/auth/session"
 import { removeSubscription } from "@/lib/content/queries"
 
 export async function unsubscribeAction(formData: FormData) {
@@ -15,8 +14,8 @@ export async function unsubscribeAction(formData: FormData) {
   revalidatePath("/bibliotheque")
 }
 
-// Sign-out déléguée à auth.contentos.ch : redirige vers la page de sign-in du
-// provider (laquelle propose la déconnexion + retour ici via le cookie cross-domain).
+// Sign-out déléguée à auth.contentos.ch. En preview, passe par preview-logout
+// (efface la session + pose le marqueur → chooser).
 export async function signOutAction() {
-  redirect(`${env.AUTH_URL}/sign-in?redirect=${encodeURIComponent(env.APP_URL)}`)
+  redirect(signOutUrl())
 }
