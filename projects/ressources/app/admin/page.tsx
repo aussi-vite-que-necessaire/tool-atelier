@@ -3,6 +3,7 @@ import { Plus, Eye, Lock, Layers, Users, Download, type LucideIcon } from "lucid
 import { listResources } from "@/lib/resources/service"
 import { getStatsOverview } from "@/lib/stats/queries"
 import { createResourceAction } from "@/lib/actions/admin"
+import { requireOperator } from "@/lib/auth/operator"
 import { Badge } from "@/components/ui/badge"
 
 export const dynamic = "force-dynamic"
@@ -19,7 +20,8 @@ function Kpi({ icon: Icon, label, value, sub }: { icon: LucideIcon; label: strin
 }
 
 export default async function AdminDashboard() {
-  const [resources, overview] = await Promise.all([listResources(), getStatsOverview()])
+  const op = await requireOperator()
+  const [resources, overview] = await Promise.all([listResources(op.id), getStatsOverview(op.id)])
   const stat = (slug: string) => overview.resources.find((o) => o.slug === slug)
   const totalViews = overview.resources.reduce((a, o) => a + o.pageViews, 0)
   const totalGate = overview.resources.reduce((a, o) => a + o.gateImpressions, 0)

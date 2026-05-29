@@ -1,10 +1,18 @@
 import { z, type ZodRawShape } from "zod"
 import { moduleInputSchema, pageInputSchema } from "./module-input"
 import * as service from "./service"
+import type { OpRef } from "./service"
 import * as stats from "@/lib/stats/queries"
 
+export type ToolExtra = { authInfo?: { extra?: Record<string, unknown> } }
+
 export type ToolServer = {
-  tool: (name: string, description: string, shape: ZodRawShape, cb: (args: never) => unknown) => void
+  tool: (
+    name: string,
+    description: string,
+    shape: ZodRawShape,
+    cb: (args: never, extra: never) => unknown,
+  ) => void
 }
 
 function json(data: unknown) {
@@ -15,47 +23,60 @@ function errorResult(message: string) {
   return { content: [{ type: "text" as const, text: `Erreur: ${message}` }], isError: true }
 }
 
+// L'opérateur est résolu côté route (withMcpAuth) et déposé dans authInfo.extra.
+// Chaque outil n'opère donc que sur les ressources de cet opérateur (ADR-0002).
+function operatorFrom(extra: ToolExtra): OpRef {
+  const e = extra.authInfo?.extra
+  const id = e?.operatorId
+  const handle = e?.operatorHandle
+  if (typeof id !== "string" || typeof handle !== "string") {
+    throw new Error("Opérateur manquant dans le token")
+  }
+  return { id, handle }
+}
+
 export function registerTools(server: ToolServer) {
   const add = <S extends z.ZodObject<ZodRawShape>>(
     name: string,
     description: string,
     schema: S,
-    run: (args: z.infer<S>) => Promise<unknown>,
+    run: (op: OpRef, args: z.infer<S>) => Promise<unknown>,
   ) => {
-    const handler = async (args: z.infer<S>) => {
+    const handler = async (args: z.infer<S>, extra: ToolExtra) => {
       try {
-        return json(await run(args))
+        const op = operatorFrom(extra)
+        return json(await run(op, args))
       } catch (e) {
         return errorResult((e as Error).message)
       }
     }
-    server.tool(name, description, schema.shape, handler as (args: never) => unknown)
+    server.tool(name, description, schema.shape, handler as (args: never, extra: never) => unknown)
   }
 
   add(
     "list_resources",
-    "Liste toutes les ressources (slug, titre, visibilité, publication, mise en avant).",
+    "Liste tes ressources (slug, titre, visibilité, publication, mise en avant).",
     z.object({}),
-    () => service.listResources(),
+    (op) => service.listResources(op.id),
   )
 
   add(
     "get_resource",
-    "Renvoie l'arborescence complète d'une ressource (pages par chemin, modules par id, et sections avec ancre + href prêt à coller pour lier des sous-sections). Le champ `url` est le lien public ; pour le diffuser avec suivi de provenance, génère un lien tagué via `tracking_link`.",
+    "Renvoie l'arborescence complète d'une ressource (pages par chemin, modules par id, et sections avec ancre + href prêt à coller pour lier des sous-sections). Le champ `url` est le lien public (/o/<handle>/r/<slug>) ; pour le diffuser avec suivi de provenance, génère un lien tagué via `tracking_link`.",
     z.object({ slug: z.string() }),
-    ({ slug }) => service.getResource(slug),
+    (op, { slug }) => service.getResource(op, slug),
   )
 
   add(
     "get_outline",
-    "Carte des liens d'une ressource : toutes les pages et leurs sections (titre, ancre, href du type /r/slug/chemin#ancre), SANS le contenu des modules. Utile pour créer des liens vers des sous-sections (ex. sommaire global).",
+    "Carte des liens d'une ressource : toutes les pages et leurs sections (titre, ancre, href du type /o/<handle>/r/<slug>/chemin#ancre), SANS le contenu des modules. Utile pour créer des liens vers des sous-sections (ex. sommaire global).",
     z.object({ slug: z.string() }),
-    ({ slug }) => service.getOutline(slug),
+    (op, { slug }) => service.getOutline(op, slug),
   )
 
   add(
     "create_resource",
-    "Crée une ressource. Petite/moyenne ressource : passe toute l'arborescence ici (rootModules, pages[] imbriquées avec leurs modules et children). GROSSE ressource (beaucoup de pages/modules) : crée seulement la coquille (titre + page racine légère), puis remplis page par page avec add_page(modules) / add_modules — un appel par page, pour éviter un payload géant. Renvoie { id, slug, url }. Pour diffuser ce `url` avec suivi de provenance (LinkedIn, newsletter…), génère un lien tagué via `tracking_link`.",
+    "Crée une ressource (rattachée à toi). Petite/moyenne ressource : passe toute l'arborescence ici (rootModules, pages[] imbriquées avec leurs modules et children). GROSSE ressource (beaucoup de pages/modules) : crée seulement la coquille (titre + page racine légère), puis remplis page par page avec add_page(modules) / add_modules — un appel par page, pour éviter un payload géant. Renvoie { id, slug, url }. Pour diffuser ce `url` avec suivi de provenance (LinkedIn, newsletter…), génère un lien tagué via `tracking_link`.",
     z.object({
       slug: z.string().optional(),
       title: z.string(),
@@ -75,7 +96,7 @@ export function registerTools(server: ToolServer) {
           "Arborescence complète des sous-pages. Chaque page = { slug, title, modules?, children? } ; children est récursif. Fournis tout l'arbre d'un coup.",
         ),
     }),
-    (args) => service.createResource(args),
+    (op, args) => service.createResource(op, args),
   )
 
   add(
@@ -92,11 +113,11 @@ export function registerTools(server: ToolServer) {
         published: z.boolean().optional(),
       }),
     }),
-    ({ slug, patch }) => service.updateResource(slug, patch),
+    (op, { slug, patch }) => service.updateResource(op, slug, patch),
   )
 
-  add("delete_resource", "Supprime une ressource et tout son contenu.", z.object({ slug: z.string() }), ({ slug }) =>
-    service.deleteResource(slug),
+  add("delete_resource", "Supprime une ressource et tout son contenu.", z.object({ slug: z.string() }), (op, { slug }) =>
+    service.deleteResource(op.id, slug),
   )
 
   add(
@@ -113,7 +134,7 @@ export function registerTools(server: ToolServer) {
         .optional()
         .describe("Modules de la page, dans l'ordre — créés avec la page."),
     }),
-    (args) => service.addPage(args),
+    (op, args) => service.addPage(op.id, args),
   )
 
   add(
@@ -124,7 +145,7 @@ export function registerTools(server: ToolServer) {
       path: z.array(z.string()),
       modules: z.array(moduleInputSchema),
     }),
-    (args) => service.addModules(args),
+    (op, args) => service.addModules(op.id, args),
   )
 
   add(
@@ -135,14 +156,14 @@ export function registerTools(server: ToolServer) {
       path: z.array(z.string()),
       patch: z.object({ title: z.string().optional(), slug: z.string().optional() }),
     }),
-    (args) => service.updatePage(args),
+    (op, args) => service.updatePage(op.id, args),
   )
 
   add(
     "delete_page",
     "Supprime une page et son contenu (pas la racine).",
     z.object({ resourceSlug: z.string(), path: z.array(z.string()) }),
-    (args) => service.deletePage(args),
+    (op, args) => service.deletePage(op.id, args),
   )
 
   add(
@@ -154,7 +175,7 @@ export function registerTools(server: ToolServer) {
       newParentPath: z.array(z.string()).optional(),
       position: z.number().int().optional(),
     }),
-    (args) => service.movePage(args),
+    (op, args) => service.movePage(op.id, args),
   )
 
   add(
@@ -163,7 +184,7 @@ export function registerTools(server: ToolServer) {
     z.object({
       orderedPageIds: z.array(z.string()).describe("Ids des pages d'un même parent, dans l'ordre voulu."),
     }),
-    (args) => service.reorderPages(args.orderedPageIds),
+    (op, args) => service.reorderPages(op.id, args.orderedPageIds),
   )
 
   add(
@@ -175,44 +196,46 @@ export function registerTools(server: ToolServer) {
       module: moduleInputSchema,
       position: z.number().int().optional(),
     }),
-    (args) => service.addModule(args),
+    (op, args) => service.addModule(op.id, args),
   )
 
   add(
     "update_module",
     "Met à jour le contenu et/ou la position d'un module (le contenu est validé selon le type existant).",
     z.object({ id: z.string(), content: z.unknown().optional(), position: z.number().int().optional() }),
-    (args) => service.updateModule(args),
+    (op, args) => service.updateModule(op.id, args),
   )
 
-  add("delete_module", "Supprime un module.", z.object({ id: z.string() }), (args) => service.deleteModule(args))
+  add("delete_module", "Supprime un module.", z.object({ id: z.string() }), (op, args) =>
+    service.deleteModule(op.id, args),
+  )
 
   add(
     "reorder_modules",
     "Réordonne les modules : position = index dans la liste fournie.",
     z.object({ orderedModuleIds: z.array(z.string()) }),
-    (args) => service.reorderModules(args),
+    (op, args) => service.reorderModules(op.id, args),
   )
 
   add(
     "grant_access",
     "Autorise un email à accéder à une ressource privée.",
     z.object({ resourceSlug: z.string(), email: z.string().email() }),
-    (args) => service.grantAccess(args),
+    (op, args) => service.grantAccess(op.id, args),
   )
 
   add(
     "revoke_access",
     "Retire l'accès d'un email à une ressource privée.",
     z.object({ resourceSlug: z.string(), email: z.string().email() }),
-    (args) => service.revokeAccess(args),
+    (op, args) => service.revokeAccess(op.id, args),
   )
 
   add(
     "get_stats",
     "Statistiques de vue et de provenance. Avec slug : détail d'une ressource (vues, visiteurs uniques, impressions gate, par page, utilisateurs débloqués, ventilation par source UTM). Sans slug : vue d'ensemble (par ressource + top sources d'acquisition).",
     z.object({ slug: z.string().optional(), sinceDays: z.number().int().positive().optional() }),
-    (args) => (args.slug ? stats.getResourceStats(args.slug, args.sinceDays) : stats.getStatsOverview()),
+    (op, args) => (args.slug ? stats.getResourceStats(op.id, args.slug, args.sinceDays) : stats.getStatsOverview(op.id)),
   )
 
   add(
@@ -228,6 +251,6 @@ export function registerTools(server: ToolServer) {
         .optional()
         .describe("Chemin de sous-page (tableau de slugs depuis la racine) ; défaut = page racine."),
     }),
-    (args) => service.trackingLink(args),
+    (op, args) => service.trackingLink(op, args),
   )
 }

@@ -3,12 +3,12 @@ import { headers, cookies } from "next/headers"
 import { notFound } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { getSession } from "@/lib/auth/session"
-import { userIsAdmin } from "@/lib/auth/admin"
+import { operatorByHandle } from "@/lib/auth/operator"
 import { buildPageTree, type TreePage } from "@/lib/content/tree"
 import { resolvePageByPath } from "@/lib/content/resolve"
 import { extractToc, type TocItem } from "@/lib/content/toc"
 import { canAccess } from "@/lib/access"
-import { getResourceBySlug, getGrantedEmails, getPageModules, addSubscription } from "@/lib/content/queries"
+import { getResourceBySlug, getGrantedEmails, getPageModules, addSubscription, upsertAudienceMember } from "@/lib/content/queries"
 import { isPrefetchRequest } from "@/lib/stats/prefetch"
 import { recordPageView, recordGateView } from "@/lib/stats/record"
 import { parseRefCookie, parseRefFromRecord, REF_COOKIE } from "@/lib/tracking/ref"
@@ -32,18 +32,23 @@ function flattenTree(root: TreePage, basePath: string): NavItem[] {
 }
 
 export async function renderResourcePage(
+  handle: string,
   slug: string,
   path: string[],
   opts?: { preview?: boolean; searchParams?: Record<string, string | string[] | undefined> },
 ) {
+  const operator = await operatorByHandle(handle)
+  if (!operator) notFound()
+
   const h = await headers()
   // URL d'abord (présente au 1er clic, avant que le cookie ne soit lisible), cookie en repli (first-touch persisté).
   const ref = parseRefFromRecord(opts?.searchParams) ?? parseRefCookie((await cookies()).get(REF_COOKIE)?.value)
   const session = await getSession()
-  const isAdmin = userIsAdmin(session?.user.id)
-  const preview = !!opts?.preview && isAdmin
+  // L'aperçu (brouillons inclus) est réservé au propriétaire de l'espace.
+  const isOwner = !!session && session.user.id === operator.id
+  const preview = !!opts?.preview && isOwner
 
-  const data = await getResourceBySlug(slug, preview)
+  const data = await getResourceBySlug(operator.id, slug, preview)
   if (!data) notFound()
 
   if (!preview) {
@@ -59,7 +64,11 @@ export async function renderResourcePage(
         />
       )
     }
-    if (session) await addSubscription(session.user.id, data.resource.id, ref)
+    if (session) {
+      await addSubscription(session.user.id, data.resource.id, ref)
+      // Rattache le lecteur à l'audience de l'opérateur (sauf l'opérateur lui-même).
+      if (!isOwner) await upsertAudienceMember(operator.id, session.user.id, ref)
+    }
   }
 
   const root = buildPageTree(data.flatPages)
@@ -78,7 +87,7 @@ export async function renderResourcePage(
     .filter((m) => m.type === "markdown" || m.type === "callout")
     .flatMap((m) => extractToc((m.content as { md: string }).md))
 
-  const basePath = `/r/${slug}`
+  const basePath = `/o/${handle}/r/${slug}`
   const flat = flattenTree(root, basePath)
   const idx = flat.findIndex((p) => p.id === page.id)
   const prev = idx > 0 ? flat[idx - 1] : null

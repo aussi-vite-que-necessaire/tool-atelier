@@ -77,7 +77,7 @@ export default async function ComptePage() {
             <ul className="divide-y-2 divide-ink border-2 border-ink">
               {items.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                  <Link href={`/r/${r.slug}`} className="font-bold hover:text-accent">
+                  <Link href={`/o/${r.operatorHandle}/r/${r.slug}`} className="font-bold hover:text-accent">
                     {r.title}
                   </Link>
                   <form action={unsubscribeAction}>

@@ -1,20 +1,27 @@
 import type { Metadata } from "next"
 import { getResourceMeta } from "@/lib/content/queries"
 import { buildResourceMetadata } from "@/lib/content/metadata"
+import { operatorByHandle } from "@/lib/auth/operator"
 import { resourceUrl } from "@/lib/resources/service"
 import { renderResourcePage } from "./render"
 
 export const dynamic = "force-dynamic"
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params
-  const meta = await getResourceMeta(slug)
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ handle: string; slug: string }>
+}): Promise<Metadata> {
+  const { handle, slug } = await params
+  const op = await operatorByHandle(handle)
+  if (!op) return { title: "Ressources" }
+  const meta = await getResourceMeta(op.id, slug)
   if (!meta || !meta.published) return { title: "Ressources" }
   return buildResourceMetadata({
     title: meta.title,
     description: meta.description,
     coverImageUrl: meta.coverImageUrl,
-    url: resourceUrl(slug),
+    url: resourceUrl(handle, slug),
   })
 }
 
@@ -22,10 +29,10 @@ export default async function ResourceRootPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ handle: string; slug: string }>
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const { slug } = await params
+  const { handle, slug } = await params
   const sp = await searchParams
-  return renderResourcePage(slug, [], { preview: sp.preview === "1", searchParams: sp })
+  return renderResourcePage(handle, slug, [], { preview: sp.preview === "1", searchParams: sp })
 }
