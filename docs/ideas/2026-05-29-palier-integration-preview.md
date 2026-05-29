@@ -65,6 +65,10 @@ côté intégration, et la passerelle en `mcp.preview.contentos.ch`).
 
 ## Décision actuelle (29/05/2026)
 
+**Design validé** → `docs/superpowers/specs/2026-05-29-palier-integration-preview-design.md`
+(modèle : `main` = intégration, prod = promotion d'artefact ; découpé en 4 phases). Reste en
+backlog ci-dessous le contexte d'origine.
+
 Backlog. La passerelle MCP (ADR-0003) se développe d'abord en pointant ses backends vers les
 endpoints internes de **prod** depuis sa branche ; le palier d'intégration est le bon cadre pour
 le test réaliste, à construire quand on l'attaque pour de vrai. À fusionner avec l'idée e2e
