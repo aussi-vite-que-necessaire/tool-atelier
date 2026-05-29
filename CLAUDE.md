@@ -1,8 +1,8 @@
 # Contentos — suite d'outils pour agents IA
 
-Projet exploratoire. **Suite d'outils pensés pour être pilotés par des agents IA**, focalisée sur la production de contenu généré par IA en gardant un maximum de contrôle côté humain. Monorepo : **un dossier dans `projects/` = un outil de la suite** (ex. `projects/hello/`, `projects/counter/`), avec son propre `CLAUDE.md` chargé à la volée quand on l'ouvre. Le reste de la racine (`bin/`, `docs/`, `scripts/`, `secrets/`, `starters/`, `test/`, `tools/`) est la plomberie de l'atelier.
+Projet exploratoire. **Suite d'outils pensés pour être pilotés par des agents IA**, focalisée sur la production de contenu généré par IA en gardant un maximum de contrôle côté humain. **Toute la suite est une seule application Next.js : `projects/app/`** (cast, media, ressources, skills, endpoint MCP, espace public docs), avec une navbar suite pour passer d'un domaine à l'autre. Un build, une base Postgres, un schéma Drizzle, une session d'authentification, une preview par branche. `projects/app/CLAUDE.md` détaille l'app. Le reste de la racine (`bin/`, `docs/`, `scripts/`, `secrets/`, `test/`, `tools/`) est la plomberie de l'atelier.
 
-Les outils vivent sous `*.contentos.ch` en prod. Cas spécial : **`projects/www/`** sert `contentos.ch` + `www.contentos.ch`.
+`projects/app` sert l'apex **`contentos.ch`** (+ `www.contentos.ch`) en prod — déclaré par `"apex": true` dans son `lab.json`. Un nouveau domaine de la suite = une **section/module** de l'app (route group + `src/lib/<domaine>/` + tables + outils MCP), pas un nouveau projet.
 
 ## Comment on travaille
 
@@ -19,7 +19,7 @@ Les outils vivent sous `*.contentos.ch` en prod. Cas spécial : **`projects/www/
   - `lab-ssh` — exécuter une commande de diagnostic sur le serveur `lab` (`bin/lab-ssh`).
 - **Qualité front — l'œil de l'agent (RÉFLEXE).** Par défaut tu codes le front **à l'aveugle** : `npm run dev` rend la page, mais rien ne la regarde, et la seule preview visuelle arrive après push (boucle longue). **Toute modif qui change un rendu visuel se termine par un coup d'œil** : tu lances le serveur de dev, tu screenshotes avec `/apercu` (Chromium headless dans le conteneur, mobile **et** desktop), tu **Read** le PNG pour le *voir*, tu critiques (hiérarchie, espacement, responsive, états, cohérence), tu corriges, tu re-screenshotes — *puis* tu pousses. C'est un automatisme du trajet, pas une étape qui rend la main (cf. la surcouche « un seul arrêt humain »). Le standard de jugement est **local au projet** : si le projet utilise `@contentos/ui`/son thème, aligne-toi dessus et réutilise l'existant ; sinon respecte son identité propre (`docs`, `www`). On *match the codebase*, on n'impose pas un look de suite.
 
-La liste des projets se déduit en scannant `projects/*/lab.json` — chaque projet déclare sa description dans son `lab.json`.
+La suite est un seul déployable, `projects/app` (son `lab.json` déclare ses besoins : db, redis, browser, email, worker, `apex`).
 
 ## Workflow & isolation — RÈGLE ABSOLUE
 
@@ -27,9 +27,9 @@ La liste des projets se déduit en scannant `projects/*/lab.json` — chaque pro
 
 - **Une session = un conteneur isolé = une branche.** Chaque session tourne dans son propre conteneur (un clone frais et jetable du dépôt, sur `claude.ai/code`) sur sa propre branche, fournie par le harness. L'isolation est **structurelle** : un agent est seul dans son conteneur, il peut éditer n'importe quel projet et basculer de branche sans gêner personne. Pas de worktree git, pas de checkout partagé.
 - **Jamais de commit sur `main`.** On code sur sa branche de session, on ouvre une PR. C'est le seul garde-fou du hook `branch-guard` : il bloque tout `commit`/`push` qui mettrait `main` à jour. Le reste est permis (le conteneur est privé).
-- **Push de branche → preview par-branche** : `https://<projet>-<branche>.preview.contentos.ch` (un seul outil isolé, détruite à la suppression de la branche).
-- **Merge de PR → `main` = palier d'intégration** : toute la suite assemblée sous les noms propres `https://<projet>.preview.contentos.ch` (+ `mcp.preview`, `auth.preview`…). C'est là qu'on teste l'**assemblage** : SSO cross-subdomain, passerelle MCP, e2e. Persistant (pas de teardown).
-- **Promotion explicite → prod** : `https://<projet>.contentos.ch` (cas `www` → `contentos.ch` + `www.contentos.ch`), via le workflow `promote` (`workflow_dispatch`) qui **re-tague les images `:integration` validées en `:prod` sans rebuild** (on promeut l'artefact exact testé). Prod n'est plus un envoi auto au merge.
+- **Push de branche → preview par-branche** : `https://app-<branche>.preview.contentos.ch` (la suite entière, isolée, base dédiée seedée ; détruite à la suppression de la branche).
+- **Merge de PR → `main` = palier d'intégration** : `https://app.preview.contentos.ch`, base `app_integration` persistante, seed plus riche + e2e. C'est le palier stable où l'on valide avant prod.
+- **Promotion explicite → prod** : `https://contentos.ch` (+ `www.contentos.ch`), via le workflow `promote` (`workflow_dispatch`) qui **re-tague les images `:integration` validées en `:prod` sans rebuild** (on promeut l'artefact exact testé). Prod n'est jamais un envoi auto au merge.
 - **Merger** : `gh pr merge <#> --squash` (→ intégration). La branche distante se supprime seule (`delete_branch_on_merge`) ; le conteneur de la session est jetable, rien à nettoyer côté local.
 - **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opérateur de plein droit : SSH lecture/diagnostic (`lab-ssh`), secrets (`bin/lab-secret-add`), logs. La clé SSH du lab est tirée du store (`sysadmin/LAB_SSH_KEY_B64`), déchiffrée en mémoire, utilisée, effacée. `lab-ssh` transite par un tunnel WebSocket sur 443 (`ops.contentos.ch`, secret `sysadmin/WSTUNNEL_PATH`) là où le port 22 sortant est fermé — sessions cloud —, sinon en SSH direct ; local et cloud ont les mêmes privilèges.
 
@@ -37,7 +37,7 @@ La liste des projets se déduit en scannant `projects/*/lab.json` — chaque pro
 
 `git push` → GitHub Action build l'image du/des projet(s) modifié(s) → **GHCR** → SSH vers `lab` → `scripts/deploy.sh`. Le serveur ne build jamais : il *pull* l'image déjà construite. Suivre avec `gh run watch`. Logs d'un projet : `bin/lab-ssh "docker logs <projet>-<env>-app-1"`.
 
-**Trois paliers.** Push de branche → **preview par-branche** (`env` = slug de branche, un outil). Merge sur `main` → **intégration** (`env=integration`, toute la suite sur `*.preview.contentos.ch`). Promotion (workflow `promote`, `workflow_dispatch`) → **prod** (`env=prod`) : re-tag GHCR `:integration`→`:prod` (`docker buildx imagetools create`, sans rebuild) puis `deploy.sh <projet> prod`. Les URLs (`APP_URL`/`AUTH_URL`) étant injectées au runtime via `.env`, la même image se reconfigure d'un palier à l'autre — d'où la promotion sans rebuild.
+**Trois paliers.** Push de branche → **preview par-branche** (`env` = slug de branche, `app-<branche>.preview.contentos.ch`). Merge sur `main` → **intégration** (`env=integration`, `app.preview.contentos.ch`, base persistante + e2e). Promotion (workflow `promote`, `workflow_dispatch`) → **prod** (`env=prod`, `contentos.ch`) : re-tag GHCR `:integration`→`:prod` (`docker buildx imagetools create`, sans rebuild) puis `deploy.sh app prod`. `APP_URL` étant injecté au runtime via `.env`, la même image se reconfigure d'un palier à l'autre — d'où la promotion sans rebuild.
 
 **DNS.** Deux wildcards Infomaniak sur `contentos.ch` : `*.contentos.ch` (prod) et `*.preview.contentos.ch` (previews) pointent sur le lab — aucun enregistrement DNS par projet. La zone est pilotable via l'API Infomaniak (token `sysadmin/INFOMANIAK_API_TOKEN`).
 
@@ -51,11 +51,11 @@ Au déploiement, `deploy.sh` :
 - `redis: true` → `REDIS_URL` + `REDIS_PREFIX` ;
 - `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` (Resend, clé de plateforme) ;
 - `browser: true` → `BROWSER_URL` (Chromium partagé browserless sur le réseau `lab`) ;
-- injecte toujours **`APP_URL`** = origine publique du déploiement (`https://<projet>-<branche>.preview.contentos.ch` en preview par-branche, `https://<projet>.preview.contentos.ch` en intégration, `https://<projet>.contentos.ch` en prod, cas `www` → `https://contentos.ch`).
+- injecte toujours **`APP_URL`** = origine publique du déploiement (`https://app-<branche>.preview.contentos.ch` en preview par-branche, `https://app.preview.contentos.ch` en intégration, `https://contentos.ch` en prod via `apex`).
 
-Preview par-branche = base vide + seed, droppée au teardown. Intégration = base `<projet>_integration` + seed, **persistante** (pas de teardown). Exemples : `projects/hello/` (rien), `projects/counter/` (db).
+Preview par-branche = base vide + seed, droppée au teardown. Intégration = base `app_integration` + seed, **persistante** (pas de teardown).
 
-**Dev (agents & local).** La même déclaration `lab.json` alimente l'environnement de dev — pensé d'abord pour les **agents en session cloud** (conteneur isolé, sans daemon Docker). `scripts/dev-db.sh up <projet>` monte Postgres (et Redis si déclaré) en **natif** (serveur installé via apt si absent, cluster Debian démarré ; pas de Docker), crée le rôle applicatif `app` (convention de l'atelier, identique à la CI) puis `<projet>_dev` **et** `<projet>_test`, joue `migrate`+`seed` sur la base dev et `db:test:prepare` sur la base test, et écrit le `.env` du projet (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL`, `BETTER_AUTH_SECRET` de dev). Résultat : `npm run dev` **et** `npm test` passent du premier coup (vérifié de bout en bout, ardoise vierge : `cast` 169 tests, `media` 72, `ressources` 81 — tous verts ; `auth`/`counter` provisionnés, sans suite testable). Calque le modèle de la prod. Idempotent (à relancer si le conteneur a été recyclé). `reset <projet>` repart de zéro, `down` arrête les services (données conservées), `nuke <projet>` drop les bases du projet. *(e2e Playwright = hors de ce périmètre : ils tournent en CI post-deploy contre la preview — cf. `docs/ideas/2026-05-28-e2e-mutualises.md`.)*
+**Dev (agents & local).** La même déclaration `lab.json` alimente l'environnement de dev — pensé d'abord pour les **agents en session cloud** (conteneur isolé, sans daemon Docker). `scripts/dev-db.sh up app` monte Postgres (et Redis) en **natif** (serveur installé via apt si absent, cluster Debian démarré ; pas de Docker), crée le rôle applicatif `app` (convention de l'atelier, identique à la CI) puis `app_dev` **et** `app_test`, joue `migrate`+`seed` sur la base dev et `db:test:prepare` sur la base test, et écrit le `.env` (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL`, `BETTER_AUTH_SECRET` de dev). Résultat : `npm run dev` **et** `npm test` partent du premier coup. Calque le modèle de la prod. Idempotent. `reset app` repart de zéro, `down` arrête les services (données conservées), `nuke app` drop les bases. *(e2e Playwright = hors de ce périmètre : ils tournent en CI post-deploy contre la preview/intégration.)*
 
 ## Secrets
 
