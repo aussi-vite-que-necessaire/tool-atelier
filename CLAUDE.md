@@ -24,7 +24,7 @@ La liste des projets se déduit en scannant `projects/*/lab.json` — chaque pro
 - **Push de branche → preview** : `https://<projet>-<branche>.preview.contentos.ch` (détruite à la suppression de la branche).
 - **Merge de PR → prod** : `https://<projet>.contentos.ch` (cas `www` → `contentos.ch` + `www.contentos.ch`).
 - **Merger** : `gh pr merge <#> --squash`. La branche distante se supprime seule (`delete_branch_on_merge`) ; le conteneur de la session est jetable, rien à nettoyer côté local.
-- **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opérateur de plein droit : SSH lecture/diagnostic (`lab-ssh`), secrets (`bin/lab-secret-add`), logs. La clé SSH du lab est tirée du store (`sysadmin/LAB_SSH_KEY_B64`), déchiffrée en mémoire, utilisée, effacée. Local et cloud ont les mêmes privilèges.
+- **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opérateur de plein droit : SSH lecture/diagnostic (`lab-ssh`), secrets (`bin/lab-secret-add`), logs. La clé SSH du lab est tirée du store (`sysadmin/LAB_SSH_KEY_B64`), déchiffrée en mémoire, utilisée, effacée. `lab-ssh` transite par un tunnel WebSocket sur 443 (`ops.contentos.ch`, secret `sysadmin/WSTUNNEL_PATH`) là où le port 22 sortant est fermé — sessions cloud —, sinon en SSH direct ; local et cloud ont les mêmes privilèges.
 
 ## Déployer (build sur la CI uniquement)
 
@@ -45,6 +45,8 @@ Au déploiement, `deploy.sh` :
 - injecte toujours **`APP_URL`** = origine publique du déploiement (`https://<projet>-<branche>.preview.contentos.ch` en preview, `https://<projet>.contentos.ch` en prod, cas `www` → `https://contentos.ch`).
 
 Preview = base vide + seed, droppée au teardown. Exemples : `projects/hello/` (rien), `projects/counter/` (db).
+
+**Dev (agents & local).** La même déclaration `lab.json` alimente l'environnement de dev — pensé d'abord pour les **agents en session cloud** (conteneur isolé, sans daemon Docker). `scripts/dev-db.sh up <projet>` monte Postgres (et Redis si déclaré) en **natif** (serveur installé via apt si absent, cluster Debian démarré ; pas de Docker), crée le rôle applicatif `app` (convention de l'atelier, identique à la CI) puis `<projet>_dev` **et** `<projet>_test`, joue `migrate`+`seed` sur la base dev et `db:test:prepare` sur la base test, et écrit le `.env` du projet (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL`, `BETTER_AUTH_SECRET` de dev). Résultat : `npm run dev` **et** `npm test` passent du premier coup (vérifié de bout en bout, ardoise vierge : `cast` 169 tests, `media` 72, `ressources` 81 — tous verts ; `auth`/`counter` provisionnés, sans suite testable). Calque le modèle de la prod. Idempotent (à relancer si le conteneur a été recyclé). `reset <projet>` repart de zéro, `down` arrête les services (données conservées), `nuke <projet>` drop les bases du projet. *(e2e Playwright = hors de ce périmètre : ils tournent en CI post-deploy contre la preview — cf. `docs/ideas/2026-05-28-e2e-mutualises.md`.)*
 
 ## Secrets
 
