@@ -190,6 +190,13 @@
       "when": 1780033350923,
       "tag": "0026_drop_ideas",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1780086870453,
+      "tag": "0027_drop_post_status",
+      "breakpoints": true
     }
   ]
 }

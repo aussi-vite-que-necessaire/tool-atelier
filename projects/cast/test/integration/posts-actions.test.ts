@@ -4,7 +4,7 @@ import { createPost, getPost } from '@/lib/db/repositories/posts';
 import { createTestUser } from './helpers/seed';
 
 describe('createPostCore', () => {
-  it('crée un post draft avec titre et contenu vide', async () => {
+  it('crée un post avec titre et contenu vide', async () => {
     const userId = await createTestUser('pc-create');
     const res = await createPostCore(userId, { title: 'Mon titre' });
     expect(res.status).toBe('success');
@@ -12,7 +12,6 @@ describe('createPostCore', () => {
     const post = await getPost(userId, res.postId);
     expect(post?.title).toBe('Mon titre');
     expect(post?.content).toBe('');
-    expect(post?.status).toBe('draft');
   });
 
   it('refuse un titre vide', async () => {
@@ -37,14 +36,6 @@ describe('updatePostCore', () => {
     const r = await updatePostCore(userId, { id: post.id, title: 'Nouveau' });
     expect(r.status).toBe('success');
     expect((await getPost(userId, post.id))?.title).toBe('Nouveau');
-  });
-
-  it('toggle status draft → validated', async () => {
-    const userId = await createTestUser('pu-status');
-    const post = await createPost(userId, { title: 'T', content: 'c' });
-    expect(post.status).toBe('draft');
-    await updatePostCore(userId, { id: post.id, status: 'validated' });
-    expect((await getPost(userId, post.id))?.status).toBe('validated');
   });
 
   it('refuse sans aucun champ', async () => {

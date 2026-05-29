@@ -11,14 +11,12 @@ export type CreatePostInput = {
   title: string;
   content: string;
   mediaId?: string | null;
-  status?: 'draft' | 'validated';
   generationJobId?: string | null;
 };
 
 export type UpdatePostPatch = Partial<{
   title: string;
   content: string;
-  status: 'draft' | 'validated';
   mediaId: string | null;
 }>;
 
@@ -32,7 +30,6 @@ export async function createPost(userId: string, data: CreatePostInput): Promise
       title: data.title,
       content: data.content,
       mediaId: data.mediaId ?? null,
-      status: data.status ?? 'draft',
       generationJobId: data.generationJobId ?? null,
     })
     .returning();

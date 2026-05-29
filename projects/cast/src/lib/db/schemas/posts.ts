@@ -1,6 +1,4 @@
-import { index, integer, pgEnum, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
-
-export const postStatus = pgEnum('post_status', ['draft', 'validated']);
+import { index, integer, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const posts = pgTable(
   'posts',
@@ -16,7 +14,6 @@ export const posts = pgTable(
     mediaWidth: integer('media_width'),
     mediaHeight: integer('media_height'),
     content: text('content').notNull(),
-    status: postStatus('status').notNull().default('draft'),
     generationJobId: text('generation_job_id').unique(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),

@@ -1,9 +1,6 @@
 import { Film, Image as ImageIcon, Layers } from 'lucide-react';
 import Link from 'next/link';
-import { Badge } from '@/components/ui/badge';
 import type { PostWithThumbnail } from '@/lib/db/repositories/posts';
-
-const STATUS_LABEL = { draft: 'brouillon', validated: 'validé' } as const;
 
 type Props = {
   post: PostWithThumbnail;
@@ -44,12 +41,6 @@ export function PostCard({ post }: Props) {
             PDF
           </span>
         ) : null}
-        <Badge
-          variant={post.status === 'validated' ? 'default' : 'secondary'}
-          className="absolute right-2 top-2 shadow-sm"
-        >
-          {STATUS_LABEL[post.status]}
-        </Badge>
       </div>
 
       <div className="space-y-1.5 p-4">
