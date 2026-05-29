@@ -1,5 +1,5 @@
 {
-  "name": "lab-ressources",
+  "name": "lab-docs",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,12 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "db:generate": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs generate",
-    "db:push": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs push",
-    "db:studio": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs studio",
-    "db:seed": "node --env-file=.env.local --import tsx db/seed.ts",
-    "db:test:prepare": "node scripts/db-test-prepare.mjs"
+    "test": "vitest run"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",
@@ -35,7 +30,6 @@
     "remark-gfm": "^4.0.0",
     "shiki": "^1.24.0",
     "tailwind-merge": "^3.6.0",
-    "tsx": "^4.19.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -47,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5",
     "vitest": "^4.1.7"
   }

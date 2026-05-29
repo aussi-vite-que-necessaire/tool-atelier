@@ -106,9 +106,11 @@ cmd_up() {
   local proj="${1:?usage: dev-db.sh up <projet>}"
   local dir; dir="$(proj_dir "$proj")"
   local lab="$dir/lab.json"
-  local db=false redis=false migrate="" seed=""
+  local db=false redis=false migrate="" seed="" db_shared_from=""
   if [ -f "$lab" ]; then
-    db="$(jq -r '.db // false' "$lab")"
+    # .db : true (base propre) | {"shared":"X"} (réutilise X_dev) | false.
+    db="$(jq -r 'if (.db|type)=="object" then "shared" elif (.db // false) then "true" else "false" end' "$lab")"
+    db_shared_from="$(jq -r '(.db | objects | .shared) // empty' "$lab")"
     redis="$(jq -r '.redis // false' "$lab")"
     migrate="$(jq -r '.migrate // empty' "$lab")"
     seed="$(jq -r '.seed // empty' "$lab")"
@@ -120,6 +122,12 @@ cmd_up() {
     create_db "${proj}_dev"
     create_db "${proj}_test"   # base de test prête pour `npm test` (cf. db:test:prepare des projets)
     dburl="$(dburl_for "${proj}_dev")"
+  elif [ "$db" = "shared" ]; then
+    # Backend partagé : on pointe sur la base dev du projet propriétaire, sans rien créer ni migrer.
+    ensure_pg
+    db_exists "${db_shared_from}_dev" \
+      || echo "⚠ base partagée ${db_shared_from}_dev absente — lance d'abord: scripts/dev-db.sh up ${db_shared_from}"
+    dburl="$(dburl_for "${db_shared_from}_dev")"
   fi
   if [ "$redis" = "true" ]; then
     ensure_redis
@@ -148,6 +156,12 @@ cmd_up() {
         export DATABASE_URL="$(dburl_for "${proj}_test")" APP_URL="http://localhost:3000"
         [ -n "$redisurl" ] && export REDIS_URL="$redisurl"
         npm run db:test:prepare --if-present )
+    fi
+  elif [ "$db" = "shared" ]; then
+    # Pas de migrate/seed (base gérée par le propriétaire) ; on installe juste les deps pour `npm run dev`.
+    if [ -f "$dir/package.json" ] && [ ! -d "$dir/node_modules" ]; then
+      echo "→ installation des deps de $proj (node_modules absent)…"
+      ( cd "$dir" && { [ -f package-lock.json ] && npm ci || npm install; } >/dev/null )
     fi
   fi
 

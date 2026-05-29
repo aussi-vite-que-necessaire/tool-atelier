@@ -7,27 +7,22 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 # --- build : compile l'app Next en sortie standalone ---
-# Les secrets/DB sont lus paresseusement au runtime (db/index.ts).
-# L'auth est centralisée sur auth.contentos.ch (fetch côté serveur, pas d'inline client).
+# docs ne possède pas le schéma : pas de migrations, pas de seed. La base est
+# partagée avec `ressources` (lab.json: db.shared) et lue paresseusement au
+# runtime (db/index.ts). Auth centralisée sur auth.contentos.ch.
 FROM node:22-alpine AS build
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 # Placeholders : permettent au build d'aboutir sans vrais secrets ni base.
 ENV DATABASE_URL=postgres://placeholder:placeholder@localhost:5432/placeholder
-ENV APP_URL=https://ressources.contentos.ch
+ENV APP_URL=https://docs.contentos.ch
 # Clé de chiffrement des Server Actions — DOIT être identique build + runtime, sinon
 # « Failed to find Server Action » en self-hosted. Faible sensibilité (réfs d'action).
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=Uh/a226WHYYubDLev4Kg4PMV+YnbcyyHbaW6rSD+o/U=
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
-
-# --- prod-deps : node_modules de production uniquement (pour le one-shot migrate) ---
-FROM node:22-alpine AS proddeps
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
 
 # --- runner : image finale slim ---
 FROM node:22-alpine AS runner
@@ -39,20 +34,11 @@ ENV HOSTNAME=0.0.0.0
 # Même clé qu'au build (cohérence des Server Actions).
 ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=Uh/a226WHYYubDLev4Kg4PMV+YnbcyyHbaW6rSD+o/U=
 
-# Sortie standalone de Next : serveur + node_modules tracés.
+# Sortie standalone de Next : serveur + node_modules tracés (db/index.ts inclus).
+# Pas de one-shot migrate/seed côté docs (base gérée par ressources).
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
-
-# Migrations + seed + deps de prod, pour les conteneurs one-shot `migrate`/`seed`
-# (la même image sert : scripts/migrate.mjs require drizzle-orm + postgres ;
-# le seed `node --import tsx db/seed.ts` a besoin de db/ + lib/ + tsx — tsx est en
-# dependencies pour être présent dans node_modules de prod).
-COPY --from=build --chown=node:node /app/drizzle ./drizzle
-COPY --from=build --chown=node:node /app/scripts ./scripts
-COPY --from=build --chown=node:node /app/db ./db
-COPY --from=build --chown=node:node /app/lib ./lib
-COPY --from=proddeps --chown=node:node /app/node_modules ./node_modules
 
 USER node
 EXPOSE 8080

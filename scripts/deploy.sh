@@ -76,9 +76,11 @@ umask 077
 } > "$APPDIR/.env"
 
 # Besoins déclarés par le projet (lab.json absent => projet sans base ni redis)
-DB=false; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""
+# .db accepte : true (base propre <projet>_<env>) | {"shared":"X"} (réutilise la base de X) | false.
+DB=false; DB_SHARED_FROM=""; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""
 if [ -f "$APPDIR/lab.json" ]; then
-  DB="$(jq -r '.db // false' "$APPDIR/lab.json")"
+  DB="$(jq -r 'if (.db|type)=="object" then "shared" elif (.db // false) then "true" else "false" end' "$APPDIR/lab.json")"
+  DB_SHARED_FROM="$(jq -r '(.db | objects | .shared) // empty' "$APPDIR/lab.json")"
   REDIS="$(jq -r '.redis // false' "$APPDIR/lab.json")"
   EMAIL="$(jq -r '.email // false' "$APPDIR/lab.json")"
   BROWSER="$(jq -r '.browser // false' "$APPDIR/lab.json")"
@@ -86,14 +88,22 @@ if [ -f "$APPDIR/lab.json" ]; then
   SEED="$(jq -r '.seed // empty' "$APPDIR/lab.json")"
 fi
 
-# Postgres central : base <projet>_<env> + DATABASE_URL injecté
-if [ "$DB" = "true" ]; then
+# Postgres central : DATABASE_URL injecté.
+#   db:true            → base propre <projet>_<env> (créée si absente, migrée/seedée par ce projet).
+#   db:{shared:"X"}    → réutilise la base X_<env> d'un autre projet (backend partagé). Ne crée
+#                        RIEN et ne migre/seed pas : le projet propriétaire (X) gère son schéma.
+if [ "$DB" = "true" ] || [ "$DB" = "shared" ]; then
   # shellcheck disable=SC1091
   . /opt/lab/platform/.env   # LAB_POSTGRES_PASSWORD
-  DBNAME="${PROJ}_$(printf '%s' "$ENV" | tr '-' '_')"
-  docker exec lab-platform-postgres-1 psql -U postgres -tAc \
-    "SELECT 1 FROM pg_database WHERE datname='${DBNAME}'" | grep -q 1 \
-    || docker exec lab-platform-postgres-1 createdb -U postgres "${DBNAME}"
+  if [ "$DB" = "shared" ]; then
+    [ -n "$DB_SHARED_FROM" ] || { echo "::error::db.shared vide dans lab.json"; exit 1; }
+    DBNAME="${DB_SHARED_FROM}_$(printf '%s' "$ENV" | tr '-' '_')"
+  else
+    DBNAME="${PROJ}_$(printf '%s' "$ENV" | tr '-' '_')"
+    docker exec lab-platform-postgres-1 psql -U postgres -tAc \
+      "SELECT 1 FROM pg_database WHERE datname='${DBNAME}'" | grep -q 1 \
+      || docker exec lab-platform-postgres-1 createdb -U postgres "${DBNAME}"
+  fi
   printf 'DATABASE_URL=postgres://postgres:%s@postgres:5432/%s\n' "$LAB_POSTGRES_PASSWORD" "$DBNAME" >> "$APPDIR/.env"
 fi
 
