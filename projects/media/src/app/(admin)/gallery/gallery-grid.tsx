@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { MediaRecord } from "@/lib/media/types";
 import { editAction, deleteMediaAction } from "./actions";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ export function GalleryGrid({ items }: { items: MediaRecord[] }) {
       fd.set("id", id);
       await deleteMediaAction(fd);
       router.refresh();
+      toast.success("Média supprimé");
     });
   }
 

@@ -17,10 +17,19 @@ est la vérité, et on **copie** les composants dans chaque projet avec `bin/ui-
 | `src/components/button.tsx` | **atome** — bouton (variantes default/outline/secondary/ghost/destructive/link) |
 | `src/components/typography.tsx` | **atomes** — `Heading` (h1–h4), `Lead`, `Text`, `Muted`, `Code` |
 | `src/components/badge.tsx` | **atome** — badge |
+| `src/components/input.tsx` | **atome** — champ texte |
+| `src/components/textarea.tsx` | **atome** — zone de texte (auto-resize) |
+| `src/components/label.tsx` | **atome** — libellé de champ |
+| `src/components/skeleton.tsx` | **atome** — placeholder de chargement |
 | `src/components/card.tsx` | **molécule** — carte (`Card`, `CardHeader`, …) |
+| `src/components/select.tsx` | **molécule** — menu déroulant (`@base-ui/react`, `name`/`defaultValue` form-ready) |
 | `src/components/dialog.tsx` | **primitives** — modale (`@base-ui/react`) |
 | `src/components/confirm-dialog.tsx` | **molécule** — confirmation oui/non |
+| `src/components/sonner.tsx` | **organisme** — `Toaster` (notifications, thème-aware) |
 | `src/components/sidebar.tsx` | **organisme** — navigation latérale |
+
+> `sonner.tsx` lit le thème via `next-themes` et requiert un `<Toaster />` monté dans le
+> layout + le paquet `sonner`. Déclencher une notification : `import { toast } from "sonner"`.
 
 La vitrine vivante est le projet `projects/styleguide/` → `styleguide.contentos.ch`.
 
