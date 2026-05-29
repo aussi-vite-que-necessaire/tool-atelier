@@ -1,30 +1,33 @@
-# mcp
+# mcp — passerelle MCP centrale
 
-passerelle MCP centrale (mcp.contentos.ch) — fédère les tools de la suite.
-
-Projet généré par `/lab-new` (base Next.js App Router + Tailwind 4, sortie `standalone`).
-Point de départ **déviable** : tout est modifiable. Les capacités cochées au démarrage
-(base de données, Redis, auth, MCP) ont été composées depuis `starters/modules/`.
+Serveur MCP **unique et public** de la suite contentos (`mcp.contentos.ch`). Façade thin,
+**sans base** : valide le Bearer OAuth (auth.contentos.ch), récupère le catalogue des backends
+internes et **relaie** les appels en préfixant les noms (`media_generate_image`…).
 
 ## Repères
 
-- `src/app/` — routes (App Router). `globals.css` porte le bloc `@theme` (tokens de design).
-- `healthz/route.ts` — `GET /healthz` → 200, ne touche aucune ressource.
-- `Dockerfile` / `compose.yml` — build CI uniquement ; le serveur *pull* l'image (jamais de build).
-- `lab.json` — capacités déclarées (db/redis/email/mcp) ; la plateforme injecte les variables
-  (`DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY`, `APP_URL`).
+- `src/app/api/mcp/route.ts` — porte MCP : `createMcpHandler` + `withMcpAuth`. Seule ressource
+  protégée OAuth de la suite (`resource = APP_URL`).
+- `src/lib/mcp/gateway.ts` — handlers bas-niveau `tools/list` (agrégation + namespacing +
+  dégradation si un backend est down) et `tools/call` (dé-préfixe + route).
+- `src/lib/backends.ts` — registre **statique** des backends (`getBackends()`, lecture paresseuse
+  d'env) ; `src/lib/backend-client.ts` parle leur contrat interne.
+- `src/lib/mcp/auth.ts` — `verifyMcpToken` (valide le bearer via auth.contentos.ch ; court-circuit
+  preview). `.well-known/*` — découverte OAuth (délègue à auth.contentos.ch).
 
-## Dev (agents & local)
+## Backends
 
-`scripts/dev-db.sh up mcp` (depuis la racine de l'atelier) monte les bases déclarées
-dans `lab.json` — Postgres/Redis en **natif** (sans Docker, OK en session cloud), crée le rôle
-`app` + `mcp_dev` et `mcp_test`, joue migrate + seed (dev) et
-`db:test:prepare` (test), et écrit `.env` (`DATABASE_URL`, `APP_URL`, `REDIS_URL`,
-`BETTER_AUTH_SECRET`). Ensuite `npm run dev` → http://localhost:3000 et `npm test` passent du
-premier coup. Idempotent (à relancer si le conteneur a été recyclé). Les **e2e** (Playwright)
-ne sont pas couverts ici : ils tournent en CI post-deploy contre la preview.
+Un backend expose `GET /internal/tools` (schémas JSON) et `POST /internal/tools/:name`
+(`{ userId, args }`), protégés par une service-key. La passerelle transmet le `userId` résolu ;
+le backend applique son propre scoping. Variables : `MEDIA_INTERNAL_URL`, `MEDIA_SERVICE_KEY`
+(= `MEDIA_ENGINE_SERVICE_KEY` côté media). Ajouter un tool dans un backend ne nécessite pas de
+redéployer la passerelle (catalogue récupéré au runtime) ; ajouter un nouveau backend = éditer
+`src/lib/backends.ts`.
 
-## Déployer
+## Dev / déploiement
 
-`git push` sur une branche → preview `https://mcp-<branche>.preview.contentos.ch`.
-Merge de la PR → prod `https://mcp.contentos.ch`. Jamais de commit sur `main`.
+`npm test` (vitest, fetch mocké, sans réseau ni base). `next build` n'a besoin d'aucune variable
+au build (lecture paresseuse au runtime). En attendant le palier d'intégration
+`preview.contentos.ch`, la passerelle pointe vers les backends **prod** (cf.
+`docs/decisions/0003-passerelle-mcp-centrale.md`). `git push` sur une branche → preview ; merge de
+la PR → prod `https://mcp.contentos.ch`. Jamais de commit sur `main`.
