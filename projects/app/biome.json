@@ -15,6 +15,7 @@
       "!playwright-report",
       "!test-results",
       "!src/app/globals.css",
+      "!src/app/(docs)/docs.css",
       "!src/components/ui"
     ]
   },

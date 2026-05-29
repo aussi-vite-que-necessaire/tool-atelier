@@ -14,8 +14,8 @@ export const SUITE_ENTRIES: SuiteEntry[] = [
   {
     segment: 'ressources',
     label: 'Ressources',
-    tagline: 'Bibliothèque éditoriale',
-    available: false,
+    tagline: 'Lead magnets & espace docs',
+    available: true,
   },
   { segment: 'skills', label: 'Skills', tagline: 'Compétences agentiques', available: false },
 ];
