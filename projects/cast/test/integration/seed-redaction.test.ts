@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'vitest';
-import { listIdeas } from '@/lib/db/repositories/ideas';
 import { createVoice, listVoices } from '@/lib/db/repositories/voice';
 import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
 import { seedRedaction } from '../../scripts/seed-redaction';
 import { createTestUser } from './helpers/seed';
 
 describe('seed-redaction', () => {
-  test('crée voix + template + idée, et est idempotent', async () => {
+  test('crée voix + template, et est idempotent', async () => {
     const userId = await createTestUser('seedredac');
     await seedRedaction(userId);
     await seedRedaction(userId); // deuxième passage : pas de doublon
@@ -16,9 +15,6 @@ describe('seed-redaction', () => {
 
     const templates = await listWritingTemplates(userId);
     expect(templates.filter((t) => t.name === 'Post-thèse LinkedIn')).toHaveLength(1);
-
-    const ideas = await listIdeas(userId);
-    expect(ideas.filter((i) => i.idea.startsWith('AVQN'))).toHaveLength(1);
 
     const voice = voices.find((v) => v.name === 'Manu');
     expect(voice?.content).toContain('contraste mesuré');

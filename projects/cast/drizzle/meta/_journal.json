@@ -183,6 +183,13 @@
       "when": 1779983770548,
       "tag": "0025_drop_auth_oidc",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1780033350923,
+      "tag": "0026_drop_ideas",
+      "breakpoints": true
     }
   ]
 }

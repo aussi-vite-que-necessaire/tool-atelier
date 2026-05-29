@@ -1,7 +1,6 @@
 import { beforeEach } from 'vitest';
 import { db } from '@/lib/db/client';
 import {
-  ideas,
   posts,
   publications,
   settings,
@@ -16,7 +15,6 @@ import {
 beforeEach(async () => {
   await db.delete(publications);
   await db.delete(posts);
-  await db.delete(ideas);
   await db.delete(writingTemplates);
   await db.delete(voice);
   await db.delete(settings);

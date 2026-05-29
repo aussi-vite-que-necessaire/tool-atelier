@@ -1,12 +1,5 @@
 import { describe, expect, it, test } from 'vitest';
 import {
-  createIdea,
-  deleteIdea,
-  getIdea,
-  listIdeas,
-  updateIdea,
-} from '@/lib/db/repositories/ideas';
-import {
   createPost,
   deletePost,
   getPost,
@@ -77,20 +70,6 @@ runTenantIsolationSuite('voice', {
   list: listVoices,
   update: updateVoice,
   delete: deleteVoice,
-});
-
-runTenantIsolationSuite('ideas', {
-  seed: (uid) => createIdea(uid, { idea: 'sample' }),
-  rowId: (r) => r.id,
-  reload: (uid, id) => getIdea(uid, id),
-  updatePatch: { idea: 'hacked' },
-  updateAssertions: (row) => {
-    expect(row.idea).toBe('sample');
-  },
-  get: getIdea,
-  list: listIdeas,
-  update: updateIdea,
-  delete: deleteIdea,
 });
 
 runTenantIsolationSuite('posts', {

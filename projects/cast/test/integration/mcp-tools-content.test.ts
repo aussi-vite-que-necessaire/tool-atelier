@@ -1,18 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { createPost } from '@/lib/db/repositories/posts';
-import { ideaImpl } from '@/lib/mcp/tools/ideas';
 import { postImpl } from '@/lib/mcp/tools/posts';
 import { createTestUser } from './helpers/seed';
-
-describe('mcp tools — idées', () => {
-  test('create puis list', async () => {
-    const userId = await createTestUser('mcpidea');
-    const created = await ideaImpl.create(userId, { idea: 'Sujet A', brief: 'brief' });
-    expect(created.idea).toBe('Sujet A');
-    const list = await ideaImpl.list(userId);
-    expect(list.map((i) => i.id)).toContain(created.id);
-  });
-});
 
 describe('mcp tools — posts', () => {
   test('edit + set_post_status', async () => {

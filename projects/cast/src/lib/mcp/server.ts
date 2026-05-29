@@ -2,7 +2,6 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { userIdFrom } from './auth';
 import { jsonResult } from './result';
 import { registerConfigTools } from './tools/config';
-import { registerIdeaTools } from './tools/ideas';
 import { registerMediaTools } from './tools/media';
 import { registerPostTools } from './tools/posts';
 import { registerPublishingTools } from './tools/publishing';
@@ -18,7 +17,6 @@ export function registerAllTools(server: McpServer): void {
     },
     async (_input, extra) => jsonResult({ ok: true, userId: userIdFrom(extra) }),
   );
-  registerIdeaTools(server);
   registerPostTools(server);
   registerConfigTools(server);
   registerMediaTools(server);

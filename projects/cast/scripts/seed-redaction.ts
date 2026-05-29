@@ -2,7 +2,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createIdea, listIdeas } from '@/lib/db/repositories/ideas';
 import { createVoice, listVoices, updateVoice } from '@/lib/db/repositories/voice';
 import {
   createWritingTemplate,
@@ -36,15 +35,6 @@ export async function seedRedaction(userId: string): Promise<void> {
       structure: read('post-these-structure.md'),
       writingRules: read('post-these-rules.md'),
     });
-  }
-
-  const ideaFile = read('idee-avqn.md');
-  const [titleLine, ...rest] = ideaFile.split('\n');
-  const title = (titleLine ?? '').replace(/^#\s*/, '').trim();
-  const brief = rest.join('\n').trim();
-  const ideas = await listIdeas(userId);
-  if (!ideas.some((i) => i.idea.startsWith('AVQN'))) {
-    await createIdea(userId, { idea: title, brief });
   }
 }
 

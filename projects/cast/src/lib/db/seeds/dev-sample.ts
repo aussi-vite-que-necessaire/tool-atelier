@@ -1,4 +1,3 @@
-import { createIdea, listIdeas } from '../repositories/ideas';
 import { createPost, listPosts } from '../repositories/posts';
 import {
   createPublication,
@@ -13,18 +12,6 @@ import {
   DEFAULT_VOICE_NAME,
   DEFAULT_WRITING_TEMPLATE,
 } from './user-defaults';
-
-const SAMPLE_IDEAS = [
-  {
-    idea: 'Pourquoi je documente mes specs avant de coder',
-    brief: 'Angle : gain de temps réel vs surcoût perçu.',
-  },
-  {
-    idea: 'Le piège des tests qui partagent la base de dev',
-    brief: 'Anecdote : données effacées à chaque run.',
-  },
-  { idea: 'Construire en solo avec des agents IA', brief: null as string | null },
-];
 
 const SAMPLE_POSTS = [
   {
@@ -52,14 +39,6 @@ async function seedUserDefaultsIdempotent(userId: string): Promise<void> {
 
 export async function seedDev(userId: string): Promise<void> {
   await seedUserDefaultsIdempotent(userId);
-
-  const byText = new Map((await listIdeas(userId)).map((i) => [i.idea, i]));
-  for (const s of SAMPLE_IDEAS) {
-    if (!byText.has(s.idea)) {
-      const created = await createIdea(userId, { idea: s.idea, brief: s.brief ?? undefined });
-      byText.set(created.idea, created);
-    }
-  }
 
   const postsByContent = new Map((await listPosts(userId)).map((p) => [p.content, p]));
   for (const p of SAMPLE_POSTS) {

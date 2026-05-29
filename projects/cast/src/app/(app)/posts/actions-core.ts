@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { createPost, deletePost, updatePost } from '@/lib/db/repositories/posts';
-import type { ActionState } from '../ideas/actions-core';
+
+export type ActionState =
+  | { status: 'idle' }
+  | { status: 'success'; message?: string }
+  | { status: 'error'; message: string };
 
 export type CreatePostState =
   | { status: 'success'; postId: string }
