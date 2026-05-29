@@ -31,23 +31,54 @@ previews cast (et tout client de l'auth) qui ne modifient pas `auth`. La prod es
 (parce que `user1/2/3` y sont seedés et que le cookie auto-login preview en dépend). C'est cette
 incohérence qui pique.
 
-## Options (du plus léger au plus lourd)
+## Options (du plus léger au plus structurant)
 
 1. **Auth preview « de base » persistante.** Une seule preview `auth` durable, seedée
    user1/2/3, cible **par défaut** de toutes les previews clientes ; on ne déploie une
    `auth-<branche>` que si la branche **touche** `auth` (routage `auth-<branche>` → base au
    proxy, ou résolu dans `deploy.sh`). Calque le traitement de `media`. Garde la modularité,
-   **zéro build auth** pour une PR cast, préserve les users seedés. *Reco à explorer.*
+   **zéro build auth** pour une PR cast, préserve les users seedés. *Fix le plus léger.*
 2. **Toujours co-déployer `auth`** (et autres deps runtime) à chaque preview. Simple et robuste,
    mais érode le « on ne build que ce qui change » (une virgule CSS dans cast rebuild auth).
 3. **Fallback `AUTH_URL` → prod.** Léger, **mais mauvaise idée** : l'auto-login preview irait
    contre la **prod**, les users seedés ne correspondent plus, mélange test/prod. À éviter.
-4. **Monorepo : rapatrier tous les projets dans un projet central.** Supprime toute la classe de
-   problème (plus de câblage cross-projet en preview), mais migration douloureuse et perte de la
-   modularité « un service par capacité ». Arbitrage DX stratégique, pas un fix.
+4. **Big-bang : rapatrier tous les projets dans un seul Next.js central + une seule base.**
+   Supprime *toute* la classe de problème (plus de câblage cross-projet en preview, plus de
+   tunnels d'URL, plus d'auth par-branche : un seul déploiement, une seule session, une seule
+   migration). Migration douloureuse en une fois, mais le résultat est **plus simple à
+   maintenir** que le système multi-projet — c'est l'hypothèse à prendre au sérieux (cf. note
+   d'architecte ci-dessous), pas le dernier recours.
+
+## Note d'architecte (29/05/2026)
+
+Réflexion de Manu, à garder telle quelle parce qu'elle réoriente le projet :
+
+> « La migration big-bang vers une solution centralisée n'est pas forcément mauvaise. On joue à
+> l'architecte. Avant je voulais des MCP séparés, etc., avant d'unifier derrière un *tools
+> contentos* avec des sous-projets. La séparation n'a plus autant de sens qu'avant. Là je me dis
+> qu'un bon projet Next.js, mais bien structuré, avec tout dans une seule base, finalement ce ne
+> serait pas plus dur à maintenir que ce système multi-projet. »
+
+Lecture : le découpage « un service par capacité » (MCP séparés → puis `contentos` unifié avec
+sous-projets → puis monorepo de projets déployables indépendamment) répondait à un besoin
+d'isolation/modularité **qui s'est érodé**. Les coûts qu'il génère aujourd'hui sont concrets :
+
+- câblage cross-projet fragile en preview (le présent incident) ;
+- N images, N déploiements, N bases, N migrations, N `CLAUDE.md` à tenir cohérents ;
+- secrets et URLs synthétisés par environnement (`AUTH_URL`, `MEDIA_ENGINE_URL`, tunnels…) ;
+- DX : ouvrir/raisonner sur 6 projets là où un seul, bien structuré (modules/dossiers + une
+  base avec schémas par domaine), donnerait la même clarté sans la plomberie inter-services.
+
+Ce qu'on perdrait à centraliser : déploiement indépendant par capacité, blast-radius réduit,
+possibilité de stacks hétérogènes. À peser : ces bénéfices sont-ils encore *utilisés* ?
 
 ## Déclencheur
 
-**La prochaine fois qu'une preview casse faute de dépendance cross-projet sur la branche**
-(ou quand l'agacement DX dépasse le coût d'un fix), trancher entre (1) auth-base persistante et
-(2) co-déploiement systématique — avant d'envisager (4).
+**À la prochaine douleur de preview cross-projet** (ou dès que l'agacement DX dépasse le coût
+d'un fix) : trancher. Deux horizons distincts —
+- **court terme / réversible :** (1) auth-base persistante, pour débloquer les previews sans
+  rien casser ;
+- **structurant :** instruire sérieusement (4) le big-bang « un Next.js + une base », avec un
+  vrai spec de migration (inventaire des capacités → modules, schémas par domaine dans une base,
+  stratégie de bascule). (2) et (3) ne sont que des rustines.
+
