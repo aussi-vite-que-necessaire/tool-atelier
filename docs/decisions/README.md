@@ -7,3 +7,4 @@ Capturer une décision : `/lab-adr <sujet>`.
 ## Décisions
 
 - [ADR-0001](0001-structure-documentation-atelier.md) — Accepted — Structure de documentation de l'atelier (`docs/{specs,plans,ideas,decisions}/`).
+- [ADR-0002](0002-comptes-operateur-audience-tenancy.md) — Accepted — Comptes opérateur/audience (`accountType` central) + tenancy locale à chaque outil.
