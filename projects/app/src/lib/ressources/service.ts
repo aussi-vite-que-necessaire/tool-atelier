@@ -112,7 +112,7 @@ export async function createResource(
     await db
       .select({ slug: resResources.slug })
       .from(resResources)
-      .where(eq(resResources.userId, op.id))
+      .where(eq(resResources.userId, op.userId))
   ).map((r) => r.slug);
   const base = slugify(input.slug ?? input.title) || 'ressource';
   const slug = uniqueSlug(base, existing);
@@ -120,7 +120,7 @@ export async function createResource(
   const [resource] = await db
     .insert(resResources)
     .values({
-      userId: op.id,
+      userId: op.userId,
       slug,
       title: input.title,
       description: input.description ?? null,
@@ -175,7 +175,7 @@ export async function updateResource(
     published?: boolean;
   },
 ) {
-  const r = await getResourceRowBySlug(op.id, slug);
+  const r = await getResourceRowBySlug(op.userId, slug);
   const set = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
   if (Object.keys(set).length) {
     await db
@@ -193,7 +193,7 @@ export async function deleteResource(userId: string, slug: string) {
 }
 
 export async function getResource(op: OpRef, slug: string) {
-  const r = await getResourceRowBySlug(op.id, slug);
+  const r = await getResourceRowBySlug(op.userId, slug);
   const root = buildPageTree(await flatPagesOf(r.id));
   if (!root) throw new Error(`Ressource sans page racine: ${slug}`);
 
@@ -247,7 +247,7 @@ async function getModulesForPage(pageId: string) {
 }
 
 export async function getOutline(op: OpRef, slug: string) {
-  const r = await getResourceRowBySlug(op.id, slug);
+  const r = await getResourceRowBySlug(op.userId, slug);
   const root = buildPageTree(await flatPagesOf(r.id));
   if (!root) throw new Error(`Ressource sans page racine: ${slug}`);
 
@@ -284,7 +284,7 @@ export async function trackingLink(
   op: OpRef,
   input: { slug: string; path?: string[]; source: string; medium?: string; campaign?: string },
 ): Promise<{ url: string }> {
-  await getResourceRowBySlug(op.id, input.slug);
+  await getResourceRowBySlug(op.userId, input.slug);
   const base = `${appBaseUrl()}${pagePath(op.handle, input.slug, input.path ?? [])}`;
   return {
     url: buildTrackingUrl(base, {

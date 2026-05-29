@@ -12,8 +12,9 @@ export type OperatorSettings = {
   theme: ThemeConfig | null;
 };
 
-// Référence opérateur minimale pour le data-layer : id (scoping) + handle (URLs).
-export type OpRef = { id: string; handle: string };
+// Référence opérateur minimale pour le data-layer : userId (scoping) + handle
+// (URLs). OperatorSettings est assignable à OpRef.
+export type OpRef = { userId: string; handle: string };
 
 function toSettings(row: typeof resSettings.$inferSelect, name: string): OperatorSettings {
   return {
