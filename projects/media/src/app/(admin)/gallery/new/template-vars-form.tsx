@@ -1,6 +1,10 @@
 "use client";
 
 import type { VariablesSchema } from "@/lib/templates/dsl";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 // Une image sélectionnable : la valeur stockée dans la variable est l'URL
 // (les templates interpolent l'URL directement, ex. background-image:url('{{x}}')).
@@ -13,9 +17,6 @@ interface Props {
   onChange: (next: Record<string, unknown>) => void;
 }
 
-const inputClass =
-  "block w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400";
-
 // Formulaire dynamique généré depuis le schéma de variables d'un template
 // (string / list / color / image). Contrôlé : remonte l'objet de variables
 // complet à chaque changement. Composant autonome, réutilisable hors de la modal.
@@ -26,7 +27,7 @@ export function TemplateVarsForm({ schema, values, images, onChange }: Props) {
 
   if (schema.length === 0) {
     return (
-      <p className="text-sm text-gray-400">Ce template n&apos;a aucune variable.</p>
+      <p className="text-sm text-muted-foreground">Ce template n&apos;a aucune variable.</p>
     );
   }
 
@@ -35,22 +36,21 @@ export function TemplateVarsForm({ schema, values, images, onChange }: Props) {
       {schema.map((v) => {
         const required = !("optional" in v && v.optional);
         return (
-          <div key={v.name} className="space-y-1">
-            <label className="block text-xs font-medium text-gray-600">
+          <div key={v.name} className="space-y-1.5">
+            <Label className="text-xs">
               {v.label}
-              {required && <span className="text-red-500"> *</span>}
-            </label>
+              {required && <span className="text-destructive"> *</span>}
+            </Label>
             {v.description && (
-              <p className="text-xs text-gray-400">{v.description}</p>
+              <p className="text-xs text-muted-foreground">{v.description}</p>
             )}
 
             {v.type === "string" && (
-              <input
+              <Input
                 type="text"
                 value={asString(values[v.name])}
                 maxLength={v.max}
                 onChange={(e) => set(v.name, e.target.value)}
-                className={inputClass}
               />
             )}
 
@@ -60,9 +60,9 @@ export function TemplateVarsForm({ schema, values, images, onChange }: Props) {
                   type="color"
                   value={asColor(values[v.name], v.default)}
                   onChange={(e) => set(v.name, e.target.value)}
-                  className="h-8 w-12 cursor-pointer rounded border border-gray-300"
+                  className="h-8 w-12 cursor-pointer rounded-lg border border-input bg-transparent"
                 />
-                <span className="font-mono text-xs text-gray-500">
+                <span className="font-mono text-xs text-muted-foreground">
                   {asColor(values[v.name], v.default)}
                 </span>
               </div>
@@ -103,7 +103,7 @@ function ListField({
     <div className="space-y-2">
       {items.map((item, i) => (
         <div key={i} className="flex items-center gap-2">
-          <input
+          <Input
             type="text"
             value={item}
             maxLength={itemMax}
@@ -112,25 +112,27 @@ function ListField({
               next[i] = e.target.value;
               onChange(next);
             }}
-            className={`flex-1 rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400`}
           />
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="text-destructive"
             onClick={() => onChange(items.filter((_, j) => j !== i))}
-            className="px-1 text-red-600 hover:text-red-800"
             title="Retirer"
           >
             ✕
-          </button>
+          </Button>
         </div>
       ))}
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="xs"
         onClick={() => onChange([...items, ""])}
-        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
       >
         + Ajouter
-      </button>
+      </Button>
     </div>
   );
 }
@@ -147,17 +149,18 @@ function ImagePicker({
   return (
     <div className="space-y-2">
       {value && (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="xs"
           onClick={() => onChange("")}
-          className="text-xs text-gray-500 hover:text-gray-800"
         >
           Retirer l&apos;image
-        </button>
+        </Button>
       )}
-      <div className="grid max-h-40 grid-cols-4 gap-2 overflow-y-auto rounded border border-gray-200 bg-gray-50 p-2 sm:grid-cols-6">
+      <div className="grid max-h-40 grid-cols-4 gap-2 overflow-y-auto rounded-lg border border-border bg-muted/50 p-2 sm:grid-cols-6">
         {images.length === 0 ? (
-          <p className="col-span-full text-xs text-gray-400">
+          <p className="col-span-full text-xs text-muted-foreground">
             Aucune image dans la galerie.
           </p>
         ) : (
@@ -166,11 +169,12 @@ function ImagePicker({
               key={img.id}
               type="button"
               onClick={() => onChange(img.url)}
-              className={`aspect-square overflow-hidden rounded border-2 ${
+              className={cn(
+                "aspect-square overflow-hidden rounded-md border-2",
                 value === img.url
-                  ? "border-gray-800"
-                  : "border-transparent hover:border-gray-400"
-              }`}
+                  ? "border-primary"
+                  : "border-transparent hover:border-ring",
+              )}
               title="Choisir cette image"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -1,33 +1,42 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { emailOTP } from "better-auth/plugins";
-import { db } from "@/db";
-import { schema } from "@/db/schema";
-import { sendEmail } from "@/lib/email";
-import { isPreview, PREVIEW_OTP } from "@/lib/auth-preview";
+// Auth déléguée au SSO de la suite — auth.contentos.ch.
+// Skills n'a aucune donnée propre à l'utilisateur : l'auth sert uniquement de
+// portail (être connecté pour voir la liste et télécharger). On lit donc la
+// session via un simple fetch HTTP vers le provider, en forwardant le cookie du
+// browser (posé en cross-subdomain .contentos.ch). Aucun secret partagé, aucune
+// table locale.
 
-const baseURL = process.env.APP_URL ?? "http://localhost:3000";
+// URL du provider d'auth de la suite contentos. Défaut prod = auth.contentos.ch.
+const AUTH_URL = process.env.AUTH_URL ?? "https://auth.contentos.ch";
+// Origine publique de skills (injectée par la plateforme). Sert de redirect post-login.
+const APP_URL = process.env.APP_URL ?? "http://localhost:8080";
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, { provider: "pg", schema }),
-  secret: process.env.BETTER_AUTH_SECRET,
-  baseURL,
-  trustedOrigins: [baseURL],
-  plugins: [
-    emailOTP({
-      otpLength: 6,
-      expiresIn: 600,
-      ...(isPreview ? { generateOTP: () => PREVIEW_OTP } : {}),
-      async sendVerificationOTP({ email, otp }) {
-        if (isPreview) return;
-        await sendEmail({
-          to: email,
-          subject: "Ton code de connexion",
-          html: `<p>Ton code : <b>${otp}</b> (expire dans 10 minutes).</p>`,
-        });
-      },
-    }),
-  ],
-});
+// Le portail SSO n'est actif qu'en prod (APP_ENV='prod', posé par deploy.sh).
+// En preview déployée (APP_ENV = slug de branche) comme en dev local (APP_ENV
+// absent), on court-circuite : pas de auth.contentos.ch à joindre, accès ouvert.
+const ssoEnabled = process.env.APP_ENV === "prod";
 
-export type Session = typeof auth.$Infer.Session;
+export type SessionUser = { id: string; email?: string };
+export type Session = { user: SessionUser };
+
+// Récupère la session via fetch HTTP vers auth.contentos.ch (cookie forwardé).
+// Hors-prod, court-circuite avec une identité de preview.
+export async function getSession(headers: Headers): Promise<Session | null> {
+  if (!ssoEnabled) return { user: { id: "preview-user", email: "preview@skills.local" } };
+  const cookie = headers.get("cookie");
+  if (!cookie) return null;
+  const res = await fetch(`${AUTH_URL}/api/auth/get-session`, {
+    headers: { cookie },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data?.user?.id ? { user: { id: data.user.id, email: data.user.email } } : null;
+}
+
+// URL de connexion du provider, avec retour vers skills après login.
+export function signInUrl(): string {
+  return `${AUTH_URL}/sign-in?redirect=${encodeURIComponent(APP_URL)}`;
+}
+
+// Page du provider (gère aussi la déconnexion via le cookie cross-domain).
+export const authUrl = AUTH_URL;

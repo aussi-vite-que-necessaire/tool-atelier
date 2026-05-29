@@ -1,9 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { generateAction } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 const RATIOS = ["1:1", "16:9", "9:16", "4:5", "4:3"];
+
+// Valeur sentinelle « aucun style » : base-ui Select n'accepte pas "" comme item,
+// on mappe donc cette option sur null (le champ caché soumet une chaîne vide).
+const NO_STYLE = "__none__";
 
 interface StyleOption {
   id: string;
@@ -12,68 +27,73 @@ interface StyleOption {
 
 export function GenerateForm({ styles }: { styles: StyleOption[] }) {
   const [state, action, pending] = useActionState(generateAction, {});
+  // Select contrôlé : la sentinelle NO_STYLE est soumise comme "" (contrat de
+  // generateAction : "" → aucun style), via un champ caché.
+  const [styleId, setStyleId] = useState<string>(NO_STYLE);
 
   return (
-    <div className="border border-gray-200 rounded p-4 space-y-3">
-      <h2 className="text-sm font-medium">Générer avec l&apos;IA</h2>
-      <form action={action} className="space-y-2">
-        <textarea
-          name="prompt"
-          required
-          rows={3}
-          placeholder="Décris l'image : sujet, style, composition, couleurs, ambiance…"
-          className="block w-full text-sm border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400"
-        />
-        <div className="flex flex-wrap gap-2">
-          <label className="text-xs text-gray-500 flex items-center gap-1">
-            Ratio
-            <select
-              name="aspectRatio"
-              defaultValue="1:1"
-              className="text-sm border border-gray-300 rounded px-2 py-1"
-            >
-              {RATIOS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-gray-500 flex items-center gap-1">
-            Style
-            <select
-              name="styleId"
-              defaultValue=""
-              className="text-sm border border-gray-300 rounded px-2 py-1"
-            >
-              <option value="">Aucun style</option>
-              {styles.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="bg-gray-800 text-white text-sm rounded px-3 py-1.5 hover:bg-gray-700 disabled:opacity-50"
-        >
-          {pending ? "Génération…" : "Générer"}
-        </button>
-      </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Générer avec l&apos;IA</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <form action={action} className="space-y-3">
+          <Textarea
+            name="prompt"
+            required
+            rows={3}
+            placeholder="Décris l'image : sujet, style, composition, couleurs, ambiance…"
+          />
+          <div className="flex flex-wrap gap-4">
+            <div className="flex flex-col items-start gap-1">
+              <Label className="text-xs text-muted-foreground">Ratio</Label>
+              <Select name="aspectRatio" defaultValue="1:1">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RATIOS.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {r}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col items-start gap-1">
+              <Label className="text-xs text-muted-foreground">Style</Label>
+              <input type="hidden" name="styleId" value={styleId === NO_STYLE ? "" : styleId} />
+              <Select value={styleId} onValueChange={(v) => setStyleId((v as string) ?? NO_STYLE)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_STYLE}>Aucun style</SelectItem>
+                  {styles.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Génération…" : "Générer"}
+          </Button>
+        </form>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
-      {state.url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={state.url}
-          alt="Image générée"
-          className="max-w-full border border-gray-200 rounded"
-        />
-      )}
-    </div>
+        {state.url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={state.url}
+            alt="Image générée"
+            className="max-w-full rounded-lg ring-1 ring-foreground/10"
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }

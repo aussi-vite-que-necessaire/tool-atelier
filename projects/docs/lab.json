@@ -1,0 +1,4 @@
+{
+  "description": "docs — espace public de lecture des ressources (docs.contentos.ch). Backend partagé avec ressources.",
+  "db": { "shared": "ressources" }
+}

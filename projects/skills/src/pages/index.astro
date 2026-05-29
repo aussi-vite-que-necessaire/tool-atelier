@@ -1,12 +1,12 @@
 ---
-import { auth } from "@/lib/auth";
+import { getSession, signInUrl, authUrl } from "@/lib/auth";
 import { listSkills } from "@/lib/skills-fs";
 import "@/styles/global.css";
 
 export const prerender = false;
 
-const session = await auth.api.getSession({ headers: Astro.request.headers });
-if (!session) return Astro.redirect("/sign-in");
+const session = await getSession(Astro.request.headers);
+if (!session) return Astro.redirect(signInUrl());
 
 const skills = await listSkills();
 ---
@@ -29,13 +29,13 @@ const skills = await listSkills();
             Hub des skills agentiques de la suite — contentos, ressources, media.
           </p>
         </div>
-        <button
-          id="sign-out"
+        <a
+          href={authUrl}
           class="text-xs text-gray-500 hover:text-gray-900"
           title={session.user?.email ?? ""}
         >
           se déconnecter
-        </button>
+        </a>
       </header>
 
       {
@@ -73,15 +73,5 @@ const skills = await listSkills();
         )
       }
     </main>
-    <script>
-      document.getElementById("sign-out")?.addEventListener("click", async () => {
-        await fetch("/api/auth/sign-out", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: "{}",
-        });
-        location.href = "/sign-in";
-      });
-    </script>
   </body>
 </html>

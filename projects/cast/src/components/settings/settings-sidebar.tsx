@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
+
+import {
+  Sidebar,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarItem,
+  SidebarSection,
+} from '@/components/ui/sidebar';
 
 const items: { label: string; href: string }[] = [
   { label: 'Brand', href: '/settings/brand' },
@@ -14,37 +21,26 @@ const items: { label: string; href: string }[] = [
 export function SettingsSidebar() {
   const pathname = usePathname();
   return (
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 px-3 py-4">
-      <Link href="/" className="px-3 pb-4 text-lg font-semibold">
-        Contentos
-      </Link>
-      <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
-        Réglages
-      </p>
-      <nav aria-label="Réglages" className="flex flex-col gap-1">
-        {items.map((item) => {
-          const active = pathname?.startsWith(item.href) ?? false;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'rounded-lg px-3 py-2 text-sm',
-                active
-                  ? 'bg-white font-medium text-neutral-900 shadow-sm'
-                  : 'text-neutral-600 hover:bg-white/60',
-              )}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="mt-auto px-3 pt-4 text-xs text-neutral-500">
-        <Link href="/" className="hover:text-neutral-900">
+    <Sidebar>
+      <SidebarHeader>
+        <Link href="/">Contentos</Link>
+      </SidebarHeader>
+      <SidebarSection label="Réglages">
+        {items.map((item) => (
+          <SidebarItem
+            key={item.href}
+            active={pathname?.startsWith(item.href) ?? false}
+            render={<Link href={item.href} />}
+          >
+            {item.label}
+          </SidebarItem>
+        ))}
+      </SidebarSection>
+      <SidebarFooter>
+        <Link href="/" className="hover:text-foreground">
           ← Retour à l'app
         </Link>
-      </div>
-    </aside>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

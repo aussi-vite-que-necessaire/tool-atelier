@@ -1,7 +1,3 @@
 {
-  "description": "Hub central des skills agentiques de la suite de tools de l'atelier (contentos, ressources, media).",
-  "db": true,
-  "migrate": "node scripts/migrate.mjs",
-  "seed": "node scripts/seed.mjs",
-  "email": true
+  "description": "Hub central des skills agentiques de la suite de tools de l'atelier (contentos, ressources, media). Auth déléguée au SSO auth.contentos.ch."
 }

@@ -6,6 +6,8 @@ import { parseVariablesSchema } from "@/lib/templates/dsl";
 import { renderTemplateFromTemplateAction } from "../actions";
 import { TemplateVarsForm, type FormImage } from "./template-vars-form";
 import { TemplateLivePreview } from "./template-live-preview";
+import { Button } from "@/components/ui/button";
+import { Heading } from "@/components/ui/typography";
 
 // Vue minimale d'un template nécessaire à l'onglet (le reste reste serveur).
 export type TemplateOption = {
@@ -77,25 +79,25 @@ export function TemplateTab({ templates, images }: Props) {
   if (!selected) {
     if (templates.length === 0) {
       return (
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Aucun template dans la bibliothèque. Crée-en un dans{" "}
-          <span className="font-medium">Bibliothèque › Templates</span>.
+          <span className="font-medium text-foreground">Bibliothèque › Templates</span>.
         </p>
       );
     }
     return (
       <div className="space-y-3">
-        <h2 className="text-sm font-medium">Choisis un template</h2>
+        <Heading level={4}>Choisis un template</Heading>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => pick(t)}
-              className="rounded border border-gray-200 p-3 text-left hover:border-gray-400 hover:bg-gray-50"
+              className="rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-ring hover:bg-muted"
             >
-              <div className="text-sm font-medium text-gray-800">{t.label}</div>
-              <div className="mt-1 text-xs text-gray-400">
+              <div className="text-sm font-medium">{t.label}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
                 {t.platform} · {t.width}×{t.height}
               </div>
             </button>
@@ -109,14 +111,10 @@ export function TemplateTab({ templates, images }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={back}
-          className="text-sm text-gray-500 hover:text-gray-800"
-        >
+        <Button variant="ghost" size="sm" onClick={back}>
           ← Changer de template
-        </button>
-        <span className="text-sm font-medium text-gray-800">{selected.label}</span>
+        </Button>
+        <span className="text-sm font-medium">{selected.label}</span>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -130,21 +128,16 @@ export function TemplateTab({ templates, images }: Props) {
               onChange={setVars}
             />
           ) : (
-            <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
               Le schéma de variables de ce template est invalide.
             </p>
           )}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <button
-            type="button"
-            onClick={render}
-            disabled={pending}
-            className="rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
-          >
+          <Button type="button" onClick={render} disabled={pending}>
             {pending ? "Rendu…" : "Ajouter à la galerie"}
-          </button>
+          </Button>
         </div>
 
         {/* Aperçu HTML live */}
