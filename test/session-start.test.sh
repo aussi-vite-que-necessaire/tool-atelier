@@ -15,17 +15,18 @@ REPO="$TMP/repo"; git init -q "$REPO"; REPO="$(cd "$REPO" && pwd -P)"
 
 run() { ( cd "$1" && "$HOOK" ); }   # le hook lit son cwd
 
-# Sur main : invite à basculer sur une branche de session, oriente vers /start.
+# Sur main : invite à basculer sur une branche de session, mentionne superpowers.
 run "$REPO" | grep -q "git switch -c" || fail "main n'invite pas à basculer sur une branche"
-run "$REPO" | grep -q "/start"        || fail "main n'oriente pas vers /start"
+run "$REPO" | grep -q "superpowers"   || fail "main ne mentionne pas superpowers"
 
-# Sur une branche de session : message session isolée, nomme la branche, oriente vers /start,
-# sans aucune mention de worktree ni de lanceur local.
+# Sur une branche de session : message session isolée, nomme la branche, mentionne superpowers,
+# sans aucune mention de worktree, de lanceur local ni de l'ancien menu /start.
 git -C "$REPO" switch -c work/iso -q
 run "$REPO" | grep -q "session isolée" || fail "branche de session non annoncée comme isolée"
 run "$REPO" | grep -q "work/iso"       || fail "branche de session non nommée"
-run "$REPO" | grep -q "/start"         || fail "branche de session n'oriente pas vers /start"
+run "$REPO" | grep -q "superpowers"    || fail "branche de session ne mentionne pas superpowers"
 run "$REPO" | grep -qi "worktree" && fail "le message mentionne encore worktree"
 run "$REPO" | grep -q "Atelier.command" && fail "le message mentionne encore le lanceur local"
+run "$REPO" | grep -q "/start" && fail "le message mentionne encore l'ancien menu /start"
 
 echo "OK session-start.test.sh"

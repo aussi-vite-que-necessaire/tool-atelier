@@ -1,13 +1,13 @@
 ---
-name: lab-idea
+name: noter-idee
 description: Capturer une idée / piste d'amélioration en backlog d'exploration. À utiliser quand une discussion produit une piste qu'on n'a pas le temps ou la pertinence de traiter maintenant, mais qu'on veut conserver pour plus tard. Une idée a un déclencheur explicite (« quand 2 projets utilisent X »).
 ---
 
-# /lab-idea — capturer une piste en backlog
+# /noter-idee — capturer une piste en backlog
 
 Une idée est une **piste non priorisée** : on note pourquoi on n'y va pas
-maintenant et le déclencheur qui ferait y revenir. Différent d'une ADR (décision
-prise) et différent d'une spec (engagement d'impl).
+maintenant et le déclencheur qui ferait y revenir. Différent d'une décision déjà
+prise et d'un engagement d'implémentation.
 
 ## Contrat
 
@@ -56,10 +56,10 @@ prise) et différent d'une spec (engagement d'impl).
 
 ## Quand une idée évolue
 
-- **Priorisée pour impl.** L'idée garde sa place dans `ideas/` ; une spec est
-  créée séparément dans `docs/specs/` via `/lab-cadrer`. Quand la PR est mergée,
-  mettre à jour le statut de l'idée à `Réalisée (PR #N)` (à la main ou via une
-  prochaine invocation manuelle de cette skill — pas d'automatisation).
+- **Priorisée pour impl.** L'idée garde sa place dans `ideas/` ; le travail
+  d'implémentation se mène ensuite via le workflow superpowers (brainstorm →
+  plan → impl). Quand la PR est mergée, mettre à jour le statut de l'idée à
+  `Réalisée (PR #N)`.
 - **Abandonnée.** Mettre à jour le statut à `Abandonnée` et noter pourquoi en
   fin de fichier.
 
