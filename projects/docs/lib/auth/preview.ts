@@ -16,6 +16,17 @@ export const PREVIEW_AUD_3_ID = "preview-aud-3"
 // docs est l'app publique « audience » → auto-connect user3 (audience).
 export const DEFAULT_PREVIEW_USER: 1 | 2 | 3 = 3
 
+// Présence d'un cookie de session BetterAuth. Accepte le préfixe prod
+// (`better-auth`) ET le préfixe preview (`better-auth-preview`) — distincts pour
+// éviter la collision entre le cookie prod (.contentos.ch, qui fuit sur les
+// sous-domaines preview) et celui de la preview.
+export function hasSessionCookie(cookieHeader: string | null | undefined): boolean {
+  return (
+    !!cookieHeader &&
+    /(?:^|;\s*)(?:__Secure-)?better-auth(?:-preview)?\.session_token=/.test(cookieHeader)
+  )
+}
+
 const MARKER = "cos_preview_login"
 // Marqueur posé au logout en preview : tant qu'il est là, on montre le chooser.
 export function hasManualMarker(cookieHeader: string | null | undefined): boolean {

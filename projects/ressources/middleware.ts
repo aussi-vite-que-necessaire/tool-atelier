@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { env } from "@/lib/env"
-import { isPreview, loginRedirect, DEFAULT_PREVIEW_USER } from "@/lib/auth/preview"
+import { isPreview, loginRedirect, hasSessionCookie, DEFAULT_PREVIEW_USER } from "@/lib/auth/preview"
 
 // ressources = outil d'administration. Seules les zones /admin (et l'entrée nommée
 // /connexion) passent par le SSO. Le public (espaces /o/*, reader, bibliothèque,
@@ -15,8 +15,7 @@ export function middleware(req: NextRequest): NextResponse {
   if (SSO_GATED.test(pathname)) {
     const cookie = req.headers.get("cookie") ?? ""
     // Cookie posé par auth.contentos.ch (cross-subdomain .contentos.ch / .preview…).
-    const hasSession = /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(cookie)
-    if (!hasSession) {
+    if (!hasSessionCookie(cookie)) {
       // L'URL interne du conteneur derrière le proxy lab fuiterait dans request.url ;
       // on reconstruit depuis APP_URL (origine publique) + pathname + search.
       const url = new URL(req.url)

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
-import { isPreview, loginRedirect, DEFAULT_PREVIEW_USER } from "@/lib/auth/preview";
+import { isPreview, loginRedirect, hasSessionCookie, DEFAULT_PREVIEW_USER } from "@/lib/auth/preview";
 
 // Bloque l'accès aux pages protégées sans cookie de session, sans toucher la DB
 // ni le SSO : simple présence du cookie cross-subdomain `.contentos.ch`.
@@ -9,8 +9,7 @@ import { isPreview, loginRedirect, DEFAULT_PREVIEW_USER } from "@/lib/auth/previ
 export function middleware(request: NextRequest): NextResponse {
   const cookie = request.headers.get("cookie") ?? "";
   // Cookie posé par auth.contentos.ch (cross-subdomain .contentos.ch / .preview…).
-  const hasSession = /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(cookie);
-  if (!hasSession) {
+  if (!hasSessionCookie(cookie)) {
     // L'URL interne du conteneur derrière le proxy lab fuiterait dans request.url ;
     // on reconstruit depuis APP_URL (origine publique) + pathname + search.
     const url = new URL(request.url);

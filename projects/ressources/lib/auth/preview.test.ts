@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest"
-import { hasManualMarker, loginRedirect } from "./preview"
+import { hasManualMarker, loginRedirect, hasSessionCookie } from "./preview"
+
+describe("hasSessionCookie", () => {
+  it("détecte le cookie prod (.contentos.ch)", () => {
+    expect(hasSessionCookie("__Secure-better-auth.session_token=abc")).toBe(true)
+    expect(hasSessionCookie("better-auth.session_token=abc")).toBe(true)
+  })
+  it("détecte le cookie preview (préfixe distinct)", () => {
+    expect(hasSessionCookie("__Secure-better-auth-preview.session_token=abc")).toBe(true)
+    expect(hasSessionCookie("foo=1; better-auth-preview.session_token=abc")).toBe(true)
+  })
+  it("faux quand aucun token de session", () => {
+    expect(hasSessionCookie(null)).toBe(false)
+    expect(hasSessionCookie("cos_preview_login=manual")).toBe(false)
+  })
+})
 
 describe("hasManualMarker", () => {
   it("détecte le marqueur", () => {
