@@ -1,10 +1,9 @@
 # cast — atelier de publication LinkedIn
 
 Projet **cast** de la suite **contentos** (`cast.contentos.ch`). Plateforme de création,
-planification et publication de contenu LinkedIn, pilotée par agent. Ses tools sont exposés
-par la **passerelle MCP centrale** (`mcp.contentos.ch`) ; cast les publie via un **endpoint
-interne** `/internal/tools` (clé partagée `MCP_INTERNAL_KEY`, court-circuitée en preview),
-sans serveur MCP public ni OAuth local.
+planification et publication de contenu LinkedIn, pilotée par agent. Tous les outils de la
+suite (cast + media + ressources) sont exposés par un **endpoint MCP in-app unique**,
+`/api/mcp` (cf. « Endpoint MCP » plus bas).
 
 ## Deux process
 
@@ -37,8 +36,8 @@ Un post **référence** un média via des colonnes (`mediaUrl`, `mediaKind`, `me
   section `/media/gallery` (in-app). Pas d'iframe, pas de postMessage, pas de self-call HTTP.
 - **MCP** : `attach_media_to_post` / `detach_media` (attache) et les outils du moteur
   (`generate_image`, `render_html`, `create_pdf`, styles/chartes/templates…) sont enregistrés
-  dans le registre MCP in-app (`src/lib/mcp/tools/media-engine.ts`), servis par
-  `/internal/tools`, `userId` issu de la session.
+  dans le registre MCP in-app (`src/lib/mcp/tools/media-engine.ts`), servis par l'endpoint
+  `/api/mcp`, `userId` issu de la session.
 
 La publication LinkedIn récupère les octets par `fetch(mediaUrl)` (`src/lib/media/fetch-bytes.ts`,
 URL R2 publique) et mappe `mediaKind → LinkedIn` (`pdf→document`, `video→video`,
@@ -55,17 +54,40 @@ une seule session. Handler monté sous `/api/auth/*` (`src/app/api/auth/[...all]
 client `src/lib/auth-client.ts`, page de connexion `/signin`. `src/lib/auth/session.ts` lit la
 session localement (`auth.api.getSession`). En preview, `/preview-login` ouvre une vraie session
 pour l'opérateur de test seedé (`/preview-logout` la ferme et pose le marqueur chooser) ; en prod,
-connexion normale par `/signin`. L'auth MCP (OAuth) est centralisée à la
-passerelle `mcp.contentos.ch` ; cast n'expose que `/internal/tools` (clé partagée), et ses tools
-reçoivent le `userId` transmis (`src/lib/mcp/auth.ts` → `userIdFrom`). Migrations SQL committées
+connexion normale par `/signin`. Migrations SQL committées
 dans `drizzle/`, appliquées au déploiement par le one-shot `scripts/migrate.mjs`
 (`drizzle-orm/node-postgres`, deps de prod — pas de drizzle-kit). `GET /healthz` → `ok` sans DB.
+
+## Endpoint MCP (`src/lib/mcp/`)
+
+Un **registre unique** (`registry.ts`) capture **tous** les outils de la suite — cast (posts,
+config, voices, publishing), media (moteur visuel + attache), ressources — au chargement du
+module, sans dépendre du transport (`server.ts` → `registerAllTools`). Soit **66 outils** plus
+la sonde `ping`. `internal.ts` en dérive le catalogue (`listToolsResponse` : nom + description +
+JSON Schema) et l'exécution par nom (`callToolByName`, qui revalide les args en Zod).
+
+L'endpoint public de la suite est **`/api/mcp`** (`src/app/api/mcp/route.ts`) :
+
+- `GET` → catalogue de tous les outils.
+- `POST { name, args, userId? }` → exécute un outil.
+- **Auth** (`src/lib/mcp/endpoint-auth.ts`, pure et testée) : la **session de la suite**
+  (cookie BetterAuth) est prioritaire → `userId` résolu côté serveur (`auth.api.getSession`), le
+  `userId` du corps est ignoré. À défaut, un **canal de confiance** — bearer
+  `MCP_INTERNAL_KEY` (prod) ou preview ouverte — honore le `userId` du corps. Pas d'OAuth.
+
+`/internal/tools` (GET liste + POST `[name]`, garde `allowInternal`, `userId` dans le corps)
+reste comme variante interne pour un appelant programmatique de confiance ; il partage le même
+registre et la même garde bearer/preview que `/api/mcp`.
+
+Suivis (non faits) : OAuth par utilisateur sur `/api/mcp` et exposition sur un sous-domaine
+dédié `mcp.contentos.ch`.
 
 ## Skill agentique
 
 Le skill `content-os-redaction` (cerveau éditorial qui pilote cast et media via MCP) vit dans le
-hub central de l'atelier : `skills/skills/content-os-redaction/`. Téléchargeable sur
-`https://skills.contentos.ch` après connexion OTP.
+hub in-app de la suite : `src/lib/skills/catalog/content-os-redaction/`. Le hub `/skills` liste
+tous les skills (catalogue lu à chaud) et permet leur téléchargement en ZIP
+(`/skills/[name]/download`), gardé par la session de la suite.
 
 ## Déployer (via l'atelier)
 
@@ -74,8 +96,7 @@ hub central de l'atelier : `skills/skills/content-os-redaction/`. Téléchargeab
 build l'image (`docker build`) → GHCR → pull sur `lab` ; le serveur ne build jamais.
 
 La plateforme injecte `APP_URL` (cf. `deploy.sh`) = l'URL preview en preview,
-`https://cast.contentos.ch` en prod. La passerelle `mcp.contentos.ch` joint `/internal/tools` de
-cast sur cette même origine (preview de la même branche, ou prod).
+`https://cast.contentos.ch` en prod. L'endpoint MCP `/api/mcp` est servi sur cette même origine.
 
 ## Données & secrets
 
@@ -94,7 +115,7 @@ injectés par `deploy.sh` :
 - `GEMINI_API_KEY` — génération/édition d'image (module media). Absent → génération désactivée.
 - `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_S3_ENDPOINT`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` —
   stockage R2/S3 des médias. Incomplet → studio média en mode dégradé.
-- `MCP_INTERNAL_KEY` — clé interne partagée (scope **global**) gardant `/internal/tools` (passerelle MCP) ; court-circuitée en preview
+- `MCP_INTERNAL_KEY` — clé interne partagée (scope **global**) gardant le canal bearer de confiance de `/api/mcp` et de `/internal/tools` ; court-circuitée en preview
 - `QUEUE_PREFIX` — défaut `cast` (à laisser tel quel sauf collision)
 - stubs CI/dev : `CONTENT_OS_AI_STUB`, `CONTENT_OS_LINKEDIN_STUB`, `CONTENT_OS_MEDIA_STUB`
 
