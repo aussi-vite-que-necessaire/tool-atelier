@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import { Eye, Trash2 } from "lucide-react"
 import { getResource, listAccess } from "@/lib/resources/service"
 import { getResourceStats } from "@/lib/stats/queries"
+import { requireOperator } from "@/lib/auth/operator"
 import {
   updateResourceMetaAction,
   deleteResourceAction,
@@ -21,14 +22,15 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 export default async function ResourceEditor({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
+  const op = await requireOperator()
   let data: Awaited<ReturnType<typeof getResource>>
   try {
-    data = await getResource(slug)
+    data = await getResource(op, slug)
   } catch {
     notFound()
   }
-  const stats = await getResourceStats(slug)
-  const grantedEmails = data.visibility === "private" ? await listAccess(slug) : []
+  const stats = await getResourceStats(op.id, slug)
+  const grantedEmails = data.visibility === "private" ? await listAccess(op.id, slug) : []
 
   return (
     <div className="space-y-10">
@@ -42,7 +44,7 @@ export default async function ResourceEditor({ params }: { params: Promise<{ slu
           </div>
         </div>
         <a
-          href={`/r/${slug}?preview=1`}
+          href={`/o/${op.handle}/r/${slug}?preview=1`}
           target="_blank"
           rel="noreferrer"
           className="press inline-flex items-center gap-2 border-2 border-ink bg-paper px-4 py-2 text-sm font-bold uppercase tracking-wide shadow-brutal-sm"

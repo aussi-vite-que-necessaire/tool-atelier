@@ -16,6 +16,7 @@ function CoverArt({ slug, title }: { slug: string; title: string }) {
 
 export function ResourceCard({
   slug,
+  operatorHandle,
   title,
   description,
   coverImageUrl,
@@ -23,6 +24,7 @@ export function ResourceCard({
   footer,
 }: {
   slug: string
+  operatorHandle: string
   title: string
   description?: string | null
   coverImageUrl?: string | null
@@ -31,7 +33,7 @@ export function ResourceCard({
 }) {
   return (
     <Card className="lift group flex h-full flex-col overflow-hidden">
-      <Link href={`/r/${slug}`} className="flex flex-1 flex-col">
+      <Link href={`/o/${operatorHandle}/r/${slug}`} className="flex flex-1 flex-col">
         {coverImageUrl ? (
           <div className="aspect-[16/9] overflow-hidden border-b-2 border-ink">
             {/* eslint-disable-next-line @next/next/no-img-element */}

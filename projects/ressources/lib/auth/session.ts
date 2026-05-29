@@ -3,15 +3,20 @@ import { redirect } from "next/navigation"
 import { env } from "@/lib/env"
 import { isPreview, PREVIEW_USER_ID, PREVIEW_USER_EMAIL } from "./preview"
 
+export type AccountType = "operator" | "audience"
+
 export type Session = {
-  user: { id: string; email: string; name: string | null }
+  user: { id: string; email: string; name: string | null; accountType: AccountType }
 }
 
 // Récupère la session via fetch HTTP vers auth.contentos.ch (cookie forwardé).
-// En preview, court-circuite avec PREVIEW_USER_ID.
+// En preview, court-circuite avec PREVIEW_USER_ID (operator, pour garder l'accès
+// admin auto comme avant).
 export async function fetchSession(h: Headers): Promise<Session | null> {
   if (isPreview) {
-    return { user: { id: PREVIEW_USER_ID, email: PREVIEW_USER_EMAIL, name: "Preview" } }
+    return {
+      user: { id: PREVIEW_USER_ID, email: PREVIEW_USER_EMAIL, name: "Preview", accountType: "operator" },
+    }
   }
   const cookie = h.get("cookie")
   if (!cookie) return null
@@ -27,6 +32,7 @@ export async function fetchSession(h: Headers): Promise<Session | null> {
       id: data.user.id,
       email: data.user.email ?? "",
       name: data.user.name ?? null,
+      accountType: data.user.accountType === "operator" ? "operator" : "audience",
     },
   }
 }

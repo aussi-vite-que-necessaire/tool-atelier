@@ -29,6 +29,13 @@
       "when": 1779991070327,
       "tag": "0003_drop_auth_oidc",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780033568666,
+      "tag": "0004_third_zarda",
+      "breakpoints": true
     }
   ]
 }

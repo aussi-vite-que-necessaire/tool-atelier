@@ -9,19 +9,28 @@ import {
   unique,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core"
+import { operators } from "./operators"
 
-export const resources = pgTable("resources", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  slug: text("slug").notNull().unique(),
-  title: text("title").notNull(),
-  description: text("description"),
-  coverImageUrl: text("cover_image_url"),
-  visibility: text("visibility").notNull().default("public"),
-  published: boolean("published").notNull().default(false),
-  featured: boolean("featured").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-})
+export const resources = pgTable(
+  "resources",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    // Propriétaire (ADR-0002). Slug unique PAR opérateur, plus globalement.
+    operatorId: text("operator_id")
+      .notNull()
+      .references(() => operators.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    description: text("description"),
+    coverImageUrl: text("cover_image_url"),
+    visibility: text("visibility").notNull().default("public"),
+    published: boolean("published").notNull().default(false),
+    featured: boolean("featured").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("resources_operator_slug").on(t.operatorId, t.slug)],
+)
 
 export const pages = pgTable(
   "pages",

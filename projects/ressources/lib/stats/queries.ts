@@ -4,8 +4,12 @@ import { resources, pages, viewEvents, subscriptions } from "@/db/schema"
 import { buildPageTree, type TreePage } from "@/lib/content/tree"
 import { aggregateResourceStats, aggregateBySource, type ViewEvent, type StatPage, type SubAttribution } from "./aggregate"
 
-export async function getResourceStats(slug: string, sinceDays?: number) {
-  const [resource] = await db.select().from(resources).where(eq(resources.slug, slug)).limit(1)
+export async function getResourceStats(operatorId: string, slug: string, sinceDays?: number) {
+  const [resource] = await db
+    .select()
+    .from(resources)
+    .where(and(eq(resources.operatorId, operatorId), eq(resources.slug, slug)))
+    .limit(1)
   if (!resource) throw new Error(`Ressource introuvable: ${slug}`)
 
   const pageRows = await db.select().from(pages).where(eq(pages.resourceId, resource.id))
@@ -51,7 +55,7 @@ export async function getResourceStats(slug: string, sinceDays?: number) {
   }
 }
 
-export async function getStatsOverview() {
+export async function getStatsOverview(operatorId: string) {
   const rows = await db
     .select({
       slug: resources.slug,
@@ -61,6 +65,7 @@ export async function getStatsOverview() {
     })
     .from(resources)
     .leftJoin(viewEvents, eq(viewEvents.resourceId, resources.id))
+    .where(eq(resources.operatorId, operatorId))
     .groupBy(resources.slug, resources.title, viewEvents.type)
 
   const map = new Map<string, { slug: string; title: string; pageViews: number; gateImpressions: number; subscribers: number }>()
@@ -75,6 +80,7 @@ export async function getStatsOverview() {
     .select({ slug: resources.slug, source: subscriptions.source, count: sql<number>`cast(count(${subscriptions.id}) as int)` })
     .from(subscriptions)
     .innerJoin(resources, eq(subscriptions.resourceId, resources.id))
+    .where(eq(resources.operatorId, operatorId))
     .groupBy(resources.slug, subscriptions.source)
 
   const sources = new Map<string, { source: string; users: number }>()

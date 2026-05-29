@@ -10,6 +10,10 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
+  // Type de compte central de la suite contentos (ADR-0002). 'audience' par
+  // défaut ; 'operator' octroyé par acte d'administration (jamais auto-promu).
+  // Exposé via BetterAuth additionalFields (input:false → non positionnable client).
+  accountType: text("account_type").notNull().default("audience"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

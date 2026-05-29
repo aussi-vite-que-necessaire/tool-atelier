@@ -33,6 +33,19 @@ export const auth = betterAuth({
     "https://*.contentos.ch",
     "https://*.preview.contentos.ch",
   ],
+  // accountType central de la suite (ADR-0002). input:false → un client ne peut
+  // pas se l'attribuer à l'inscription/update ; l'octroi 'operator' est un acte
+  // d'administration (mise à jour DB / script). get-session le renvoie.
+  user: {
+    additionalFields: {
+      accountType: {
+        type: "string",
+        required: false,
+        defaultValue: "audience",
+        input: false,
+      },
+    },
+  },
   ...(sharedDomain
     ? {
         advanced: {

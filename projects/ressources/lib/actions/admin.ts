@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
-import { requireAdmin } from "@/lib/auth/admin"
+import { requireOperator } from "@/lib/auth/operator"
 import { moveInList } from "@/lib/admin/reorder"
 import { validateModuleInput } from "@/lib/resources/module-input"
 import * as service from "@/lib/resources/service"
@@ -20,16 +20,16 @@ function revalidateResource(slug: string) {
 }
 
 export async function createResourceAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const title = str(fd, "title") ?? "Nouvelle ressource"
-  const { slug } = await service.createResource({ title })
+  const { slug } = await service.createResource(op, { title })
   redirect(`/admin/r/${slug}`)
 }
 
 export async function updateResourceMetaAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "slug")!
-  await service.updateResource(slug, {
+  await service.updateResource(op, slug, {
     title: str(fd, "title"),
     description: str(fd, "description"),
     coverImageUrl: str(fd, "coverImageUrl"),
@@ -41,16 +41,16 @@ export async function updateResourceMetaAction(fd: FormData) {
 }
 
 export async function deleteResourceAction(fd: FormData) {
-  await requireAdmin()
-  await service.deleteResource(str(fd, "slug")!)
+  const op = await requireOperator()
+  await service.deleteResource(op.id, str(fd, "slug")!)
   revalidatePath("/admin")
   redirect("/admin")
 }
 
 export async function addPageAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
-  await service.addPage({
+  await service.addPage(op.id, {
     resourceSlug: slug,
     parentPath: parsePath(str(fd, "parentPath")),
     slug: str(fd, "slug") ?? "page",
@@ -60,9 +60,9 @@ export async function addPageAction(fd: FormData) {
 }
 
 export async function renamePageAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
-  await service.updatePage({
+  await service.updatePage(op.id, {
     resourceSlug: slug,
     path: parsePath(str(fd, "path")),
     patch: { title: str(fd, "title"), slug: str(fd, "slug") || undefined },
@@ -71,62 +71,62 @@ export async function renamePageAction(fd: FormData) {
 }
 
 export async function deletePageAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
-  await service.deletePage({ resourceSlug: slug, path: parsePath(str(fd, "path")) })
+  await service.deletePage(op.id, { resourceSlug: slug, path: parsePath(str(fd, "path")) })
   revalidateResource(slug)
 }
 
 export async function movePageAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
   const ids = (str(fd, "orderedIds") ?? "").split(",").filter(Boolean)
   const reordered = moveInList(ids, str(fd, "id")!, str(fd, "direction") as "up" | "down")
-  await service.reorderPages(reordered)
+  await service.reorderPages(op.id, reordered)
   revalidateResource(slug)
 }
 
 export async function addModuleAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
   const m = validateModuleInput({ type: str(fd, "type"), content: JSON.parse(str(fd, "content") ?? "{}") })
-  await service.addModule({ resourceSlug: slug, path: parsePath(str(fd, "path")), module: m })
+  await service.addModule(op.id, { resourceSlug: slug, path: parsePath(str(fd, "path")), module: m })
   revalidateResource(slug)
 }
 
 export async function updateModuleAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
   const m = validateModuleInput({ type: str(fd, "type"), content: JSON.parse(str(fd, "content") ?? "{}") })
-  await service.updateModule({ id: str(fd, "id")!, content: m.content })
+  await service.updateModule(op.id, { id: str(fd, "id")!, content: m.content })
   revalidateResource(slug)
 }
 
 export async function deleteModuleAction(fd: FormData) {
-  await requireAdmin()
-  await service.deleteModule({ id: str(fd, "id")! })
+  const op = await requireOperator()
+  await service.deleteModule(op.id, { id: str(fd, "id")! })
   revalidateResource(str(fd, "resourceSlug")!)
 }
 
 export async function moveModuleAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
   const ids = (str(fd, "orderedIds") ?? "").split(",").filter(Boolean)
   const reordered = moveInList(ids, str(fd, "id")!, str(fd, "direction") as "up" | "down")
-  await service.reorderModules({ orderedModuleIds: reordered })
+  await service.reorderModules(op.id, { orderedModuleIds: reordered })
   revalidateResource(slug)
 }
 
 export async function grantAccessAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
-  await service.grantAccess({ resourceSlug: slug, email: str(fd, "email")! })
+  await service.grantAccess(op.id, { resourceSlug: slug, email: str(fd, "email")! })
   revalidateResource(slug)
 }
 
 export async function revokeAccessAction(fd: FormData) {
-  await requireAdmin()
+  const op = await requireOperator()
   const slug = str(fd, "resourceSlug")!
-  await service.revokeAccess({ resourceSlug: slug, email: str(fd, "email")! })
+  await service.revokeAccess(op.id, { resourceSlug: slug, email: str(fd, "email")! })
   revalidateResource(slug)
 }

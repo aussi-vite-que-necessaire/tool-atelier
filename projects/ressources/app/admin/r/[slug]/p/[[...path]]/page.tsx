@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import { getResource } from "@/lib/resources/service"
+import { requireOperator } from "@/lib/auth/operator"
 import { addModuleAction, updateModuleAction, deleteModuleAction, moveModuleAction } from "@/lib/actions/admin"
 import { ModuleForm } from "@/components/admin/module-form"
 import { Badge } from "@/components/ui/badge"
@@ -67,9 +68,10 @@ function DeleteModule({ slug, id }: { slug: string; id: string }) {
 
 export default async function PageEditor({ params }: { params: Promise<{ slug: string; path?: string[] }> }) {
   const { slug, path = [] } = await params
+  const op = await requireOperator()
   let data: Awaited<ReturnType<typeof getResource>>
   try {
-    data = await getResource(slug)
+    data = await getResource(op, slug)
   } catch {
     notFound()
   }

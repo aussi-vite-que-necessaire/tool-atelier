@@ -1,5 +1,24 @@
 import { pgTable, uuid, text, timestamp, unique } from "drizzle-orm/pg-core"
 import { resources } from "./content"
+import { operators } from "./operators"
+
+// Membre d'audience rattaché à un opérateur (ADR-0002). Créé/assuré à la 1ʳᵉ
+// lecture d'une ressource de l'opérateur. userId = id auth (text, sans FK locale).
+export const audienceMembers = pgTable(
+  "audience_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    operatorId: text("operator_id")
+      .notNull()
+      .references(() => operators.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    source: text("source"),
+    medium: text("medium"),
+    campaign: text("campaign"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("audience_operator_user").on(t.operatorId, t.userId)],
+)
 
 export const resourceAccess = pgTable(
   "resource_access",

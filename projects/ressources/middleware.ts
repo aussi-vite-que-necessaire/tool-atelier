@@ -30,8 +30,8 @@ function setRefCookie(req: NextRequest, res: NextResponse): NextResponse {
 export function middleware(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl
 
-  // Pose le cookie de tracking sur le reader public (matcher /r/...).
-  if (pathname.startsWith("/r/")) {
+  // Pose le cookie de tracking sur les espaces opérateur publics (/o/...).
+  if (pathname.startsWith("/o/")) {
     return setRefCookie(req, NextResponse.next())
   }
 
@@ -57,8 +57,9 @@ export function middleware(req: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Matcher = union de ce qui peut nous concerner : tracking sur /r/*, SSO sur
-  // /admin, /compte, /bibliotheque, /connexion. Exclut healthz, _next, api,
-  // .well-known (gérés ailleurs / publics).
-  matcher: ["/r/:path*", "/admin/:path*", "/compte/:path*", "/bibliotheque/:path*", "/connexion"],
+  // Matcher = union de ce qui peut nous concerner : tracking sur /o/* (espaces
+  // opérateur), SSO sur /admin, /compte, /bibliotheque, /connexion. Exclut
+  // healthz, _next, api, .well-known (gérés ailleurs / publics). Les liens
+  // legacy /r/* sont gérés par une page de redirection (pas besoin de middleware).
+  matcher: ["/o/:path*", "/admin/:path*", "/compte/:path*", "/bibliotheque/:path*", "/connexion"],
 }

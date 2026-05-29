@@ -1,13 +1,13 @@
 import Link from "next/link"
 import { LogOut } from "lucide-react"
-import { requireAdmin } from "@/lib/auth/admin"
+import { requireOperator } from "@/lib/auth/operator"
 import { signOutAction } from "@/lib/actions/account"
 import { Logo } from "@/components/brand/logo"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin()
+  const op = await requireOperator()
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 h-14 border-b-2 border-ink bg-paper/90 backdrop-blur">
@@ -20,8 +20,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link href="/admin" className="hover:text-ink">
                 Bord
               </Link>
-              <Link href="/" className="hover:text-ink">
-                Site ↗
+              <Link href="/admin/audience" className="hover:text-ink">
+                Audience
+              </Link>
+              <Link href={`/o/${op.handle}`} className="hover:text-ink">
+                Espace ↗
               </Link>
             </nav>
           </div>

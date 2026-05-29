@@ -53,6 +53,7 @@ export default async function BibliothequePage() {
                   <Reveal key={r.id} delay={Math.min(i * 0.05, 0.3)} className="h-full">
                     <ResourceCard
                       slug={r.slug}
+                      operatorHandle={r.operatorHandle}
                       title={r.title}
                       description={r.description}
                       coverImageUrl={r.coverImageUrl}

@@ -1,8 +1,13 @@
-import { eq, inArray } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 import { db } from "./index"
-import { resources, pages, modules, resourceAccess } from "./schema"
+import { resources, pages, modules, resourceAccess, operators } from "./schema"
+import { PREVIEW_USER_ID } from "../lib/auth/preview"
 
 type Mod = { type: string; content: Record<string, unknown> }
+
+// Opérateur de démo en preview : le preview-user (auto-loggé, operator par
+// défaut) possède toutes les ressources seedées. Son espace : /o/demo.
+const DEMO_OPERATOR = { id: PREVIEW_USER_ID, handle: "demo", name: "Démo Contentos" }
 
 async function addPage(
   resourceId: string,
@@ -33,10 +38,13 @@ async function createResource(meta: {
   published?: boolean
   featured?: boolean
 }) {
-  await db.delete(resources).where(eq(resources.slug, meta.slug))
+  await db
+    .delete(resources)
+    .where(and(eq(resources.operatorId, DEMO_OPERATOR.id), eq(resources.slug, meta.slug)))
   const [r] = await db
     .insert(resources)
     .values({
+      operatorId: DEMO_OPERATOR.id,
       slug: meta.slug,
       title: meta.title,
       description: meta.description,
@@ -52,17 +60,26 @@ async function createResource(meta: {
 const img = (seed: string, w = 1200, h = 700) => `https://picsum.photos/seed/${seed}/${w}/${h}`
 
 async function seed() {
+  // L'opérateur démo doit exister avant les ressources (FK operator_id).
+  await db
+    .insert(operators)
+    .values(DEMO_OPERATOR)
+    .onConflictDoUpdate({ target: operators.id, set: { handle: DEMO_OPERATOR.handle, name: DEMO_OPERATOR.name } })
+
   await db
     .delete(resources)
     .where(
-      inArray(resources.slug, [
-        "showcase",
-        "guide-ia",
-        "atelier-prive",
-        "automatiser-n8n",
-        "deployer-coolify",
-        "manifeste",
-      ]),
+      and(
+        eq(resources.operatorId, DEMO_OPERATOR.id),
+        inArray(resources.slug, [
+          "showcase",
+          "guide-ia",
+          "atelier-prive",
+          "automatiser-n8n",
+          "deployer-coolify",
+          "manifeste",
+        ]),
+      ),
     )
 
   // ───────────────────────── Showcase : tous les blocs ─────────────────────────
