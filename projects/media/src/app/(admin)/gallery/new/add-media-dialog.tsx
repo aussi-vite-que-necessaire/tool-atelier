@@ -6,12 +6,15 @@ import { useRouter } from "next/navigation";
 import { uploadAction } from "../actions";
 import { GenerateForm } from "../generate-form";
 import { Composer, type PickerImage } from "./composer";
+import { TemplateTab, type TemplateOption } from "./template-tab";
+import type { FormImage } from "./template-vars-form";
 import { TABS, type Tab } from "./tabs";
 
 const TAB_LABELS: Record<Tab, string> = {
   upload: "Uploader un fichier",
   generate: "Générer une image (IA)",
   pdf: "Composer un PDF",
+  template: "Rendre un template",
 };
 
 interface StyleOption {
@@ -23,10 +26,14 @@ export function AddMediaDialog({
   tab,
   styles,
   images,
+  templates,
+  templateImages,
 }: {
   tab: Tab;
   styles: StyleOption[];
   images: PickerImage[];
+  templates: TemplateOption[];
+  templateImages: FormImage[];
 }) {
   const router = useRouter();
 
@@ -103,6 +110,10 @@ export function AddMediaDialog({
           {tab === "generate" && <GenerateForm styles={styles} />}
 
           {tab === "pdf" && <Composer images={images} />}
+
+          {tab === "template" && (
+            <TemplateTab templates={templates} images={templateImages} />
+          )}
         </div>
       </div>
     </div>
