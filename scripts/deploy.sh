@@ -38,6 +38,39 @@ acquire_deploy_lock() {
     || { echo "::error::verrou deploy non acquis après ${DEPLOY_LOCK_TIMEOUT:-600}s" >&2; exit 1; }
 }
 
+# Host public primaire selon l'env (fonction pure, testable) :
+#   prod        → <projet>.contentos.ch (cas www → apex contentos.ch)
+#   integration → <projet>.preview.contentos.ch (noms propres, suite assemblée sur le palier)
+#   <branche>   → <projet>-<branche>.preview.contentos.ch (preview par-branche, suffixe conservé)
+compute_primary_host() {
+  local proj="$1" env="$2"
+  if [ "$env" = "prod" ]; then
+    if [ "$proj" = "www" ]; then echo "contentos.ch"; else echo "${proj}.contentos.ch"; fi
+  elif [ "$env" = "integration" ]; then
+    echo "${proj}.preview.contentos.ch"
+  else
+    echo "${proj}-${env}.preview.contentos.ch"
+  fi
+}
+# Liste Caddy (séparée par virgule) : www en prod sert apex + www, sinon = host primaire.
+compute_caddy_hosts() {
+  local proj="$1" env="$2"
+  if [ "$env" = "prod" ] && [ "$proj" = "www" ]; then
+    echo "contentos.ch, www.contentos.ch"
+  else
+    compute_primary_host "$proj" "$env"
+  fi
+}
+# AUTH_URL injecté hors prod : integration → auth.preview (nom propre) ; branche →
+# auth-<branche>.preview (auth de la branche, où sont seedés user1/2/3) ; prod → vide
+# (le défaut applicatif / le secret s'applique).
+compute_auth_url() {
+  local env="$1"
+  if [ "$env" = "prod" ]; then echo ""
+  elif [ "$env" = "integration" ]; then echo "https://auth.preview.contentos.ch"
+  else echo "https://auth-${env}.preview.contentos.ch"; fi
+}
+
 # Sourcé (tests) : on s'arrête après les définitions de fonctions, sans exécuter le deploy.
 (return 0 2>/dev/null) && return 0
 
@@ -46,20 +79,11 @@ PROJ="$1"; ENV="$2"; IMAGES="$3"
 acquire_deploy_lock
 APPDIR="/opt/lab/apps/${PROJ}-${ENV}"
 UPSTREAM="${PROJ}-${ENV}"
-# Hosts publics : prod sous *.contentos.ch (cas spécial `www` = apex + www), preview sous *.preview.contentos.ch.
-# PRIMARY_HOST sert d'identité publique (APP_URL, logs) ; HOSTS_CADDY est la liste séparée par virgule pour la route.
-if [ "$ENV" = "prod" ]; then
-  if [ "$PROJ" = "www" ]; then
-    PRIMARY_HOST="contentos.ch"
-    HOSTS_CADDY="contentos.ch, www.contentos.ch"
-  else
-    PRIMARY_HOST="${PROJ}.contentos.ch"
-    HOSTS_CADDY="$PRIMARY_HOST"
-  fi
-else
-  PRIMARY_HOST="${PROJ}-${ENV}.preview.contentos.ch"
-  HOSTS_CADDY="$PRIMARY_HOST"
-fi
+# Hosts publics (cf. fonctions pures ci-dessus) : prod sous *.contentos.ch (www = apex + www),
+# integration sous <projet>.preview.contentos.ch (noms propres), preview par-branche suffixée.
+# PRIMARY_HOST = identité publique (APP_URL, logs) ; HOSTS_CADDY = liste virgule pour la route.
+PRIMARY_HOST="$(compute_primary_host "$PROJ" "$ENV")"
+HOSTS_CADDY="$(compute_caddy_hosts "$PROJ" "$ENV")"
 
 # jq requis pour lire lab.json — auto-install si absent (serveur fraîchement provisionné)
 command -v jq >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq jq; }
@@ -182,15 +206,15 @@ fi
 # secrets pour être autoritative — en --env-file la dernière occurrence d'une clé gagne.
 printf 'APP_URL=https://%s\n' "$PRIMARY_HOST" >> "$APPDIR/.env"
 
-# AUTH_URL : en preview, les clients parlent à l'auth de LEUR branche
-# (auth-<branche>.preview.contentos.ch) — c'est là que sont seedés user1/2/3. On
-# RETIRE d'abord tout AUTH_URL hérité (certains projets en ont un dans leur secret
-# = valeur prod, qui sinon shadowe l'injection via env_file) puis on écrit celui de
-# la branche → une seule valeur, sans ambiguïté de précédence. En prod, on ne touche
-# à rien : le secret (ou le défaut applicatif https://auth.contentos.ch) s'applique.
-if [ "$ENV" != "prod" ]; then
+# AUTH_URL hors prod (cf. compute_auth_url) : en integration → auth.preview (nom propre, où la
+# suite assemblée partage le SSO) ; en preview par-branche → auth-<branche>.preview (là où sont
+# seedés user1/2/3). On RETIRE d'abord tout AUTH_URL hérité (certains projets en ont un dans leur
+# secret = valeur prod, qui sinon shadowe l'injection via env_file) puis on écrit la bonne valeur
+# → une seule, sans ambiguïté de précédence. En prod : vide, le secret/défaut applicatif s'applique.
+auth_url="$(compute_auth_url "$ENV")"
+if [ -n "$auth_url" ]; then
   sed -i '/^AUTH_URL=/d' "$APPDIR/.env"
-  printf 'AUTH_URL=https://auth-%s.preview.contentos.ch\n' "$ENV" >> "$APPDIR/.env"
+  printf 'AUTH_URL=%s\n' "$auth_url" >> "$APPDIR/.env"
 fi
 
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab.
