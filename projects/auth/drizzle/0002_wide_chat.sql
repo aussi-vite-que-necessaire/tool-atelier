@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "account_type" text DEFAULT 'audience' NOT NULL;
