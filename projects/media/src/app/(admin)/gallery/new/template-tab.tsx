@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { parseVariablesSchema } from "@/lib/templates/dsl";
 import { renderTemplateFromTemplateAction } from "../actions";
+import { type CreatedMedia, toCreatedMedia } from "@/lib/embed/contract";
 import { TemplateVarsForm, type FormImage } from "./template-vars-form";
 import { TemplateLivePreview } from "./template-live-preview";
 import { Button } from "@/components/ui/button";
@@ -23,11 +24,12 @@ export type TemplateOption = {
 interface Props {
   templates: TemplateOption[];
   images: FormImage[];
+  onCreated?: (m: CreatedMedia) => void;
 }
 
 // Onglet « Template » de la modal galerie : choisir un template, remplir ses
 // variables et voir l'aperçu HTML live à côté, puis rendre l'image en galerie.
-export function TemplateTab({ templates, images }: Props) {
+export function TemplateTab({ templates, images, onCreated }: Props) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [vars, setVars] = useState<Record<string, unknown>>({});
@@ -67,8 +69,21 @@ export function TemplateTab({ templates, images }: Props) {
     startTransition(async () => {
       const res = await renderTemplateFromTemplateAction(selected.id, vars);
       if (res.ok) {
-        router.push("/gallery");
-        router.refresh();
+        if (onCreated) {
+          // Mode embarqué : remonter au parent plutôt que naviguer vers /gallery.
+          onCreated(
+            toCreatedMedia({
+              id: res.id,
+              url: res.url,
+              kind: res.kind,
+              width: res.width,
+              height: res.height,
+            }),
+          );
+        } else {
+          router.push("/gallery");
+          router.refresh();
+        }
       } else {
         setError(res.error);
       }

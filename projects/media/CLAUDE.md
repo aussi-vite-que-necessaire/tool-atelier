@@ -65,6 +65,12 @@ Faire évoluer le schéma : éditer `src/db/schema.ts` → `npm run db:generate`
 - **Admin** (App Router, route group `(admin)`, derrière le SSO via `requireUserId()`) : `/gallery`
   (galerie + upload manuel), `/templates` (+ éditeur avec aperçu de rendu), `/styles`,
   `/style-guides`, `/brand`.
+- **Embed** (`/embed/new`, derrière le SSO, hors route group admin) : version embarquable de la
+  modal d'ajout (mêmes onglets upload/generate/pdf/template, réutilisés via un callback
+  `onCreated`). Chargée en iframe par les autres apps de la suite (ex. cast) pour créer un média
+  sans quitter l'app. Valide `?parentOrigin=` (`src/lib/embed/origin.ts`), `frame-ancestors`
+  posé sur `/embed/*` (`next.config.ts`), et remonte le média créé au parent par `postMessage`
+  (`contentos:media-created`, contrat `src/lib/embed/contract.ts`).
 
 Le rendu de template substitue les variables côté serveur (Handlebars + contexte `{{brand.*}}`) ;
 `render_html` reste le chemin sans templating (l'appelant fournit tout le HTML).

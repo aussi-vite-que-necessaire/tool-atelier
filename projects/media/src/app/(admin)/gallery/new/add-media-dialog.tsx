@@ -3,14 +3,13 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { uploadAction } from "../actions";
 import { GenerateForm } from "../generate-form";
 import { Composer, type PickerImage } from "./composer";
 import { TemplateTab, type TemplateOption } from "./template-tab";
 import type { FormImage } from "./template-vars-form";
+import { UploadForm } from "./upload-form";
 import { TABS, type Tab } from "./tabs";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const TAB_LABELS: Record<Tab, string> = {
   upload: "Uploader un fichier",
@@ -85,25 +84,7 @@ export function AddMediaDialog({
 
         {/* Contenu de l'onglet actif */}
         <div className="flex-1 overflow-auto p-6">
-          {tab === "upload" && (
-            <form action={uploadAction} className="max-w-md space-y-3">
-              <input
-                type="file"
-                name="file"
-                accept="image/png,image/jpeg,image/webp,application/pdf,video/mp4"
-                required
-                className={cn(
-                  "block text-sm text-muted-foreground",
-                  "file:mr-3 file:rounded-lg file:border file:border-input file:bg-background file:px-3 file:py-1 file:text-sm file:text-foreground hover:file:bg-muted",
-                )}
-              />
-              <p className="text-xs text-muted-foreground">
-                Types acceptés : PNG, JPEG, WebP (≤ 10 Mo), PDF (≤ 100 Mo), MP4 (≤ 100 Mo via l&apos;UI).
-                Pour les vidéos jusqu&apos;à 500 Mo, utiliser l&apos;API <code>/v1/upload</code>.
-              </p>
-              <Button type="submit">Uploader</Button>
-            </form>
-          )}
+          {tab === "upload" && <UploadForm />}
 
           {tab === "generate" && <GenerateForm styles={styles} />}
 

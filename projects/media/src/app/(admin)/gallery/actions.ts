@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getMediaRecord, deleteMediaRow } from "@/lib/media/repository";
+import type { MediaKind } from "@/lib/media/types";
 import { deleteObject, getImageBytes } from "@/lib/storage";
 import { store } from "@/lib/store";
 import { validateUpload } from "@/lib/media/validate-upload";
@@ -16,33 +17,56 @@ import { getBrandContext } from "@/lib/brand/repository";
 import { renderTemplate } from "@/lib/templates/render";
 
 // État renvoyé par les actions IA, consommé par useActionState côté client.
+// Les champs kind/width/height alimentent le descripteur transmis au parent en
+// mode embarqué (cf. src/lib/embed/contract.ts) ; ignorés par l'admin.
 interface AiResult {
   id?: string;
   url?: string;
+  kind?: MediaKind;
+  width?: number | null;
+  height?: number | null;
   error?: string;
 }
 
-export async function uploadAction(formData: FormData): Promise<void> {
+// Résultat de l'upload, consommé par useActionState (UploadForm). Renvoie le
+// descripteur du média créé pour permettre l'attache en mode embarqué.
+export interface UploadResult {
+  id?: string;
+  url?: string;
+  kind?: MediaKind;
+  width?: number | null;
+  height?: number | null;
+  error?: string;
+}
+
+export async function uploadAction(
+  _prev: UploadResult,
+  formData: FormData,
+): Promise<UploadResult> {
   const userId = await requireUserId();
   const file = formData.get("file") as File | null;
-  if (!file || file.size === 0) return;
+  if (!file || file.size === 0) return { error: "Aucun fichier." };
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const result = validateUpload(file.type, bytes.byteLength);
-  if (!result.ok) throw new Error(result.error);
+  if (!result.ok) return { error: result.error };
 
-  await store({
-    userId,
-    bytes,
-    mimeType: file.type,
-    kind: result.kind,
-    prompt: null,
-    parent_id: null,
-    source: "upload",
-    tags: [],
-  });
-
-  revalidatePath("/gallery");
+  try {
+    const rec = await store({
+      userId,
+      bytes,
+      mimeType: file.type,
+      kind: result.kind,
+      prompt: null,
+      parent_id: null,
+      source: "upload",
+      tags: [],
+    });
+    revalidatePath("/gallery");
+    return { id: rec.id, url: rec.url, kind: rec.kind, width: rec.width, height: rec.height };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Échec de l'upload." };
+  }
 }
 
 export async function generateAction(
@@ -75,7 +99,7 @@ export async function generateAction(
       style_id: styleId ?? null,
     });
     revalidatePath("/gallery");
-    return { id: rec.id, url: rec.url };
+    return { id: rec.id, url: rec.url, kind: rec.kind, width: rec.width, height: rec.height };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Échec de la génération." };
   }
@@ -108,7 +132,7 @@ export async function editAction(
       tags: [],
     });
     revalidatePath("/gallery");
-    return { id: rec.id, url: rec.url };
+    return { id: rec.id, url: rec.url, kind: rec.kind, width: rec.width, height: rec.height };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Échec de l'édition." };
   }
@@ -141,14 +165,17 @@ export async function previewTemplateHtmlAction(
 export async function renderTemplateFromTemplateAction(
   templateId: string,
   vars: Record<string, unknown>,
-): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; id: string; url: string; kind: MediaKind; width: number | null; height: number | null }
+  | { ok: false; error: string }
+> {
   const userId = await requireUserId();
   try {
     const rec = await renderTemplate(userId, templateId, vars, {
       imagesOptional: true,
     });
     revalidatePath("/gallery");
-    return { ok: true, url: rec.url };
+    return { ok: true, id: rec.id, url: rec.url, kind: rec.kind, width: rec.width, height: rec.height };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Échec du rendu." };
   }
