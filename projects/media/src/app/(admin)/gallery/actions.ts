@@ -9,6 +9,11 @@ import { generateImage, editImage } from "@/lib/gemini";
 import { getStyle } from "@/lib/styles/repository";
 import { composePrompt } from "@/lib/styles/compose";
 import { requireUserId } from "@/lib/session";
+import { getTemplate } from "@/lib/templates/repository";
+import { compileTemplate } from "@/lib/templates/compile";
+import { fillVarDefaults, parseVariablesSchema } from "@/lib/templates/dsl";
+import { getBrandContext } from "@/lib/brand/repository";
+import { renderTemplate } from "@/lib/templates/render";
 
 // État renvoyé par les actions IA, consommé par useActionState côté client.
 interface AiResult {
@@ -106,6 +111,46 @@ export async function editAction(
     return { id: rec.id, url: rec.url };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Échec de l'édition." };
+  }
+}
+
+// Aperçu HTML d'un template : compile le Handlebars (variables + marque) et
+// renvoie le HTML, SANS passer par Chromium ni stocker quoi que ce soit. Sert
+// l'aperçu live de l'onglet « Template » de la modal. Tolérant : remplit les
+// variables manquantes par leurs valeurs par défaut (formulaire en cours
+// d'édition), ne valide pas strictement.
+export async function previewTemplateHtmlAction(
+  templateId: string,
+  vars: Record<string, unknown>,
+): Promise<{ html?: string; error?: string }> {
+  const userId = await requireUserId();
+  try {
+    const template = await getTemplate(userId, templateId);
+    if (!template) return { error: "Template introuvable" };
+    const schema = parseVariablesSchema(template.variablesSchema);
+    const filled = fillVarDefaults(schema, vars);
+    const brand = await getBrandContext(userId);
+    return { html: compileTemplate({ template, vars: filled, brand }) };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Échec de l'aperçu." };
+  }
+}
+
+// Rendu final d'un template en image (Chromium) puis stockage en galerie. Les
+// variables image restent optionnelles pour ne pas bloquer un rendu partiel.
+export async function renderTemplateFromTemplateAction(
+  templateId: string,
+  vars: Record<string, unknown>,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  const userId = await requireUserId();
+  try {
+    const rec = await renderTemplate(userId, templateId, vars, {
+      imagesOptional: true,
+    });
+    revalidatePath("/gallery");
+    return { ok: true, url: rec.url };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Échec du rendu." };
   }
 }
 

@@ -4,15 +4,13 @@ Projet exploratoire. **Suite d'outils pensés pour être pilotés par des agents
 
 Les outils vivent sous `*.contentos.ch` en prod. Cas spécial : **`projects/www/`** sert `contentos.ch` + `www.contentos.ch`.
 
-## Trois rails de session
+## Comment on travaille
 
-| Skill | Quand |
-|---|---|
-| `/lab-ship <projet>` | Feature/évolution d'un projet existant (cadrage → spec → plan → impl → PR preview, un seul gate humain) |
-| `/lab-new` | Créer un nouveau projet (base Next.js + capacités, déploiement jusqu'en prod) |
-| `/lab-meta` | Plomberie de l'atelier (skills, `CLAUDE.md`, scripts, hooks) — flow libre |
-
-Utilitaires : `/start` (router de session), `/lab-deploy` (déploie le projet courant), `/lab-secret` (secrets), `/lab-ssh` (diagnostic serveur), `/lab-adr <sujet>` (capture une décision structurante dans `docs/decisions/`), `/lab-idea <sujet>` (capture une piste en backlog dans `docs/ideas/`).
+- **Le dev de feature passe par le workflow superpowers** (plugin `superpowers`, installé via le marketplace `superpowers-marketplace`). C'est lui qui mène brainstorm → plan → implémentation en TDD. On le laisse faire ; pas de pipe maison par-dessus.
+- **L'atelier ajoute quelques skills dédiées** à sa plomberie :
+  - `/nouveau-projet` — créer un projet (base Next.js + capacités, déploiement jusqu'en prod) ;
+  - `/noter-idee` — capturer une piste d'amélioration en backlog (`docs/ideas/`) ;
+  - `/travailler-infra` — bosser sur l'atelier lui-même (skills, `CLAUDE.md`, scripts, hooks, CI).
 
 La liste des projets se déduit en scannant `projects/*/lab.json` — chaque projet déclare sa description dans son `lab.json`.
 
@@ -20,16 +18,16 @@ La liste des projets se déduit en scannant `projects/*/lab.json` — chaque pro
 
 **Étoile polaire : deux agents ne touchent jamais la même ressource mutable au même instant.** Le code et la branche s'isolent par session ; la prod (singleton) se sérialise par l'entonnoir PR → merge → CI.
 
-- **Jamais de commit sur `main`.** On code sur une branche, on ouvre une PR.
+- **Une session = un conteneur isolé = une branche.** Chaque session tourne dans son propre conteneur (un clone frais et jetable du dépôt, sur `claude.ai/code`) sur sa propre branche, fournie par le harness. L'isolation est **structurelle** : un agent est seul dans son conteneur, il peut éditer n'importe quel projet et basculer de branche sans gêner personne. Pas de worktree git, pas de checkout partagé.
+- **Jamais de commit sur `main`.** On code sur sa branche de session, on ouvre une PR. C'est le seul garde-fou du hook `branch-guard` : il bloque tout `commit`/`push` qui mettrait `main` à jour. Le reste est permis (le conteneur est privé).
 - **Push de branche → preview** : `https://<projet>-<branche>.preview.contentos.ch` (détruite à la suppression de la branche).
 - **Merge de PR → prod** : `https://<projet>.contentos.ch` (cas `www` → `contentos.ch` + `www.contentos.ch`).
-- **Merger** : `gh pr merge <#> --squash`. La branche distante se supprime seule (`delete_branch_on_merge`). Côté local, `git worktree remove <chemin>` puis `git branch -D <branche>`. Pas de `--delete-branch` en contexte worktree (gh tente un checkout sur `main`, déjà occupé).
-- **Une session = un worktree isolé + une branche.** Le checkout principal est réservé à la plomberie de l'atelier (CLAUDE.md, skills, scripts) — pas de dev projet. Le hook `branch-guard` bloque les commits sur `main`, les push qui mettraient `main` à jour, et le dev projet dans le checkout principal.
-- **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opérateur de plein droit : SSH lecture/diagnostic (`/lab-ssh`), secrets (`/lab-secret`), logs. La clé SSH du lab est tirée du store (`sysadmin/LAB_SSH_KEY_B64`), déchiffrée en mémoire, utilisée, effacée. Local et cloud ont les mêmes privilèges.
+- **Merger** : `gh pr merge <#> --squash`. La branche distante se supprime seule (`delete_branch_on_merge`) ; le conteneur de la session est jetable, rien à nettoyer côté local.
+- **Opérer = une capacité, pas un lieu.** Toute session qui détient `LAB_SECRETS_KEY` est opératrice de plein droit sur le store de secrets (`bin/lab-secret-add`) : déchiffrement/chiffrement par scope, en mémoire. Local et cloud ont les mêmes privilèges. (Pas d'accès SSH au lab depuis l'atelier : l'egress des sessions cloud ne sort qu'en HTTP/HTTPS, le port 22 est inatteignable. Le diagnostic serveur se fait hors atelier.)
 
 ## Déployer (build sur la CI uniquement)
 
-`git push` → GitHub Action build l'image du/des projet(s) modifié(s) → **GHCR** → SSH vers `lab` → `scripts/deploy.sh`. Le serveur ne build jamais : il *pull* l'image déjà construite. Suivre avec `gh run watch`. Logs d'un projet : `lab-ssh "docker logs <projet>-<env>-app-1"` (skill `/lab-ssh`).
+`git push` → GitHub Action build l'image du/des projet(s) modifié(s) → **GHCR** → SSH vers `lab` → `scripts/deploy.sh`. Le serveur ne build jamais : il *pull* l'image déjà construite. Suivre avec `gh run watch`.
 
 **DNS.** Deux wildcards Infomaniak sur `contentos.ch` : `*.contentos.ch` (prod) et `*.preview.contentos.ch` (previews) pointent sur le lab — aucun enregistrement DNS par projet. La zone est pilotable via l'API Infomaniak (token `sysadmin/INFOMANIAK_API_TOKEN`).
 
@@ -47,11 +45,11 @@ Au déploiement, `deploy.sh` :
 
 Preview = base vide + seed, droppée au teardown. Exemples : `projects/hello/` (rien), `projects/counter/` (db).
 
-**Dev (agents & local).** La même déclaration `lab.json` alimente l'environnement de dev — pensé d'abord pour les **agents en session cloud** (conteneur isolé, sans daemon Docker). `scripts/dev-db.sh up <projet>` monte Postgres (et Redis si déclaré) en **natif** (serveur installé via apt si absent, cluster Debian démarré ; pas de Docker), crée le rôle applicatif `app` (convention de l'atelier, identique à la CI) puis `<projet>_dev` **et** `<projet>_test`, joue `migrate`+`seed` sur la base dev et `db:test:prepare` sur la base test, et écrit le `.env` du projet (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL`, `BETTER_AUTH_SECRET` de dev). Résultat : `npm run dev` **et** `npm test` passent du premier coup (vérifié de bout en bout, ardoise vierge : `cast` 169 tests, `media` 72, `ressources` 81 — tous verts ; `auth`/`counter` provisionnés, sans suite testable). Calque le modèle de la prod. Idempotent (à relancer si le conteneur a été recyclé). `reset <projet>` repart de zéro, `down` arrête les services (données conservées), `nuke <projet>` drop les bases du projet. `/lab-implémenter` lance ce `up` avant la première tâche. *(e2e Playwright = hors de ce périmètre : ils tournent en CI post-deploy contre la preview — cf. `docs/ideas/2026-05-28-e2e-mutualises.md`.)*
+**Dev (agents & local).** La même déclaration `lab.json` alimente l'environnement de dev — pensé d'abord pour les **agents en session cloud** (conteneur isolé, sans daemon Docker). `scripts/dev-db.sh up <projet>` monte Postgres (et Redis si déclaré) en **natif** (serveur installé via apt si absent, cluster Debian démarré ; pas de Docker), crée le rôle applicatif `app` (convention de l'atelier, identique à la CI) puis `<projet>_dev` **et** `<projet>_test`, joue `migrate`+`seed` sur la base dev et `db:test:prepare` sur la base test, et écrit le `.env` du projet (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL`, `BETTER_AUTH_SECRET` de dev). Résultat : `npm run dev` **et** `npm test` passent du premier coup (vérifié de bout en bout, ardoise vierge : `cast` 169 tests, `media` 72, `ressources` 81 — tous verts ; `auth`/`counter` provisionnés, sans suite testable). Calque le modèle de la prod. Idempotent (à relancer si le conteneur a été recyclé). `reset <projet>` repart de zéro, `down` arrête les services (données conservées), `nuke <projet>` drop les bases du projet. *(e2e Playwright = hors de ce périmètre : ils tournent en CI post-deploy contre la preview — cf. `docs/ideas/2026-05-28-e2e-mutualises.md`.)*
 
-## Secrets — `/lab-secret`
+## Secrets
 
-Les clés API et variables sensibles se gèrent avec **`/lab-secret`** : secrets `age`-chiffrés versionnés dans `secrets/`, déverrouillés par l'unique variable `LAB_SECRETS_KEY`, par scope (`global` partagé / `sysadmin` opérateur / `<projet>`). Au déploiement, `deploy.sh` déchiffre et injecte `global` + le scope du projet. Les variables auto-fournies (`APP_URL`, `DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY`) ne sont pas à gérer à la main.
+Les clés API et variables sensibles sont des secrets `age`-chiffrés versionnés dans `secrets/`, déverrouillés par l'unique variable `LAB_SECRETS_KEY`, par scope (`global` partagé / `sysadmin` opérateur / `<projet>`). On les ajoute avec `bin/lab-secret-add`. Au déploiement, `deploy.sh` déchiffre et injecte `global` + le scope du projet. Les variables auto-fournies (`APP_URL`, `DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY`) ne sont pas à gérer à la main.
 
 ## Infra / plateforme
 
