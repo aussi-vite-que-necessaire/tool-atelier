@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Hook SessionStart : accueil de session. Modèle cloud — 1 session = 1 conteneur isolé = 1 branche.
 # On annonce la branche courante. Le dev de feature passe par le workflow superpowers ;
-# l'atelier ajoute quelques skills dédiées (/nouveau-projet, /noter-idee, /travailler-infra, lab-ssh).
+# l'atelier ajoute quelques skills dédiées (/nouveau-projet, /noter-idee, /travailler-infra).
 set -uo pipefail
 
 emit() {
