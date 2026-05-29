@@ -1,7 +1,7 @@
 # Fiabiliser l'étape `deploy` (pull + run sur le lab)
 
 **Date.** 2026-05-29
-**Statut.** À explorer
+**Statut.** Traité (retry + verrou global) — cf. `docs/superpowers/specs/2026-05-29-fiabiliser-deploy-lab-design.md`. Reste en backlog : supervision/alerte RAM.
 
 ## Contexte
 

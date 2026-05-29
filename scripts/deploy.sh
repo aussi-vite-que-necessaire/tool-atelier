@@ -10,7 +10,40 @@
 #   En multi, l'image one-shot `migrate`/`seed` est celle du rôle `web` (à défaut le 1er rôle).
 set -euo pipefail
 
+# Retry/backoff sur `docker pull` : GHCR est ponctuellement flaky. PULL_MAX_ATTEMPTS tentatives,
+# backoff exponentiel (2s, 4s, 8s…). Renvoie non-zéro à l'épuisement → `set -e` arrête le deploy
+# avant tout `compose up` (jamais d'env à moitié monté).
+retry_pull() {
+  local ref="$1" n=1 max="${PULL_MAX_ATTEMPTS:-3}" base="${PULL_BACKOFF_BASE:-2}" delay
+  until docker pull "$ref"; do
+    if [ "$n" -ge "$max" ]; then
+      echo "::error::docker pull échoué après $max tentatives: $ref" >&2
+      return 1
+    fi
+    delay=$(( base ** n ))
+    echo "⚠ docker pull $ref échoué (tentative $n/$max) — nouvel essai dans ${delay}s" >&2
+    sleep "$delay"
+    n=$(( n + 1 ))
+  done
+}
+
+# Verrou global du lab : un seul deploy/teardown à la fois sur le daemon Docker, toutes
+# sessions/branches confondues (`max-parallel:1` ne sérialise qu'au sein d'un run CI ; deux
+# branches/agents poussant ensemble lancent sinon deux deploys concurrents → pression RAM +
+# erreurs de lease containerd). flock noyau, libéré automatiquement à la mort du process (pas de
+# verrou fantôme). Attente bloquante avec timeout → échec visible plutôt que pendre à l'infini.
+acquire_deploy_lock() {
+  exec 9>"${DEPLOY_LOCKFILE:-/opt/lab/deploy.lock}"
+  flock -w "${DEPLOY_LOCK_TIMEOUT:-600}" 9 \
+    || { echo "::error::verrou deploy non acquis après ${DEPLOY_LOCK_TIMEOUT:-600}s" >&2; exit 1; }
+}
+
+# Sourcé (tests) : on s'arrête après les définitions de fonctions, sans exécuter le deploy.
+(return 0 2>/dev/null) && return 0
+
 PROJ="$1"; ENV="$2"; IMAGES="$3"
+# Verrou global pris au plus tôt : toute la suite touche le daemon Docker (pull, exec, compose).
+acquire_deploy_lock
 APPDIR="/opt/lab/apps/${PROJ}-${ENV}"
 UPSTREAM="${PROJ}-${ENV}"
 # Hosts publics : prod sous *.contentos.ch (cas spécial `www` = apex + www), preview sous *.preview.contentos.ch.
@@ -57,7 +90,7 @@ else
   done
   [ -n "$MIGRATE_IMAGE" ] || MIGRATE_IMAGE="${REFS[0]}"
 fi
-for ref in "${REFS[@]}"; do docker pull "$ref"; done
+for ref in "${REFS[@]}"; do retry_pull "$ref"; done
 
 mkdir -p "$APPDIR"
 umask 077
