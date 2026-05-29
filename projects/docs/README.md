@@ -18,6 +18,10 @@ scripts/dev-db.sh up docs         # .env de docs pointé sur ressources_dev
 npm run dev                       # http://localhost:3000
 ```
 
+> Preview : `https://docs-<slug-de-branche>.preview.contentos.ch`. La base lue est
+> celle de `ressources` (`ressources_<slug>`) ; pour des données, la même branche
+> doit aussi avoir déployé `ressources` (qui migre + seed la démo `/o/demo`).
+
 ## Tests & qualité
 
 ```bash
