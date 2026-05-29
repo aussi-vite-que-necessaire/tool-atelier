@@ -47,9 +47,9 @@ Faire évoluer le schéma : éditer `src/db/schema.ts` → `npm run db:generate`
 
 ## Interfaces
 
-- **Endpoint de tools interne** `/internal/tools` (service-key `MEDIA_ENGINE_SERVICE_KEY`) :
-  `GET /internal/tools` renvoie les schémas JSON des tools, `POST /internal/tools/:name` exécute
-  un tool avec `{ userId, args }`. Les tools sont déclarés en `ToolDef` dans `src/lib/mcp/tools/`
+- **Endpoint de tools interne** `/internal/tools` (clé interne partagée `MCP_INTERNAL_KEY`, scope
+  global ; court-circuitée en preview) : `GET /internal/tools` renvoie les schémas JSON des tools,
+  `POST /internal/tools/:name` exécute un tool avec `{ userId, args }`. Les tools sont déclarés en `ToolDef` dans `src/lib/mcp/tools/`
   et agrégés par `src/lib/mcp/registry.ts` ; chacun reçoit le `userId` transmis par la passerelle.
   La passerelle `mcp.contentos.ch` consomme ce contrat et fédère ces tools sous des noms préfixés.
   - Médias : `generate_image` (+ `style_id`), `edit_image`, `render_html`, `render_template`,
@@ -73,7 +73,8 @@ Le rendu de template substitue les variables côté serveur (Handlebars + contex
 
 - `AUTH_URL` — URL du provider d'auth de la suite (défaut `https://auth.contentos.ch`).
 - `GEMINI_API_KEY` — clé Gemini.
-- `MEDIA_ENGINE_SERVICE_KEY` — Bearer des endpoints internes (`/internal`, `/v1`).
+- `MEDIA_ENGINE_SERVICE_KEY` — Bearer de l'API `/v1` (service-to-service, ex. cast).
+- `MCP_INTERNAL_KEY` — clé interne partagée (scope global) gardant `/internal/tools` (passerelle MCP).
 - Identifiants S3 R2 : `R2_S3_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL`.
 
 Auto-injectés (ne pas gérer à la main) : `APP_URL`, `DATABASE_URL`, `BROWSER_URL`.

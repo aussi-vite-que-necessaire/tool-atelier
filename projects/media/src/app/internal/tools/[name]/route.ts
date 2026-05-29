@@ -1,4 +1,4 @@
-import { checkServiceKey } from "@/lib/service-auth";
+import { allowInternal } from "@/lib/mcp/internal-auth";
 import { callToolByName } from "@/lib/mcp/internal";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function POST(
   request: Request,
   ctx: { params: Promise<{ name: string }> },
 ): Promise<Response> {
-  if (!checkServiceKey(request)) return json({ error: "Unauthorized" }, 401);
+  if (!allowInternal(request)) return json({ error: "Unauthorized" }, 401);
 
   const { name } = await ctx.params;
   let body: unknown;

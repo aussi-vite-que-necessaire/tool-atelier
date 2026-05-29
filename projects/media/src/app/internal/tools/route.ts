@@ -1,10 +1,10 @@
-import { checkServiceKey } from "@/lib/service-auth";
+import { allowInternal } from "@/lib/mcp/internal-auth";
 import { listToolsResponse } from "@/lib/mcp/internal";
 
 export const dynamic = "force-dynamic";
 
 export function GET(request: Request): Response {
-  if (!checkServiceKey(request)) {
+  if (!allowInternal(request)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401, headers: { "content-type": "application/json" },
     });

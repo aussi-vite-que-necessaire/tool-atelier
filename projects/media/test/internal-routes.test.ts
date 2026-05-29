@@ -11,8 +11,9 @@ function req(body?: unknown, key?: string): Request {
   });
 }
 
+// Hors preview (APP_ENV non posé → isPreview=false), la garde exige MCP_INTERNAL_KEY.
 describe("/internal/tools", () => {
-  beforeEach(() => { process.env.MEDIA_ENGINE_SERVICE_KEY = KEY; });
+  beforeEach(() => { process.env.MCP_INTERNAL_KEY = KEY; });
 
   it("GET refuse sans service-key (401)", async () => {
     const res = await listTools(new Request("https://media.internal/internal/tools"));
