@@ -16,7 +16,6 @@
     "db:test:prepare": "node scripts/db-test-prepare.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.26.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
@@ -24,7 +23,6 @@
     "github-slugger": "^2.0.0",
     "jszip": "^3.10.1",
     "lucide-react": "^1.16.0",
-    "mcp-handler": "^1.0.2",
     "next": "16.2.6",
     "postgres": "^3.4.9",
     "react": "19.2.4",

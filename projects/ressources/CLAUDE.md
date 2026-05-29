@@ -5,7 +5,8 @@ Plateforme de lead magnets de la suite **contentos** (`https://ressources.conten
 partageable via `/o/<handle>`, et son **audience** (les lecteurs qui s'y rattachent). Une
 ressource = une arborescence de pages faites de modules typés, servie sur
 `/o/<handle>/r/<slug>` par un reader SSR. Authentification déléguée au SSO central
-`auth.contentos.ch`. Pilotage par agent via serveur MCP. Voir
+`auth.contentos.ch`. Pilotage par agent : ses tools sont fédérés par la passerelle MCP centrale
+(`mcp.contentos.ch`) via l'endpoint interne `/internal/tools`. Voir
 `../../docs/decisions/0002-comptes-operateur-audience-tenancy.md` (ADR-0002).
 
 ## Stack
@@ -44,11 +45,11 @@ Les helpers vivent sous `lib/auth/` :
   `userId`). Provisionnée en tandem avec `accountType='operator'` côté auth.
 - `lib/auth/preview.ts` : `PREVIEW_USER_ID`, `isPreview` (selon `APP_ENV`). En preview, la
   session est court-circuitée en `operator` (l'opérateur démo `/o/demo`, seedé).
-- `lib/mcp-auth.ts` : `verifyMcpToken(req)` via `${AUTH_URL}/api/auth/mcp/get-session` ; la
-  route MCP exige en plus que le user soit **opérateur** et dépose `operatorId`/`handle` dans
-  `authInfo.extra` (chaque outil n'opère que sur ses ressources).
-- `app/.well-known/oauth-authorization-server` : 302 vers le provider central.
-- `app/.well-known/oauth-protected-resource` : annonce `authorization_servers: [AUTH_URL]`.
+- `lib/mcp-internal.ts` : contrat interne consommé par la passerelle MCP — `listToolsResponse()`
+  (schémas JSON) et `callToolByName(name, userId, args)`, qui **résout l'opérateur** depuis le
+  `userId` (`getOperatorById`) et le dépose dans `authInfo.extra` (chaque outil n'opère que sur
+  ses ressources ; compte non-opérateur → résultat isError). Gardé par `lib/mcp-internal-auth.ts`
+  (`MCP_INTERNAL_KEY` partagée, court-circuitée en preview). Exposé sur `app/internal/tools/`.
 - `app/connexion/page.tsx` : redirige vers `${AUTH_URL}/sign-in?redirect=...` (no-op en preview).
 
 Modèle multi-tenant (ADR-0002) : un **opérateur** (table `operators`, `id` = user.id auth,
@@ -82,6 +83,7 @@ Les secrets viennent du coffre `ressources` de l'atelier (`/lab-secret`, scope `
 déchiffrés et injectés par `deploy.sh` :
 
 - `AUTH_URL` — facultatif, défaut `https://auth.contentos.ch`.
+- `MCP_INTERNAL_KEY` — clé interne partagée (scope **global**) gardant `/internal/tools` (passerelle MCP) ; court-circuitée en preview.
 
 Plus de `ADMIN_USER_IDS` : être opérateur = avoir une ligne `operators` (provisionnée en
 tandem avec `accountType='operator'` côté auth). Pour octroyer le rôle à un user :
@@ -106,5 +108,5 @@ En prod, les visiteurs sont redirigés vers `${AUTH_URL}/sign-in?redirect=...` ;
 renvoie ensuite ici avec le cookie cross-subdomain. Le reader
 (`app/(public)/o/[handle]/r/[slug]/`) adapte sa grille selon le nombre de pages / sections
 (`components/reader/reader-shell.tsx`). Espace opérateur public sous `app/(public)/o/[handle]/` ;
-admin scopé sous `app/admin/*` (dont `app/admin/audience/`) ; MCP sous
-`app/api/[transport]/route.ts`. Liens legacy `/r/<slug>` → 301 vers `/o/<handle>/r/<slug>`.
+admin scopé sous `app/admin/*` (dont `app/admin/audience/`) ; endpoint interne des tools sous
+`app/internal/tools/`. Liens legacy `/r/<slug>` → 301 vers `/o/<handle>/r/<slug>`.
