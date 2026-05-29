@@ -9,7 +9,8 @@ command -v jq >/dev/null 2>&1 || { echo "SKIP session-start.test.sh (jq absent)"
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 REPO="$TMP/repo"; git init -q "$REPO"; REPO="$(cd "$REPO" && pwd -P)"
-( cd "$REPO"; git config user.email t@t; git config user.name t; git branch -M main
+( cd "$REPO"; git config user.email t@t; git config user.name t; git config commit.gpgsign false
+  git branch -M main
   git commit -qm init --allow-empty )
 
 run() { ( cd "$1" && "$HOOK" ); }   # le hook lit son cwd

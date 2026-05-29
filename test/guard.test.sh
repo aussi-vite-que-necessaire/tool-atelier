@@ -12,7 +12,8 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 REPO="$TMP/repo"
 git init -q "$REPO"
 REPO="$(cd "$REPO" && pwd -P)"   # chemin physique (macOS : /var → /private/var)
-( cd "$REPO"; git config user.email t@t; git config user.name t; git branch -M main
+( cd "$REPO"; git config user.email t@t; git config user.name t; git config commit.gpgsign false
+  git branch -M main
   mkdir hello; echo "FROM scratch" > hello/Dockerfile; echo x > CLAUDE.md
   git add -A; git commit -qm init )
 
