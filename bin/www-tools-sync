@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# www-tools-sync — matérialise la liste des raccourcis du dashboard de `www`.
+#
+# Le build Docker est scopé par projet (contexte = projects/www/) : `www` ne voit
+# pas les autres `lab.json` au build ni au runtime. On suit donc le modèle ui-sync
+# (vendoring) : ce script scanne projects/*/lab.json, extrait le bloc `dashboard`
+# opt-in déclaré par chaque outil, et écrit projects/www/src/tools.generated.json.
+# Ne pas éditer le JSON à la main : modifier un lab.json puis relancer ce script.
+#
+# Usage :
+#   bin/www-tools-sync          (re)génère projects/www/src/tools.generated.json
+#   bin/www-tools-sync --check  échoue (exit 1) si le fichier committé a dérivé
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT="$ROOT/projects/www/src/tools.generated.json"
+
+# Construit le JSON attendu : pour chaque projects/<p>/lab.json portant un bloc
+# `dashboard`, émet { name, label, tagline, url, order }. URL = sous-domaine prod
+# dérivé du nom de projet. Tri par (order, name). En-tête @generated via _generated.
+render() {
+  local entries="[]"
+  for f in "$ROOT"/projects/*/lab.json; do
+    [ -f "$f" ] || continue
+    local proj; proj="$(basename "$(dirname "$f")")"
+    # Garde uniquement les projets déclarant un objet `dashboard`.
+    if [ "$(jq -r 'has("dashboard") and (.dashboard | type == "object")' "$f")" != "true" ]; then
+      continue
+    fi
+    local entry
+    entry="$(jq --arg proj "$proj" \
+      '.dashboard | {
+         name: $proj,
+         label: (.label // $proj),
+         tagline: (.tagline // ""),
+         url: ("https://" + $proj + ".contentos.ch"),
+         order: (.order // 100)
+       }' "$f")"
+    entries="$(jq --argjson e "$entry" '. + [$e]' <<<"$entries")"
+  done
+  jq -n --argjson tools "$entries" '{
+    _generated: "Fichier généré par bin/www-tools-sync depuis les blocs `dashboard` des projects/*/lab.json. Ne pas éditer à la main : modifier un lab.json puis relancer bin/www-tools-sync.",
+    tools: ($tools | sort_by(.order, .name))
+  }'
+}
+
+case "${1:-}" in
+  --check)
+    if [ ! -f "$OUT" ]; then
+      echo "✗ manquant: projects/www/src/tools.generated.json — lance bin/www-tools-sync" >&2
+      exit 1
+    fi
+    if ! diff -q <(render) "$OUT" >/dev/null; then
+      echo "✗ dérive: projects/www/src/tools.generated.json — relance bin/www-tools-sync" >&2
+      diff <(render) "$OUT" || true
+      exit 1
+    fi
+    echo "✓ projects/www/src/tools.generated.json est à jour"
+    ;;
+  "" )
+    mkdir -p "$(dirname "$OUT")"
+    render > "$OUT"
+    echo "✓ écrit projects/www/src/tools.generated.json"
+    ;;
+  -h | --help)
+    grep '^#' "$0" | sed 's/^# \{0,1\}//'
+    ;;
+  *)
+    echo "www-tools-sync: argument inconnu: $1" >&2; exit 2
+    ;;
+esac

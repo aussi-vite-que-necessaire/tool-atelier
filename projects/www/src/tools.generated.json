@@ -1,0 +1,33 @@
+{
+  "_generated": "Fichier généré par bin/www-tools-sync depuis les blocs `dashboard` des projects/*/lab.json. Ne pas éditer à la main : modifier un lab.json puis relancer bin/www-tools-sync.",
+  "tools": [
+    {
+      "name": "media",
+      "label": "media",
+      "tagline": "Génération et édition de visuels",
+      "url": "https://media.contentos.ch",
+      "order": 10
+    },
+    {
+      "name": "ressources",
+      "label": "ressources",
+      "tagline": "Lead magnets et ressources téléchargeables",
+      "url": "https://ressources.contentos.ch",
+      "order": 20
+    },
+    {
+      "name": "cast",
+      "label": "cast",
+      "tagline": "Publication LinkedIn assistée par l'IA",
+      "url": "https://cast.contentos.ch",
+      "order": 30
+    },
+    {
+      "name": "skills",
+      "label": "skills",
+      "tagline": "Hub des skills agentiques de la suite",
+      "url": "https://skills.contentos.ch",
+      "order": 40
+    }
+  ]
+}
