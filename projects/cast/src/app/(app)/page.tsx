@@ -1,4 +1,4 @@
-import { CalendarDays, Lightbulb, PenSquare } from 'lucide-react';
+import { CalendarDays, PenSquare } from 'lucide-react';
 import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
 import { requireUserId } from '@/lib/auth/session';
@@ -13,7 +13,6 @@ import { UpcomingPublications } from './_components/upcoming-publications';
 const QUICK_ACTIONS = [
   { href: '/posts', label: 'Créer un post', icon: PenSquare, variant: 'default' as const },
   { href: '/calendar', label: 'Calendrier', icon: CalendarDays, variant: 'outline' as const },
-  { href: '/ideas', label: 'Idées', icon: Lightbulb, variant: 'outline' as const },
 ];
 
 export default async function DashboardPage() {

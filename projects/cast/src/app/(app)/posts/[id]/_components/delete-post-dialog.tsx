@@ -45,9 +45,7 @@ export function DeletePostDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Supprimer ce post ?</DialogTitle>
-          <DialogDescription>
-            Le post sera définitivement supprimé. L'idée source reste intacte.
-          </DialogDescription>
+          <DialogDescription>Le post sera définitivement supprimé.</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
