@@ -27,6 +27,32 @@ elles (acceptable car bases preview seedées + droppées à chaque déploiement)
 
 `trustedOrigins` autorise `contentos.ch`, `*.contentos.ch` et `*.preview.contentos.ch`.
 
+## Preview — users de test, auto-login & déconnexion
+
+En preview (jamais en prod), `auth` seede **3 utilisateurs de test** et expose deux routes
+qui matérialisent une **vraie** session BetterAuth (cookie `.preview.contentos.ch` partagé) :
+
+| Rôle | id | email | accountType | usage |
+|------|----|-------|-------------|-------|
+| Opérateur 1 | `preview-op-1` | `user1@avqn.ch` | `operator` | auto-login des apps admin (ressources/media/cast) |
+| Opérateur 2 | `preview-op-2` | `user2@avqn.ch` | `operator` | second opérateur (test d'isolation) |
+| Audience 3 | `preview-aud-3` | `user3@avqn.ch` | `audience` | auto-login de `docs`, abonné à op1+op2 |
+
+- Constantes : `src/lib/preview-users.ts`. **À garder EN PHASE** avec `scripts/seed.mjs`
+  (JS pur, ne peut pas importer le module) et avec les seeds clients (ressources/media/cast).
+- `GET /preview-login?user=1|2|3&redirect=…` : ouvre la session du user (OTP `000000` joué
+  côté serveur), pose le cookie, redirige (redirect whitelisté suite). Les clients y
+  redirigent un visiteur sans session quand le marqueur de logout est **absent** → auto-login.
+- `GET /preview-logout?redirect=…` : efface la session **et** pose le marqueur suite-wide
+  `cos_preview_login=manual` (`.preview.contentos.ch`), puis renvoie sur `/sign-in` (chooser).
+  Tant que le marqueur est là, les clients montrent le chooser (plus d'auto-login).
+- `/sign-in` en preview : boutons de connexion rapide user1/2/3 (+ formulaire email + `000000`).
+- Côté clients : `lib/auth/preview.ts` porte `loginRedirect()` (helper pur testé) qui choisit
+  auto-login vs chooser selon le marqueur ; `signOutUrl()` pointe vers `preview-logout`.
+- Câblage : `deploy.sh` injecte en preview `AUTH_URL=https://auth-<branche>.preview.contentos.ch`
+  dans le `.env` des clients → ils parlent à l'auth de **leur** branche (qui doit donc être
+  déployée sur la branche pour que le flux marche de bout en bout).
+
 ## Pour brancher un service client (media, cast, ressources…)
 
 Le client lit la session via un appel HTTP à `auth.contentos.ch/api/auth/get-session`, en

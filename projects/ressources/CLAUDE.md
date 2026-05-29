@@ -48,21 +48,25 @@ Auth déléguée à `https://auth.contentos.ch` (cookie cross-subdomain `.conten
 Les helpers vivent sous `lib/auth/` :
 
 - `lib/auth/session.ts` : `getSession()`, `requireSession(target?)`, `getUserId()`,
-  `requireUserId(target?)`, `signInUrl(target?)`. Fetch `${AUTH_URL}/api/auth/get-session`
-  avec le cookie forwardé ; en preview, court-circuite avec `PREVIEW_USER_ID`.
-  Le user porte un `accountType` (`operator | audience`, central — ADR-0002).
+  `requireUserId(target?)`, `signInUrl(target?)`, `signOutUrl()`. Fetch
+  `${AUTH_URL}/api/auth/get-session` avec le cookie forwardé — **même chemin en preview
+  qu'en prod** (connexion réelle). Le user porte un `accountType` (`operator | audience`,
+  central — ADR-0002).
 - `lib/auth/operator.ts` : `requireOperator()`, `getOperator()`, `getOperatorById(id)`,
   `operatorByHandle(handle)`. **La porte « opérateur » de ressources = présence d'une ligne
   `operators`** pour ce user (tenancy locale ; marche aussi pour le MCP qui ne porte que
   `userId`). Provisionnée en tandem avec `accountType='operator'` côté auth.
-- `lib/auth/preview.ts` : `PREVIEW_USER_ID`, `isPreview` (selon `APP_ENV`). En preview, la
-  session est court-circuitée en `operator` (l'opérateur démo `/o/demo`, seedé — visible sur `docs`).
+- `lib/auth/preview.ts` : `isPreview` (selon `APP_ENV`), ids des users de preview
+  (`PREVIEW_OP_1_ID`…), `DEFAULT_PREVIEW_USER` (=1 ici), et `loginRedirect()` (helper pur,
+  testé : auto-login user1 si pas de marqueur de logout, sinon chooser). Plus de
+  court-circuit : la connexion est réelle en preview, via l'auth de la branche.
 - `lib/mcp-auth.ts` : `verifyMcpToken(req)` via `${AUTH_URL}/api/auth/mcp/get-session` ; la
   route MCP exige en plus que le user soit **opérateur** et dépose `operatorId`/`handle` dans
   `authInfo.extra` (chaque outil n'opère que sur ses ressources).
 - `app/.well-known/oauth-authorization-server` : 302 vers le provider central.
 - `app/.well-known/oauth-protected-resource` : annonce `authorization_servers: [AUTH_URL]`.
-- `app/connexion/page.tsx` : redirige vers `${AUTH_URL}/sign-in?redirect=...` (no-op en preview).
+- `app/connexion/page.tsx` : redirige vers le SSO via `loginRedirect` (en preview : auto-login
+  user1, ou chooser si le marqueur de logout est posé).
 
 Modèle multi-tenant (ADR-0002) : un **opérateur** (table `operators`, `id` = user.id auth,
 `handle` = slug d'espace) possède ses ressources (`resources.operator_id`, slug unique par
@@ -110,9 +114,11 @@ poser la contrainte `NOT NULL`.
 
 ## Vérifier (preview / dev)
 
-En preview, `isPreview` court-circuite la session : tout requérant est auto-loggé comme
-`PREVIEW_USER_ID = 'preview-user'`, **opérateur démo**. En prod, l'accès à `/admin` redirige
-vers `${AUTH_URL}/sign-in?redirect=...` ; le SSO renvoie ici avec le cookie cross-subdomain.
+En preview, l'accès à `/admin` sans session auto-connecte **user1** (`preview-op-1`, opérateur,
+espace `/o/user1`) via l'auth de la branche ; on peut se déconnecter (bouton → `preview-logout`)
+puis se reconnecter en user1/user2 (chooser, code `000000`). Le seed crée **deux** opérateurs
+(`/o/user1`, `/o/user2`) pour tester l'isolation. En prod, `/admin` redirige vers
+`${AUTH_URL}/sign-in?redirect=...` ; le SSO renvoie ici avec le cookie cross-subdomain.
 Admin scopé sous `app/admin/*` (dont `app/admin/audience/`) ; MCP sous
 `app/api/[transport]/route.ts`. **Le rendu public** (espaces, reader, `/o/<handle>`) se vérifie
 sur `docs` (`docs.contentos.ch` / `docs-<branche>.preview.contentos.ch`), qui lit cette base.
