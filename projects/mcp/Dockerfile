@@ -15,12 +15,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-# --- prod-deps : node_modules de production uniquement (pour le one-shot migrate) ---
-FROM node:22-alpine AS proddeps
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev
-
 # --- runner : image finale slim ---
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -32,16 +26,11 @@ ENV HOSTNAME=0.0.0.0
 # Utilisateur non-root.
 RUN addgroup -S app && adduser -S app -G app
 
-# Sortie standalone de Next : serveur + node_modules tracés.
+# Sortie standalone de Next : serveur + node_modules tracés (suffisant pour servir ;
+# la passerelle n'a ni DB ni migrate, donc pas de drizzle/scripts/prod-deps à embarquer).
 COPY --from=build --chown=app:app /app/.next/standalone ./
 COPY --from=build --chown=app:app /app/.next/static ./.next/static
 COPY --from=build --chown=app:app /app/public ./public
-
-# Migrations + scripts + deps de prod, pour le conteneur one-shot `migrate`.
-# (Le serveur de l'app n'en a pas besoin, mais le même image sert au migrate.)
-COPY --from=build --chown=app:app /app/drizzle ./drizzle
-COPY --from=build --chown=app:app /app/scripts ./scripts
-COPY --from=proddeps --chown=app:app /app/node_modules ./node_modules
 
 USER app
 EXPOSE 8080
