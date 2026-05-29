@@ -1,8 +1,10 @@
 # cast — atelier de publication LinkedIn
 
 Projet **cast** de la suite **contentos** (`cast.contentos.ch`). Plateforme de création,
-planification et publication de contenu LinkedIn, pilotée par agent via un serveur **MCP**
-sur `/api/mcp` (OAuth via better-auth, `.well-known/`).
+planification et publication de contenu LinkedIn, pilotée par agent. Ses tools sont exposés
+par la **passerelle MCP centrale** (`mcp.contentos.ch`) ; cast les publie via un **endpoint
+interne** `/internal/tools` (clé partagée `MCP_INTERNAL_KEY`, court-circuitée en preview),
+sans serveur MCP public ni OAuth local.
 
 ## Deux process
 
@@ -33,9 +35,10 @@ et mappe `mediaKind → LinkedIn` (`pdf→document`, `video→video`, `image|ren
 
 **Next.js 16** (App Router, sortie `standalone`) + **Drizzle ORM** (driver `pg`/node-postgres,
 schéma `src/lib/db/schema.ts`, client paresseux `src/lib/db/client.ts`) + **BullMQ + ioredis**.
-Sessions web et OAuth/OIDC du MCP délégués à **`auth.contentos.ch`** (cookie cross-subdomain
-`.contentos.ch`) — `src/lib/auth/session.ts` lit la session via fetch HTTP, `src/lib/mcp/auth.ts`
-valide les bearer MCP via `${AUTH_URL}/api/auth/mcp/get-session`. Voir
+Sessions web déléguées à **`auth.contentos.ch`** (cookie cross-subdomain `.contentos.ch`) —
+`src/lib/auth/session.ts` lit la session via fetch HTTP. L'auth MCP (OAuth) est centralisée à la
+passerelle `mcp.contentos.ch` ; cast n'expose que `/internal/tools` (clé partagée), et ses tools
+reçoivent le `userId` transmis (`src/lib/mcp/auth.ts` → `userIdFrom`). Voir
 `docs/superpowers/specs/2026-05-28-cast-sso-migration-design.md`. Migrations SQL committées
 dans `drizzle/`, appliquées au déploiement par le one-shot `scripts/migrate.mjs`
 (`drizzle-orm/node-postgres`, deps de prod — pas de drizzle-kit). `GET /healthz` → `ok` sans DB.
@@ -52,9 +55,9 @@ hub central de l'atelier : `skills/skills/content-os-redaction/`. Téléchargeab
 → prod sur **`https://cast.contentos.ch`**. Jamais de commit direct sur `main`. La CI de l'atelier
 build l'image (`docker build`) → GHCR → pull sur `lab` ; le serveur ne build jamais.
 
-L'URL publique du MCP/OAuth correspond à l'origine déployée : la plateforme injecte `APP_URL`
-(cf. `deploy.sh`) = l'URL preview en preview, `https://cast.contentos.ch` en prod ; `better-auth`
-s'aligne dessus.
+La plateforme injecte `APP_URL` (cf. `deploy.sh`) = l'URL preview en preview,
+`https://cast.contentos.ch` en prod. La passerelle `mcp.contentos.ch` joint `/internal/tools` de
+cast sur cette même origine (preview de la même branche, ou prod).
 
 ## Données & secrets
 
@@ -72,6 +75,7 @@ déchiffrés et injectés par `deploy.sh` :
 - `MEDIA_ENGINE_SERVICE_KEY` — Bearer du service **media** (`https://media.contentos.ch`) :
   lecture du catalogue (`GET /v1/media`) pour le picker. L'URL du service est codée en défaut
   (`MEDIA_ENGINE_URL` = `https://media.contentos.ch`, surchargeable par env pour le dev local)
+- `MCP_INTERNAL_KEY` — clé interne partagée (scope **global**) gardant `/internal/tools` (passerelle MCP) ; court-circuitée en preview
 - `QUEUE_PREFIX` — défaut `cast` (à laisser tel quel sauf collision)
 - stubs CI/dev : `CONTENT_OS_AI_STUB`, `CONTENT_OS_LINKEDIN_STUB`
 
