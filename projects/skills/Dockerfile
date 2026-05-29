@@ -18,7 +18,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-# --- prod-deps : node_modules de production uniquement (pour le one-shot migrate) ---
+# --- prod-deps : node_modules de production uniquement (runtime standalone) ---
 FROM node:22-slim AS proddeps
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -36,9 +36,6 @@ COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=proddeps --chown=node:node /app/node_modules ./node_modules
 # Skills (source de vérité) — lus à chaud par /api/skills/[name]/download.
 COPY --from=build --chown=node:node /app/skills ./skills
-# Migrations + scripts + package.json (pour le one-shot migrate).
-COPY --from=build --chown=node:node /app/drizzle ./drizzle
-COPY --from=build --chown=node:node /app/scripts ./scripts
 COPY --from=build --chown=node:node /app/package.json ./package.json
 
 USER node
