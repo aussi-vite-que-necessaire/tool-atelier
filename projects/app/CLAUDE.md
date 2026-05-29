@@ -16,26 +16,33 @@ sans serveur MCP public ni OAuth local.
 Les files BullMQ sont **préfixées** (`QUEUE_PREFIX`, défaut `cast`) car le Redis lab est
 central/multi-tenant — enqueue (web) et consume (worker) partagent le même préfixe.
 
-## Média — délégué à `media`
+## Média — module in-app (`src/lib/media/`, section `/media`)
 
-cast **ne crée aucun média** (pas de génération, templates, styles, chartes, PDF, upload) :
-tout ça vit dans le service **media** (`https://media.contentos.ch`). Un post **référence** un
-média via des colonnes (`mediaUrl`, `mediaKind`, `mediaWidth`, `mediaHeight`, `mediaId` optionnel).
-On attache un média :
+Le moteur média vit **dans cette app** (`src/lib/media/`) : génération/édition Gemini
+(`gemini.ts`), rendu HTML→image via le Chromium partagé (`render.ts`, `BROWSER_URL`),
+agrégation PDF (`pdf.ts`), stockage R2/S3 (`storage.ts`), galerie + styles + chartes +
+templates Handlebars (`repository.ts`, `styles.ts`, `style-guides.ts`, `brand.ts`,
+`templates/`). Tables clé par `user_id` dans `src/lib/db/schemas/media.ts` (`media`,
+`visual_styles`, `style_guides`, `visual_templates`, `brand`). `config.ts` dégrade
+proprement si un secret manque (jamais de throw au boot ; `CONTENT_OS_MEDIA_STUB=1` force
+le mode dégradé). La section UI est `src/app/(app)/media/*` (galerie, templates, styles,
+chartes, marque), sous-nav locale, AppShell partagé.
 
-- **UI** : le picker (`posts/[id]/_components/media-picker.tsx`) a deux onglets. *Choisir*
-  liste les médias de `media` (`GET /v1/media`, via `src/lib/media-catalog/`) et appelle
-  `setPostMedia`. *Créer un média* embarque en **iframe** la page `/embed/new` de `media`
-  (`${MEDIA_ENGINE_URL}/embed/new?parentOrigin=…`) — parité totale avec sa modal d'ajout
-  (upload, génération IA, PDF, template). À la création, l'iframe `postMessage`
-  `{ type: 'contentos:media-created', media }` ; cast valide `event.origin`, puis
-  `attachCreatedMediaAction` construit le `MediaRef` **depuis le payload** (pas de round-trip
-  `/v1` → indépendant du userId/preview) et l'attache. Contrat : `src/lib/media-link/embed.ts`.
-- **MCP** : `attach_media_to_post` (par `media_id` du service, ou n'importe quelle `media_url`) et
-  `detach_media`. L'agent trouve les médias via le connecteur MCP de `media`.
+Un post **référence** un média via des colonnes (`mediaUrl`, `mediaKind`, `mediaWidth`,
+`mediaHeight`, `mediaId` optionnel). On attache un média :
 
-La publication LinkedIn récupère les octets par `fetch(mediaUrl)` (`src/lib/media-catalog/fetch-bytes.ts`)
-et mappe `mediaKind → LinkedIn` (`pdf→document`, `video→video`, `image|render→image`).
+- **UI** : le picker (`posts/[id]/_components/media-picker.tsx`) liste les médias de
+  l'utilisateur par **requête DB directe** (server action `searchMediaAction` →
+  `@/lib/media/catalog`) et appelle `setPostMedia`. « Créer un média » renvoie vers la
+  section `/media/gallery` (in-app). Pas d'iframe, pas de postMessage, pas de self-call HTTP.
+- **MCP** : `attach_media_to_post` / `detach_media` (attache) et les outils du moteur
+  (`generate_image`, `render_html`, `create_pdf`, styles/chartes/templates…) sont enregistrés
+  dans le registre MCP in-app (`src/lib/mcp/tools/media-engine.ts`), servis par
+  `/internal/tools`, `userId` issu de la session.
+
+La publication LinkedIn récupère les octets par `fetch(mediaUrl)` (`src/lib/media/fetch-bytes.ts`,
+URL R2 publique) et mappe `mediaKind → LinkedIn` (`pdf→document`, `video→video`,
+`image|render→image`).
 
 ## Stack
 
@@ -72,23 +79,24 @@ cast sur cette même origine (preview de la même branche, ou prod).
 
 ## Données & secrets
 
-`lab.json` déclare `"db": true` + `"redis": true` → la plateforme crée la base
-`<projet>_<env>` (Postgres central) + provisionne Redis et injecte **`DATABASE_URL`** et
-**`REDIS_URL`** automatiquement. Elle injecte aussi **`APP_URL`** = l'origine déployée par
-environnement. Le one-shot `migrate` applique `drizzle/` avant le démarrage.
+`lab.json` déclare `"db": true` + `"redis": true` + `"browser": true` → la plateforme crée la
+base `<projet>_<env>` (Postgres central), provisionne Redis et injecte **`DATABASE_URL`**,
+**`REDIS_URL`**, **`BROWSER_URL`** (Chromium partagé browserless, pour le rendu HTML→image) et
+**`APP_URL`** = l'origine déployée par environnement. Le one-shot `migrate` applique `drizzle/`
+avant le démarrage.
 
-Les autres secrets viennent du coffre `cast` de l'atelier (`/lab-secret`, scope `cast`),
-déchiffrés et injectés par `deploy.sh` :
+Les autres secrets viennent du coffre de l'atelier (scope `app` + `global`), déchiffrés et
+injectés par `deploy.sh` :
 
 - `BETTER_AUTH_SECRET` — secret de signature des sessions BetterAuth (auth in-app). Requis.
 - `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_API_VERSION` — publication LinkedIn
 - `TOKEN_ENCRYPTION_KEY` — chiffrement des tokens LinkedIn stockés
-- `MEDIA_ENGINE_SERVICE_KEY` — Bearer du service **media** (`https://media.contentos.ch`) :
-  lecture du catalogue (`GET /v1/media`) pour le picker. L'URL du service est codée en défaut
-  (`MEDIA_ENGINE_URL` = `https://media.contentos.ch`, surchargeable par env pour le dev local)
+- `GEMINI_API_KEY` — génération/édition d'image (module media). Absent → génération désactivée.
+- `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_S3_ENDPOINT`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` —
+  stockage R2/S3 des médias. Incomplet → studio média en mode dégradé.
 - `MCP_INTERNAL_KEY` — clé interne partagée (scope **global**) gardant `/internal/tools` (passerelle MCP) ; court-circuitée en preview
 - `QUEUE_PREFIX` — défaut `cast` (à laisser tel quel sauf collision)
-- stubs CI/dev : `CONTENT_OS_AI_STUB`, `CONTENT_OS_LINKEDIN_STUB`
+- stubs CI/dev : `CONTENT_OS_AI_STUB`, `CONTENT_OS_LINKEDIN_STUB`, `CONTENT_OS_MEDIA_STUB`
 
 Faire évoluer le schéma : éditer `src/lib/db/schema.ts` / `src/lib/db/schemas/`,
 `npm run db:generate`, committer — le prochain déploiement applique la migration.
