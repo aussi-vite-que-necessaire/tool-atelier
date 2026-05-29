@@ -36,7 +36,10 @@ export function UpcomingPublications({ items }: { items: CalendarPublication[] }
       {items.length === 0 ? (
         <div className="space-y-3 rounded-xl border border-dashed p-8 text-center">
           <p className="text-sm text-muted-foreground">Aucun post planifié pour l’instant.</p>
-          <Link href="/cast/calendar" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          <Link
+            href="/cast/calendar"
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
+          >
             <CalendarPlus className="size-4" />
             Planifier un post
           </Link>

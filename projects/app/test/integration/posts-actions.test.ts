@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createPostCore, deletePostCore, updatePostCore } from '@/app/(app)/posts/actions-core';
+import { createPostCore, deletePostCore, updatePostCore } from '@/app/(app)/cast/posts/actions-core';
 import { createPost, getPost } from '@/lib/db/repositories/posts';
 import { createTestUser } from './helpers/seed';
 

@@ -27,6 +27,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    '/((?!healthz|signin|preview-login|preview-logout|oauth|api/auth|internal|api/preview-login|api/__test__|_next|favicon).*)',
+    // Zone protégée = tout sauf routes système/auth et vitrines publiques (landing
+    // à la racine, styleguide). `$` exempte la racine exacte sans toucher /cast.
+    '/((?!$|styleguide|healthz|signin|preview-login|preview-logout|oauth|api/auth|internal|api/preview-login|api/__test__|_next|favicon).*)',
   ],
 };

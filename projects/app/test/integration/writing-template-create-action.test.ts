@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createWritingTemplateCore } from '@/app/(settings)/settings/writing-templates/new/actions-core';
+import { createWritingTemplateCore } from '@/app/(app)/cast/settings/writing-templates/new/actions-core';
 import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
 
 // No-op : la table user vit côté auth.contentos.ch, plus locale.

@@ -9,7 +9,7 @@ export default function CalendarLayout({
   modal: ReactNode;
 }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 top-14 z-10 lg:top-0 lg:left-60">
+    <div className="fixed inset-x-0 bottom-0 top-26 z-10">
       {children}
       <PreviewSidebar>{modal}</PreviewSidebar>
     </div>

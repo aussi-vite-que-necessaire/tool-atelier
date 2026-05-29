@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { updateVoiceCore } from '@/app/(settings)/settings/voice/[id]/actions-core';
-import { createVoiceCore } from '@/app/(settings)/settings/voice/new/actions-core';
+import { updateVoiceCore } from '@/app/(app)/cast/settings/voice/[id]/actions-core';
+import { createVoiceCore } from '@/app/(app)/cast/settings/voice/new/actions-core';
 import { createVoice, getVoice, listVoices } from '@/lib/db/repositories/voice';
 
 // No-op : la table user vit côté auth.contentos.ch, plus locale.

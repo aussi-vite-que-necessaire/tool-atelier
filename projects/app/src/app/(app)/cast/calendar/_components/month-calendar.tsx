@@ -25,14 +25,14 @@ export function MonthCalendar({
         <span className="font-medium text-sm capitalize">{label}</span>
         <div className="flex items-center gap-1.5 text-sm">
           <Link
-            href={`/calendar?month=${monthParam(p.year, p.month)}`}
+            href={`/cast/calendar?month=${monthParam(p.year, p.month)}`}
             className="rounded-md border px-2.5 py-1 hover:bg-neutral-100"
             aria-label="Mois précédent"
           >
             ‹
           </Link>
           <Link
-            href={`/calendar?month=${monthParam(n.year, n.month)}`}
+            href={`/cast/calendar?month=${monthParam(n.year, n.month)}`}
             className="rounded-md border px-2.5 py-1 hover:bg-neutral-100"
             aria-label="Mois suivant"
           >

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   deleteWritingTemplateCore,
   updateWritingTemplateCore,
-} from '@/app/(settings)/settings/writing-templates/[id]/actions-core';
+} from '@/app/(app)/cast/settings/writing-templates/[id]/actions-core';
 import { createWritingTemplate, getWritingTemplate } from '@/lib/db/repositories/writing-templates';
 
 // No-op : la table user vit côté auth.contentos.ch, plus locale.

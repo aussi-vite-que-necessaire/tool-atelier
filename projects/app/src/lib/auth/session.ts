@@ -51,6 +51,16 @@ export async function requireUserId(): Promise<string> {
   return s.user.id;
 }
 
+export type SessionUser = { id: string; name: string; email: string };
+
+// Identité d'affichage pour le menu utilisateur du shell. Renvoie undefined hors
+// session (l'appelant a déjà passé la garde requireUserId pour la zone protégée).
+export async function getSessionUser(): Promise<SessionUser | undefined> {
+  const s = await auth.api.getSession({ headers: await headers() });
+  if (!s?.user?.id) return undefined;
+  return { id: s.user.id, name: s.user.name, email: s.user.email };
+}
+
 export async function getUserId(): Promise<string | undefined> {
   const s = await fetchSession(await headers());
   if (!s) return undefined;
