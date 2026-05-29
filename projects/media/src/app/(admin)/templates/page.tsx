@@ -4,6 +4,12 @@ import Link from "next/link";
 import { listTemplates } from "@/lib/templates/repository";
 import { requireUserId } from "@/lib/session";
 import { createTemplateAction, deleteTemplateAction } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Heading, Muted } from "@/components/ui/typography";
 
 export default async function TemplatesPage() {
   const userId = await requireUserId();
@@ -11,148 +17,94 @@ export default async function TemplatesPage() {
 
   return (
     <div className="max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold">Templates visuels</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Chaque template est un layout HTML + CSS paramétré par des variables. Cliquez sur un
+      <div className="space-y-1">
+        <Heading level={2}>Templates visuels</Heading>
+        <Muted>
+          Chaque template est un layout HTML + CSS paramétré par des variables. Clique sur un
           template pour l&apos;éditer et lancer un aperçu de rendu.
-        </p>
+        </Muted>
       </div>
 
       {/* Formulaire de création */}
-      <div className="border border-gray-200 rounded p-4 space-y-3">
-        <h2 className="text-sm font-medium">Nouveau template</h2>
-        <form action={createTemplateAction} className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1" htmlFor="new-slug">
-                Slug
-              </label>
-              <input
-                id="new-slug"
-                name="slug"
-                type="text"
-                required
-                placeholder="ex. post-linkedin"
-                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-              />
+      <Card>
+        <CardHeader>
+          <CardTitle>Nouveau template</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={createTemplateAction} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-slug">Slug</Label>
+                <Input id="new-slug" name="slug" type="text" required placeholder="ex. post-linkedin" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-label">Libellé</Label>
+                <Input id="new-label" name="label" type="text" required placeholder="ex. Post LinkedIn" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1" htmlFor="new-label">
-                Libellé
-              </label>
-              <input
-                id="new-label"
-                name="label"
-                type="text"
-                required
-                placeholder="ex. Post LinkedIn"
-                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="new-width">Largeur (px)</Label>
+                <Input id="new-width" name="width" type="number" required defaultValue={1200} min={1} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="new-height">Hauteur (px)</Label>
+                <Input id="new-height" name="height" type="number" required defaultValue={630} min={1} />
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1" htmlFor="new-width">
-                Largeur (px)
-              </label>
-              <input
-                id="new-width"
-                name="width"
-                type="number"
-                required
-                defaultValue={1200}
-                min={1}
-                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-              />
+            <div className="space-y-1.5">
+              <Label htmlFor="new-body">HTML (body)</Label>
+              <Textarea id="new-body" name="body_html" rows={3} placeholder="<div class='p-8'>...</div>" className="font-mono" />
             </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1" htmlFor="new-height">
-                Hauteur (px)
-              </label>
-              <input
-                id="new-height"
-                name="height"
-                type="number"
-                required
-                defaultValue={630}
-                min={1}
-                className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1" htmlFor="new-body">
-              HTML (body)
-            </label>
-            <textarea
-              id="new-body"
-              name="body_html"
-              rows={3}
-              placeholder="<div class='p-8'>...</div>"
-              className="w-full border border-gray-300 rounded px-2 py-1 text-sm font-mono"
-            />
-          </div>
-          <button
-            type="submit"
-            className="bg-gray-800 text-white text-sm rounded px-3 py-1.5 hover:bg-gray-700"
-          >
-            Créer
-          </button>
-        </form>
-      </div>
+            <Button type="submit">Créer</Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Liste des templates existants */}
       {templates.length === 0 ? (
-        <p className="text-sm text-gray-400">Aucun template pour l&apos;instant.</p>
+        <p className="text-sm text-muted-foreground">Aucun template pour l&apos;instant.</p>
       ) : (
-        <table className="w-full text-sm border border-gray-200 rounded overflow-hidden">
-          <thead className="bg-gray-50 text-left">
-            <tr>
-              <th className="px-3 py-2 font-medium text-gray-600">Libellé</th>
-              <th className="px-3 py-2 font-medium text-gray-600">Slug</th>
-              <th className="px-3 py-2 font-medium text-gray-600">Dimensions</th>
-              <th className="px-3 py-2 font-medium text-gray-600"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {templates.map((t) => (
-              <tr key={t.id} className="border-t border-gray-100 hover:bg-gray-50">
-                <td className="px-3 py-2">
-                  <Link
-                    href={`/templates/${t.id}`}
-                    className="font-medium text-gray-800 hover:underline"
-                  >
-                    {t.label}
-                  </Link>
-                </td>
-                <td className="px-3 py-2 text-gray-500 font-mono">{t.slug}</td>
-                <td className="px-3 py-2 text-gray-500">
-                  {t.width}&times;{t.height}
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <Link
-                      href={`/templates/${t.id}`}
-                      className="text-gray-600 hover:text-gray-800 border border-gray-200 rounded px-2 py-0.5"
-                    >
-                      Éditer
-                    </Link>
-                    <form action={deleteTemplateAction}>
-                      <input type="hidden" name="id" value={t.id} />
-                      <button
-                        type="submit"
-                        className="text-red-600 hover:text-red-800 border border-red-200 rounded px-2 py-0.5"
-                      >
-                        Supprimer
-                      </button>
-                    </form>
-                  </div>
-                </td>
+        <div className="overflow-hidden rounded-xl ring-1 ring-foreground/10">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-medium">Libellé</th>
+                <th className="px-3 py-2 font-medium">Slug</th>
+                <th className="px-3 py-2 font-medium">Dimensions</th>
+                <th className="px-3 py-2 font-medium"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {templates.map((t) => (
+                <tr key={t.id} className="border-t border-border hover:bg-muted/40">
+                  <td className="px-3 py-2">
+                    <Link href={`/templates/${t.id}`} className="font-medium hover:underline">
+                      {t.label}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-muted-foreground">{t.slug}</td>
+                  <td className="px-3 py-2 text-muted-foreground">
+                    {t.width}&times;{t.height}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="outline" size="xs" render={<Link href={`/templates/${t.id}`} />}>
+                        Éditer
+                      </Button>
+                      <form action={deleteTemplateAction}>
+                        <input type="hidden" name="id" value={t.id} />
+                        <Button variant="destructive" size="xs" type="submit">
+                          Supprimer
+                        </Button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

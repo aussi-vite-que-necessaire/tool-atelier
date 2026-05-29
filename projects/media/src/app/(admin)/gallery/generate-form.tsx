@@ -2,8 +2,15 @@
 
 import { useActionState } from "react";
 import { generateAction } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const RATIOS = ["1:1", "16:9", "9:16", "4:5", "4:3"];
+
+const selectClass =
+  "h-8 rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 interface StyleOption {
   id: string;
@@ -14,66 +21,57 @@ export function GenerateForm({ styles }: { styles: StyleOption[] }) {
   const [state, action, pending] = useActionState(generateAction, {});
 
   return (
-    <div className="border border-gray-200 rounded p-4 space-y-3">
-      <h2 className="text-sm font-medium">Générer avec l&apos;IA</h2>
-      <form action={action} className="space-y-2">
-        <textarea
-          name="prompt"
-          required
-          rows={3}
-          placeholder="Décris l'image : sujet, style, composition, couleurs, ambiance…"
-          className="block w-full text-sm border border-gray-300 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400"
-        />
-        <div className="flex flex-wrap gap-2">
-          <label className="text-xs text-gray-500 flex items-center gap-1">
-            Ratio
-            <select
-              name="aspectRatio"
-              defaultValue="1:1"
-              className="text-sm border border-gray-300 rounded px-2 py-1"
-            >
-              {RATIOS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-gray-500 flex items-center gap-1">
-            Style
-            <select
-              name="styleId"
-              defaultValue=""
-              className="text-sm border border-gray-300 rounded px-2 py-1"
-            >
-              <option value="">Aucun style</option>
-              {styles.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <button
-          type="submit"
-          disabled={pending}
-          className="bg-gray-800 text-white text-sm rounded px-3 py-1.5 hover:bg-gray-700 disabled:opacity-50"
-        >
-          {pending ? "Génération…" : "Générer"}
-        </button>
-      </form>
+    <Card>
+      <CardHeader>
+        <CardTitle>Générer avec l&apos;IA</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <form action={action} className="space-y-3">
+          <Textarea
+            name="prompt"
+            required
+            rows={3}
+            placeholder="Décris l'image : sujet, style, composition, couleurs, ambiance…"
+          />
+          <div className="flex flex-wrap gap-4">
+            <Label className="flex-col items-start gap-1 text-xs text-muted-foreground">
+              Ratio
+              <select name="aspectRatio" defaultValue="1:1" className={selectClass}>
+                {RATIOS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </Label>
+            <Label className="flex-col items-start gap-1 text-xs text-muted-foreground">
+              Style
+              <select name="styleId" defaultValue="" className={selectClass}>
+                <option value="">Aucun style</option>
+                {styles.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </Label>
+          </div>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Génération…" : "Générer"}
+          </Button>
+        </form>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
-      {state.url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={state.url}
-          alt="Image générée"
-          className="max-w-full border border-gray-200 rounded"
-        />
-      )}
-    </div>
+        {state.url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={state.url}
+            alt="Image générée"
+            className="max-w-full rounded-lg ring-1 ring-foreground/10"
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -7,6 +7,12 @@ import {
   updateStyleAction,
   deleteStyleAction,
 } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Heading, Muted } from "@/components/ui/typography";
 
 export default async function StylesPage() {
   const userId = await requireUserId();
@@ -14,101 +20,66 @@ export default async function StylesPage() {
 
   return (
     <div className="max-w-2xl space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold">Styles visuels</h1>
-        <p className="mt-1 text-sm text-gray-500">
+      <div className="space-y-1">
+        <Heading level={2}>Styles visuels</Heading>
+        <Muted>
           Un style est un suffixe ajouté au prompt de génération (ex. « rendu 3D », « flat 2D »).
-        </p>
+        </Muted>
       </div>
 
       {/* Formulaire de création */}
-      <div className="border border-gray-200 rounded p-4 space-y-3">
-        <h2 className="text-sm font-medium">Nouveau style</h2>
-        <form action={createStyleAction} className="space-y-2">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1" htmlFor="new-name">
-              Nom
-            </label>
-            <input
-              id="new-name"
-              name="name"
-              type="text"
-              required
-              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1" htmlFor="new-prompt">
-              Prompt
-            </label>
-            <textarea
-              id="new-prompt"
-              name="prompt"
-              required
-              rows={3}
-              className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            className="bg-gray-800 text-white text-sm rounded px-3 py-1.5 hover:bg-gray-700"
-          >
-            Créer
-          </button>
-        </form>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Nouveau style</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={createStyleAction} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-name">Nom</Label>
+              <Input id="new-name" name="name" type="text" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-prompt">Prompt</Label>
+              <Textarea id="new-prompt" name="prompt" required rows={3} />
+            </div>
+            <Button type="submit">Créer</Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Liste des styles existants */}
       {styles.length === 0 ? (
-        <p className="text-sm text-gray-400">Aucun style pour l&apos;instant.</p>
+        <p className="text-sm text-muted-foreground">Aucun style pour l&apos;instant.</p>
       ) : (
-        <ul className="space-y-4">
+        <div className="space-y-4">
           {styles.map((style) => (
-            <li key={style.id} className="border border-gray-200 rounded p-4 space-y-3">
-              {/* Formulaire d'édition */}
-              <form action={updateStyleAction} className="space-y-2">
-                <input type="hidden" name="id" value={style.id} />
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Nom</label>
-                  <input
-                    name="name"
-                    type="text"
-                    required
-                    defaultValue={style.name}
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Prompt</label>
-                  <textarea
-                    name="prompt"
-                    required
-                    rows={3}
-                    defaultValue={style.prompt}
-                    className="w-full border border-gray-300 rounded px-2 py-1 text-sm"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="bg-gray-800 text-white text-sm rounded px-3 py-1.5 hover:bg-gray-700"
-                >
-                  Enregistrer
-                </button>
-              </form>
+            <Card key={style.id}>
+              <CardContent className="space-y-3">
+                {/* Formulaire d'édition */}
+                <form action={updateStyleAction} className="space-y-3">
+                  <input type="hidden" name="id" value={style.id} />
+                  <div className="space-y-1.5">
+                    <Label>Nom</Label>
+                    <Input name="name" type="text" required defaultValue={style.name} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Prompt</Label>
+                    <Textarea name="prompt" required rows={3} defaultValue={style.prompt} />
+                  </div>
+                  <Button type="submit">Enregistrer</Button>
+                </form>
 
-              {/* Formulaire de suppression */}
-              <form action={deleteStyleAction}>
-                <input type="hidden" name="id" value={style.id} />
-                <button
-                  type="submit"
-                  className="text-sm text-red-600 hover:text-red-800 border border-red-200 rounded px-3 py-1"
-                >
-                  Supprimer
-                </button>
-              </form>
-            </li>
+                {/* Formulaire de suppression */}
+                <form action={deleteStyleAction}>
+                  <input type="hidden" name="id" value={style.id} />
+                  <Button variant="destructive" size="sm" type="submit">
+                    Supprimer
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

@@ -61,20 +61,20 @@ export function TemplateLivePreview({ templateId, vars, width, height }: Props) 
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
           Aperçu · {width}×{height}
         </span>
-        {loading && <span className="text-gray-400">Mise à jour…</span>}
+        {loading && <span>Mise à jour…</span>}
       </div>
       {error ? (
-        <p className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </p>
       ) : (
         <div
           ref={boxRef}
-          className="overflow-hidden rounded border border-gray-200 bg-gray-50"
+          className="overflow-hidden rounded-lg border border-border bg-muted/50"
           style={{ height: height * scale }}
         >
           <iframe
