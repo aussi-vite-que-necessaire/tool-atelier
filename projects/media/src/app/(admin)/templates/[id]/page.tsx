@@ -6,14 +6,12 @@ import { listGuides } from "@/lib/style-guides/repository";
 import { requireUserId } from "@/lib/session";
 import { saveTemplateAction } from "../actions";
 import { TemplatePreview } from "./template-preview";
+import { StyleGuideSelect } from "./style-guide-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Heading, Muted } from "@/components/ui/typography";
-
-const selectClass =
-  "h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export default async function TemplateEditorPage({
   params,
@@ -65,20 +63,11 @@ export default async function TemplateEditorPage({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="style_guide_id">Charte graphique</Label>
-          <select
-            id="style_guide_id"
-            name="style_guide_id"
-            defaultValue={template.styleGuideId ?? ""}
-            className={selectClass}
-          >
-            <option value="">— Aucune —</option>
-            {guides.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
+          <Label>Charte graphique</Label>
+          <StyleGuideSelect
+            guides={guides.map((g) => ({ id: g.id, name: g.name }))}
+            defaultId={template.styleGuideId ?? null}
+          />
         </div>
 
         <div className="space-y-1.5">

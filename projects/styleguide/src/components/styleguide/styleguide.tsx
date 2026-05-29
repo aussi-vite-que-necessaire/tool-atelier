@@ -2,6 +2,7 @@
 
 import { ArrowRightIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,14 @@ import {
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Sidebar,
@@ -34,6 +43,9 @@ const sections = [
   { id: 'titres', label: 'Titres' },
   { id: 'boutons', label: 'Boutons' },
   { id: 'formulaires', label: 'Formulaires' },
+  { id: 'select', label: 'Select' },
+  { id: 'toaster', label: 'Toaster' },
+  { id: 'skeleton', label: 'Skeleton' },
   { id: 'modale', label: 'Modale oui/non' },
   { id: 'sidebar', label: 'Sidebar' },
 ] as const;
@@ -238,6 +250,83 @@ function FormsSection() {
   );
 }
 
+function SelectSection() {
+  const [value, setValue] = useState<string | null>(null);
+  return (
+    <div className="max-w-xs space-y-3">
+      <div className="space-y-1.5">
+        <Label>Plateforme</Label>
+        <Select value={value} onValueChange={setValue}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Choisir…" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="linkedin">LinkedIn</SelectItem>
+            <SelectItem value="instagram">Instagram</SelectItem>
+            <SelectItem value="x">X</SelectItem>
+            <SelectItem value="threads">Threads</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Muted>
+        Valeur : {value ? <Code>{value}</Code> : 'aucune'}. Compatible{' '}
+        <Code>{'<form>'}</Code> via <Code>name</Code> + <Code>defaultValue</Code>.
+      </Muted>
+    </div>
+  );
+}
+
+function ToasterSection() {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button variant="outline" onClick={() => toast('Post enregistré')}>
+        Défaut
+      </Button>
+      <Button variant="outline" onClick={() => toast.success('Post publié sur LinkedIn')}>
+        Succès
+      </Button>
+      <Button variant="outline" onClick={() => toast.info('Brouillon sauvegardé automatiquement')}>
+        Info
+      </Button>
+      <Button variant="outline" onClick={() => toast.warning('Quota bientôt atteint')}>
+        Avertissement
+      </Button>
+      <Button variant="outline" onClick={() => toast.error('Échec de la publication')}>
+        Erreur
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() =>
+          toast.promise(new Promise((r) => setTimeout(r, 1500)), {
+            loading: 'Publication…',
+            success: 'Publié ✓',
+            error: 'Échec',
+          })
+        }
+      >
+        Promise
+      </Button>
+    </div>
+  );
+}
+
+function SkeletonSection() {
+  return (
+    <div className="max-w-sm space-y-3">
+      <div className="flex items-center gap-3">
+        <Skeleton className="size-10 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-3 w-1/3" />
+        </div>
+      </div>
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-4/5" />
+    </div>
+  );
+}
+
 function ModalSection() {
   const [last, setLast] = useState<string | null>(null);
   return (
@@ -354,6 +443,15 @@ export function Styleguide() {
           </Section>
           <Section id="formulaires" title="Formulaires" description="Champs de saisie : Input, Textarea, Label — états par défaut, focus, désactivé.">
             <FormsSection />
+          </Section>
+          <Section id="select" title="Select" description="Menu déroulant (base-ui), compatible formulaire — remplace les <select> natifs.">
+            <SelectSection />
+          </Section>
+          <Section id="toaster" title="Toaster" description="Notifications éphémères (sonner), thème-aware. Déclenche via toast() / toast.success(), etc.">
+            <ToasterSection />
+          </Section>
+          <Section id="skeleton" title="Skeleton" description="Placeholder de chargement : compose des blocs pour esquisser le contenu à venir.">
+            <SkeletonSection />
           </Section>
           <Section id="modale" title="Modale oui/non" description="ConfirmDialog : confirmation d'action, variante neutre ou destructive.">
             <ModalSection />
