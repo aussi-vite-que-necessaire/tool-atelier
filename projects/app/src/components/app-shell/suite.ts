@@ -17,7 +17,7 @@ export const SUITE_ENTRIES: SuiteEntry[] = [
     tagline: 'Lead magnets & espace docs',
     available: true,
   },
-  { segment: 'skills', label: 'Skills', tagline: 'Compétences agentiques', available: false },
+  { segment: 'skills', label: 'Skills', tagline: 'Compétences agentiques', available: true },
 ];
 
 // Item actif = premier segment de pathname (ex. /cast/posts → cast).

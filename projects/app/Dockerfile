@@ -56,6 +56,11 @@ COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 
+# Catalogue des skills agentiques — fichiers markdown lus à chaud par le hub
+# (/skills + route de téléchargement). Non tracés par la sortie standalone
+# (jamais importés), donc copiés explicitement sous ./skills-catalog (cwd /app).
+COPY --from=build --chown=node:node /app/src/lib/skills/catalog ./skills-catalog
+
 # Migrations + script one-shot (scripts/migrate.mjs require drizzle-orm + pg).
 # On écrase le node_modules tracé (web only) par proddeps pour avoir drizzle-orm + pg.
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
