@@ -22,29 +22,26 @@ export function PreviewSidebar({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {/* Fond assombri — mobile/tablette uniquement (sur desktop le calendrier reste cliquable) */}
+      {/* Fond assombri cliquable — le drawer passe par-dessus le calendrier sur toutes tailles */}
       <button
         type="button"
         aria-label="Fermer l'aperçu"
         onClick={() => router.back()}
-        className="fixed inset-0 z-40 bg-black/20 lg:hidden"
+        className="fixed inset-0 z-40 bg-black/30"
       />
       <aside
         aria-label="Aperçu du post"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md animate-in flex-col border-l bg-white shadow-xl duration-200 slide-in-from-right lg:sticky lg:inset-y-auto lg:top-6 lg:right-auto lg:z-auto lg:h-[calc(100vh-3rem)] lg:max-w-none lg:flex-none lg:basis-[440px] lg:rounded-lg lg:border lg:shadow-sm"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md animate-in flex-col border-l bg-white shadow-xl duration-200 slide-in-from-right"
       >
-        <div className="flex flex-none items-center justify-between border-b px-4 py-3">
-          <h2 className="font-semibold text-sm">Aperçu du post</h2>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            aria-label="Fermer"
-            className="rounded p-1 text-muted-foreground hover:bg-neutral-100 hover:text-foreground"
-          >
-            <XIcon className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="Fermer"
+          className="absolute top-3 right-3 z-10 rounded-md bg-white/80 p-1.5 text-muted-foreground backdrop-blur hover:bg-neutral-100 hover:text-foreground"
+        >
+          <XIcon className="h-4 w-4" />
+        </button>
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       </aside>
     </>
   );
