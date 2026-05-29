@@ -30,7 +30,7 @@ function defaultContent(type: string): Content {
   }
 }
 
-const field = "w-full border-2 border-ink bg-paper px-2.5 py-1.5 text-sm"
+const field = "w-full border border-border bg-background px-2.5 py-1.5 text-sm"
 
 export function ModuleForm({
   action,
@@ -55,7 +55,7 @@ export function ModuleForm({
   const set = (patch: Content) => setContent((cur) => ({ ...cur, ...patch }))
 
   return (
-    <form action={action} className="space-y-2 border-2 border-foreground p-3">
+    <form action={action} className="space-y-2 border border-border p-3">
       <input type="hidden" name="resourceSlug" value={resourceSlug} />
       <input type="hidden" name="path" value={path.join("/")} />
       {editing && <input type="hidden" name="id" value={module!.id} />}
@@ -63,12 +63,12 @@ export function ModuleForm({
       <input type="hidden" name="content" value={JSON.stringify(content)} />
 
       {editing ? (
-        <div className="text-xs font-bold uppercase">{type}</div>
+        <div className="text-xs font-bold">{type}</div>
       ) : (
         <select
           value={type}
           onChange={(e) => changeType(e.target.value)}
-          className="border-2 border-foreground px-2 py-1 text-sm"
+          className="border border-border px-2 py-1 text-sm"
         >
           {TYPES.map((t) => (
             <option key={t} value={t}>
@@ -88,7 +88,7 @@ export function ModuleForm({
       )}
       {type === "callout" && (
         <>
-          <select value={c.variant ?? "info"} onChange={(e) => set({ variant: e.target.value })} className="border-2 border-foreground px-2 py-1 text-sm">
+          <select value={c.variant ?? "info"} onChange={(e) => set({ variant: e.target.value })} className="border border-border px-2 py-1 text-sm">
             <option value="info">info</option>
             <option value="warn">warn</option>
             <option value="success">success</option>
@@ -118,13 +118,13 @@ export function ModuleForm({
         <>
           <input value={c.language ?? ""} onChange={(e) => set({ language: e.target.value })} placeholder="langage (ts, bash, python…)" className={field} />
           <input value={c.filename ?? ""} onChange={(e) => set({ filename: e.target.value })} placeholder="nom de fichier (optionnel)" className={field} />
-          <textarea value={c.code ?? ""} onChange={(e) => set({ code: e.target.value })} rows={6} className={`${field} font-mono`} placeholder="code…" />
+          <textarea value={c.code ?? ""} onChange={(e) => set({ code: e.target.value })} rows={6} className={field} placeholder="code…" />
         </>
       )}
       {type === "prompt" && (
         <>
           <input value={c.title ?? ""} onChange={(e) => set({ title: e.target.value })} placeholder="titre (optionnel)" className={field} />
-          <textarea value={c.prompt ?? ""} onChange={(e) => set({ prompt: e.target.value })} rows={6} className={`${field} font-mono`} placeholder="prompt à copier…" />
+          <textarea value={c.prompt ?? ""} onChange={(e) => set({ prompt: e.target.value })} rows={6} className={field} placeholder="prompt à copier…" />
         </>
       )}
       {type === "quote" && (
@@ -139,7 +139,7 @@ export function ModuleForm({
         <>
           <input value={c.label ?? ""} onChange={(e) => set({ label: e.target.value })} placeholder="libellé du bouton" className={field} />
           <input value={c.url ?? ""} onChange={(e) => set({ url: e.target.value })} placeholder="url" className={field} />
-          <select value={c.variant ?? "primary"} onChange={(e) => set({ variant: e.target.value })} className="border-2 border-foreground px-2 py-1 text-sm">
+          <select value={c.variant ?? "primary"} onChange={(e) => set({ variant: e.target.value })} className="border border-border px-2 py-1 text-sm">
             <option value="primary">primary</option>
             <option value="secondary">secondary</option>
           </select>
@@ -190,7 +190,7 @@ export function ModuleForm({
 
       <button
         type="submit"
-        className="press border-2 border-ink bg-accent px-4 py-2 text-sm font-bold uppercase tracking-wide text-accent-ink shadow-brutal-sm"
+        className="border border-border bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-sm"
       >
         {editing ? "Enregistrer" : "Ajouter le module"}
       </button>
@@ -230,16 +230,16 @@ function RowsEditor<T>({
   return (
     <div className="space-y-2">
       {rows.map((row, i) => (
-        <div key={i} className="space-y-1 border-2 border-dashed border-foreground p-2">
+        <div key={i} className="space-y-1 border border-dashed border-border p-2">
           <div className="flex justify-end gap-1 text-xs">
-            <button type="button" onClick={() => move(i, -1)} className="border-2 border-foreground px-1 font-bold">↑</button>
-            <button type="button" onClick={() => move(i, 1)} className="border-2 border-foreground px-1 font-bold">↓</button>
-            <button type="button" onClick={() => remove(i)} className="border-2 border-foreground px-1 font-bold">✕</button>
+            <button type="button" onClick={() => move(i, -1)} className="border border-border px-1 font-bold">↑</button>
+            <button type="button" onClick={() => move(i, 1)} className="border border-border px-1 font-bold">↓</button>
+            <button type="button" onClick={() => remove(i)} className="border border-border px-1 font-bold">✕</button>
           </div>
           {render(row, (patch) => upd(i, patch))}
         </div>
       ))}
-      <button type="button" onClick={add} className="border-2 border-foreground px-2 py-1 text-sm font-bold">
+      <button type="button" onClick={add} className="border border-border px-2 py-1 text-sm font-bold">
         + Ajouter
       </button>
     </div>

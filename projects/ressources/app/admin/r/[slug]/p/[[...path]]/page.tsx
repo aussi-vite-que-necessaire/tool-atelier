@@ -25,7 +25,7 @@ function findNode(node: Node, path: string[]): Node | null {
   return child ? findNode(child, rest) : null
 }
 
-const miniBtn = "border-2 border-ink bg-paper px-2 py-1 text-sm font-bold hover:bg-paper-2"
+const miniBtn = "border border-border bg-background px-2 py-1 text-sm font-bold hover:bg-muted"
 
 function MoveModule({
   slug,
@@ -85,18 +85,18 @@ export default async function PageEditor({ params }: { params: Promise<{ slug: s
       <div>
         <Link
           href={`/admin/r/${slug}`}
-          className="inline-flex items-center gap-1 font-mono text-xs font-bold uppercase tracking-widest text-ink-soft hover:text-ink"
+          className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-3.5" strokeWidth={2.5} /> {data.title}
         </Link>
-        <h1 className="accent-rule mt-3 text-3xl font-black tracking-tight">{page.title}</h1>
+        <h1 className="mt-3 text-3xl font-black tracking-tight">{page.title}</h1>
       </div>
 
       <ul className="space-y-4">
         {page.modules.map((m) => (
-          <li key={m.id} className="border-2 border-ink bg-paper p-4 shadow-brutal-sm">
+          <li key={m.id} className="border border-border bg-background p-4 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
-              <Badge variant="solid">{m.type}</Badge>
+              <Badge>{m.type}</Badge>
               <span className="ml-auto flex gap-1">
                 <MoveModule slug={slug} path={path} id={m.id} orderedIds={orderedIds} dir="up" />
                 <MoveModule slug={slug} path={path} id={m.id} orderedIds={orderedIds} dir="down" />
@@ -112,14 +112,14 @@ export default async function PageEditor({ params }: { params: Promise<{ slug: s
           </li>
         ))}
         {page.modules.length === 0 && (
-          <li className="border-2 border-dashed border-ink/40 px-4 py-8 text-center text-sm text-ink-soft">
+          <li className="border border-dashed border-border/40 px-4 py-8 text-center text-sm text-muted-foreground">
             Aucun module sur cette page.
           </li>
         )}
       </ul>
 
-      <section className="border-2 border-ink bg-paper-2 p-4 shadow-brutal sm:p-5">
-        <h2 className="mb-3 font-mono text-xs font-extrabold uppercase tracking-widest text-ink-soft">
+      <section className="border border-border bg-muted p-4 shadow sm:p-5">
+        <h2 className="mb-3 text-xs font-extrabold text-muted-foreground">
           Ajouter un module
         </h2>
         <ModuleForm action={addModuleAction} resourceSlug={slug} path={path} />

@@ -11,10 +11,10 @@ export default async function SettingsPage() {
   return (
     <div>
       <header className="mb-8">
-        <h1 className="accent-rule text-3xl font-black tracking-tight">Réglages</h1>
-        <p className="mt-3 max-w-2xl text-ink-soft">
+        <h1 className="text-3xl font-black tracking-tight">Réglages</h1>
+        <p className="mt-3 max-w-2xl text-muted-foreground">
           Personnalisez le nom et le thème de votre espace public (
-          <span className="font-mono">/o/{op.handle}</span>).
+          <span>/o/{op.handle}</span>).
         </p>
       </header>
       <ThemeEditor initialBrandName={op.brandName ?? ""} initialTheme={theme} />

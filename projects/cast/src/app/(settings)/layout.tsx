@@ -1,17 +1,25 @@
-import { SettingsSidebar } from '@/components/settings/settings-sidebar';
+import { AppShell } from '@/components/ui/app-shell';
 import { Toaster } from '@/components/ui/sonner';
 import { requireUserId } from '@/lib/auth/session';
+import { centralUrl } from '@/lib/central-url';
+import { env } from '@/lib/env';
+import { castSections } from '../cast-nav';
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
   await requireUserId();
-
   return (
-    <div className="flex min-h-screen bg-neutral-100">
-      <SettingsSidebar />
-      <main className="min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-5xl px-8 py-10">{children}</div>
-      </main>
+    <AppShell
+      project="Cast"
+      homeUrl={centralUrl(env.APP_ENV)}
+      sections={castSections}
+      footer={
+        <a href={env.AUTH_URL} className="hover:text-foreground">
+          Déconnexion
+        </a>
+      }
+    >
+      {children}
       <Toaster />
-    </div>
+    </AppShell>
   );
 }
