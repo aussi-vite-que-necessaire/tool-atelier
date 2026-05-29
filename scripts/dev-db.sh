@@ -30,7 +30,13 @@ PG_CLUSTER="main"
 PG_HOST="127.0.0.1"
 PG_PORT="5432"           # port du cluster Debian par défaut
 PG_USER="postgres"
-PG_PASSWORD="postgres"   # mot de passe de dev local (jamais hors de la machine)
+PG_PASSWORD="postgres"   # superutilisateur, sert aux opérations admin (createdb, rôles)
+# Rôle applicatif `app` : LA convention de l'atelier pour les bases dev/test. Le job `test`
+# de la CI tourne sur un Postgres `app:app`, et les `.env.test` committés des projets pointent
+# sur postgres://app:app@localhost/<projet>_test. On reproduit ce rôle en local pour que les
+# `npm test` qui touchent la base passent sans bricolage par projet.
+APP_USER="app"
+APP_PASSWORD="app"
 
 REDIS_PORT="6379"
 
@@ -56,6 +62,8 @@ ensure_pg() {
   pg_isready -h "$PG_HOST" -p "$PG_PORT" >/dev/null 2>&1 || { echo "✗ Postgres pas prêt après 30s"; exit 1; }
   # Mot de passe du rôle postgres (idempotent) — via le socket local en peer auth (utilisateur OS postgres).
   su postgres -c "psql -tAc \"ALTER USER ${PG_USER} PASSWORD '${PG_PASSWORD}'\"" >/dev/null 2>&1 || true
+  # Rôle applicatif `app` (idempotent) : LOGIN + CREATEDB (db:test:prepare des projets crée sa base).
+  su postgres -c "psql -tAc \"DO \\\$\\\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='${APP_USER}') THEN CREATE ROLE ${APP_USER} LOGIN PASSWORD '${APP_PASSWORD}' CREATEDB; END IF; END \\\$\\\$;\"" >/dev/null 2>&1 || true
 }
 
 ensure_redis() {
@@ -67,16 +75,20 @@ db_exists()  { [ "$(psql_admin "SELECT 1 FROM pg_database WHERE datname='$1'")" 
 create_db()  { db_exists "$1" || psql_admin "CREATE DATABASE \"$1\"" >/dev/null; }
 drop_db()    { psql_admin "DROP DATABASE IF EXISTS \"$1\" WITH (FORCE)" >/dev/null; }
 
-# (Re)génère le .env.local. Dev-only et gitignoré (.env*.local) → régénéré intégralement à
-# chaque `up` ; source de vérité = lab.json + ce script.
-write_env_local() {
+# (Re)génère le `.env` du projet. On écrit `.env` (et non `.env.local`) car c'est le fichier que
+# lisent à la fois `next dev`, le worker (`--env-file .env`) ET vitest (`loadEnv()` dans
+# vitest.config). `.env` est gitignoré (racine + par projet). Dev-only, régénéré intégralement à
+# chaque `up` (source de vérité = lab.json + ce script). Reproduit ce que la plateforme/CI injecte :
+# APP_URL, DATABASE_URL, REDIS_URL — plus un BETTER_AUTH_SECRET de dev pour les projets à auth.
+write_env() {
   local dir="$1" dburl="$2" redisurl="$3" prefix="$4"
   {
     echo "# Généré par scripts/dev-db.sh — environnement de DEV LOCAL. Ne pas committer."
     echo "APP_URL=http://localhost:3000"
     [ -n "$dburl" ]    && echo "DATABASE_URL=$dburl"
     [ -n "$redisurl" ] && { echo "REDIS_URL=$redisurl"; echo "REDIS_PREFIX=$prefix"; }
-  } > "$dir/.env.local"
+    echo "BETTER_AUTH_SECRET=dev-local-not-a-secret"
+  } > "$dir/.env"
   return 0   # sinon le dernier test (redisurl vide → 1) devient le code retour et `set -e` tue le script
 }
 
@@ -86,7 +98,8 @@ proj_dir() {
   printf '%s' "$d"
 }
 
-dburl_for() { printf 'postgres://%s:%s@%s:%s/%s' "$PG_USER" "$PG_PASSWORD" "$PG_HOST" "$PG_PORT" "$1"; }
+# URL applicative (rôle `app`) — celle qu'écrivent les `.env`/`.env.test` des projets et la CI.
+dburl_for() { printf 'postgres://%s:%s@%s:%s/%s' "$APP_USER" "$APP_PASSWORD" "$PG_HOST" "$PG_PORT" "$1"; }
 
 cmd_up() {
   need_jq
@@ -114,27 +127,35 @@ cmd_up() {
     prefix="${proj}:dev:"
   fi
 
-  write_env_local "$dir" "$dburl" "$redisurl" "$prefix"
+  write_env "$dir" "$dburl" "$redisurl" "$prefix"
 
-  # Migrations puis seed, joués depuis le projet contre <projet>_dev (comme une preview).
-  # migrate/seed ont besoin des deps du projet : on les installe si absentes (en session
-  # cloud, cloud-setup.sh le fait au boot, mais on rend `up` autonome).
-  if [ "$db" = "true" ] && { [ -n "$migrate" ] || [ -n "$seed" ]; }; then
+  if [ "$db" = "true" ]; then
+    # Deps du projet (migrate/seed/db:test:prepare en ont besoin). En session cloud,
+    # cloud-setup.sh le fait au boot ; on installe ici pour rendre `up` autonome.
     if [ -f "$dir/package.json" ] && [ ! -d "$dir/node_modules" ]; then
       echo "→ installation des deps de $proj (node_modules absent)…"
       ( cd "$dir" && { [ -f package-lock.json ] && npm ci || npm install; } >/dev/null )
     fi
+    # Base de DEV : migrate puis seed contre <projet>_dev (comme une preview).
     export DATABASE_URL="$dburl"
     [ -n "$migrate" ] && ( cd "$dir" && sh -c "$migrate" )
     [ -n "$seed" ]    && ( cd "$dir" && sh -c "$seed" )
     unset DATABASE_URL
+    # Base de TEST : on délègue au `db:test:prepare` du projet (s'il existe) pour la migrer
+    # comme le fait la CI. On lui passe l'env de test (DATABASE_URL = <projet>_test + APP_URL/REDIS_URL).
+    if [ -f "$dir/package.json" ] && grep -q '"db:test:prepare"' "$dir/package.json"; then
+      ( cd "$dir"
+        export DATABASE_URL="$(dburl_for "${proj}_test")" APP_URL="http://localhost:3000"
+        [ -n "$redisurl" ] && export REDIS_URL="$redisurl"
+        npm run db:test:prepare --if-present )
+    fi
   fi
 
   if [ "$db" = "false" ] && [ "$redis" = "false" ]; then
-    echo "ℹ $proj ne déclare ni db ni redis dans lab.json — .env.local minimal écrit."
+    echo "ℹ $proj ne déclare ni db ni redis dans lab.json — .env minimal écrit."
   fi
-  echo "✓ dev prêt pour $proj — .env.local écrit. Lance : (cd projects/$proj && npm run dev)"
-  [ "$db" = "true" ] && echo "  tests : base ${proj}_test prête → DATABASE_URL=$(dburl_for "${proj}_test") npm test"
+  echo "✓ dev prêt pour $proj — .env écrit. Lance : (cd projects/$proj && npm run dev)"
+  [ "$db" = "true" ] && echo "  tests : bases ${proj}_dev + ${proj}_test prêtes → (cd projects/$proj && npm test)"
   return 0
 }
 

@@ -17,11 +17,12 @@ Point de départ **déviable** : tout est modifiable. Les capacités cochées au
 ## Dev (agents & local)
 
 `scripts/dev-db.sh up __PROJECT_NAME__` (depuis la racine de l'atelier) monte les bases déclarées
-dans `lab.json` — Postgres/Redis en **natif** (sans Docker, OK en session cloud), crée
-`__PROJECT_NAME___dev` et `__PROJECT_NAME___test`, joue migrate + seed et écrit `.env.local`
-(`DATABASE_URL`, `APP_URL`…). Ensuite `npm run dev` → http://localhost:3000 ; les tests qui
-touchent la base tournent sur `__PROJECT_NAME___test`. Idempotent (à relancer si le conteneur a
-été recyclé).
+dans `lab.json` — Postgres/Redis en **natif** (sans Docker, OK en session cloud), crée le rôle
+`app` + `__PROJECT_NAME___dev` et `__PROJECT_NAME___test`, joue migrate + seed (dev) et
+`db:test:prepare` (test), et écrit `.env` (`DATABASE_URL`, `APP_URL`, `REDIS_URL`,
+`BETTER_AUTH_SECRET`). Ensuite `npm run dev` → http://localhost:3000 et `npm test` passent du
+premier coup. Idempotent (à relancer si le conteneur a été recyclé). Les **e2e** (Playwright)
+ne sont pas couverts ici : ils tournent en CI post-deploy contre la preview.
 
 ## Déployer
 
