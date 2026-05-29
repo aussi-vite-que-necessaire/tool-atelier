@@ -15,7 +15,7 @@ export async function fetchSession(h: Headers): Promise<Session | null> {
 
 function signInRedirectUrl(cookieHeader?: string | null): string {
   return loginRedirect({
-    back: '/',
+    back: '/cast',
     preview: isPreview,
     cookieHeader: cookieHeader ?? null,
     defaultUser: DEFAULT_PREVIEW_USER,

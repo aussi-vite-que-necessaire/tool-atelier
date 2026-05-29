@@ -17,11 +17,12 @@ export function SignInForm({ preview }: { preview: boolean }) {
   );
 }
 
-// Redirection interne uniquement (chemin relatif, même origine).
+// Redirection interne uniquement (chemin relatif, même origine). À défaut de
+// cible, on entre dans la suite par la section cast.
 function safeRedirect(raw: string | null): string {
-  if (!raw) return '/';
+  if (!raw) return '/cast';
   if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
-  return '/';
+  return '/cast';
 }
 
 function SignInFormInner({ preview }: { preview: boolean }) {

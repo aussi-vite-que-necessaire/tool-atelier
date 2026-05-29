@@ -4,11 +4,12 @@ import { PREVIEW_PASSWORD, PREVIEW_USERS } from '@/lib/auth/preview-users';
 
 export const dynamic = 'force-dynamic';
 
-// Redirection interne uniquement (chemin relatif, même origine que l'app).
+// Redirection interne uniquement (chemin relatif, même origine que l'app). À
+// défaut de cible, on entre dans la suite par la section cast.
 function safeRedirect(raw: string | null): string {
-  if (!raw) return '/';
+  if (!raw) return '/cast';
   if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
-  return '/';
+  return '/cast';
 }
 
 // Auto-connexion de preview : ouvre une VRAIE session BetterAuth (email/mot de
