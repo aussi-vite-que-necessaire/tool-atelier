@@ -20,6 +20,6 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    '/((?!healthz|signin|oauth|\\.well-known|api/auth|api/mcp|api/preview-login|api/__test__|_next|favicon).*)',
+    '/((?!healthz|signin|oauth|api/auth|internal|api/preview-login|api/__test__|_next|favicon).*)',
   ],
 };

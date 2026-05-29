@@ -23,8 +23,9 @@ function errorResult(message: string) {
   return { content: [{ type: "text" as const, text: `Erreur: ${message}` }], isError: true }
 }
 
-// L'opérateur est résolu côté route (withMcpAuth) et déposé dans authInfo.extra.
-// Chaque outil n'opère donc que sur les ressources de cet opérateur (ADR-0002).
+// L'opérateur est résolu par le contrat interne (depuis le userId transmis par la
+// passerelle) et déposé dans authInfo.extra. Chaque outil n'opère donc que sur les
+// ressources de cet opérateur (ADR-0002).
 function operatorFrom(extra: ToolExtra): OpRef {
   const e = extra.authInfo?.extra
   const id = e?.operatorId
