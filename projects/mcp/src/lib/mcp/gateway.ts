@@ -24,18 +24,23 @@ export async function aggregateToolList(backends: Backend[]): Promise<Namespaced
   return lists.flat();
 }
 
-// Dé-préfixe `<prefix>_<tool>` et route vers le backend. Nom inconnu → isError.
+// Dé-préfixe `<prefix>_<tool>` et route vers le backend. Le préfixe est le
+// segment avant le premier `_` (invariant : un préfixe de backend ne contient
+// pas de `_`, cf. backends.ts) — match exact, pas de `startsWith` ambigu.
+// Nom inconnu → isError.
 export async function routeToolCall(
   backends: Backend[],
   namespaced: string,
   userId: string,
   args: Record<string, unknown>,
 ): Promise<ToolResult> {
-  const backend = backends.find((b) => namespaced.startsWith(`${b.prefix}_`));
+  const sep = namespaced.indexOf("_");
+  const prefix = sep === -1 ? "" : namespaced.slice(0, sep);
+  const backend = backends.find((b) => b.prefix === prefix);
   if (!backend) {
     return { content: [{ type: "text", text: `Tool inconnu: ${namespaced}` }], isError: true };
   }
-  const toolName = namespaced.slice(backend.prefix.length + 1);
+  const toolName = namespaced.slice(sep + 1);
   return callTool(backend, toolName, userId, args);
 }
 

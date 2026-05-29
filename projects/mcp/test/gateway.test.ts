@@ -35,4 +35,13 @@ describe("routeToolCall", () => {
     const out = await routeToolCall(backends, "inconnu_tool", "u1", {});
     expect(out.isError).toBe(true);
   });
+
+  it("match exact du préfixe (un préfixe plus court ne capture pas)", async () => {
+    const spy = vi.spyOn(client, "callTool").mockResolvedValue({ content: [{ type: "text", text: "ok" }] });
+    const bs = [{ prefix: "med", baseUrl: "https://med.internal", serviceKey: "k" }];
+    // "media_x" ne doit PAS être routé vers le backend "med".
+    const out = await routeToolCall(bs, "media_x", "u1", {});
+    expect(out.isError).toBe(true);
+    expect(spy).not.toHaveBeenCalled();
+  });
 });

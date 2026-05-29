@@ -39,8 +39,9 @@ Agent/client ──(MCP + Bearer OAuth)──▶ mcp.contentos.ch /api/mcp
 
 ## Composant : contrat interne (côté `media`)
 
-Deux routes HTTP, protégées par une **service-key** partagée (secret `mcp/INTERNAL_KEY` ou
-`global`) :
+Deux routes HTTP, protégées par une **service-key par backend** — qui réutilise la clé de service
+existante du backend (côté `media` : `MEDIA_ENGINE_SERVICE_KEY`, déjà en place pour `/v1`). La
+passerelle détient cette clé par backend (`MEDIA_SERVICE_KEY`) :
 
 | Route | Entrée | Sortie |
 | --- | --- | --- |
