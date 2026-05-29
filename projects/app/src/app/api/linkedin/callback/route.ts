@@ -15,7 +15,7 @@ export async function GET(req: Request): Promise<Response> {
   const expected = jar.get('li_oauth_state')?.value;
   jar.delete('li_oauth_state');
 
-  const settings = new URL('/settings/connections', env.APP_URL);
+  const settings = new URL('/cast/settings/connections', env.APP_URL);
   if (!code || !state || !expected || state !== expected) {
     settings.searchParams.set('error', 'state');
     return NextResponse.redirect(settings);

@@ -65,7 +65,7 @@ export function useJobPolling(jobKey: string | null, opts: Options) {
                     ? {
                         label: 'Voir',
                         onClick: () =>
-                          router.push(`/posts/${(json.result as { postId: string }).postId}`),
+                          router.push(`/cast/posts/${(json.result as { postId: string }).postId}`),
                       }
                     : undefined,
               });
