@@ -10,6 +10,24 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "100mb",
     },
   },
+  // La page /embed est destinée à être chargée en iframe par les autres apps de la
+  // suite (cast en prod + previews). frame-ancestors restreint qui peut l'embarquer ;
+  // l'allowlist applicative (isAllowedParentOrigin) + la validation event.origin côté
+  // appelant complètent cette défense. Le reste du site n'est jamais framable.
+  async headers() {
+    return [
+      {
+        source: "/embed/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value:
+              "frame-ancestors 'self' https://cast.contentos.ch https://*.preview.contentos.ch",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

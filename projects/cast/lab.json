@@ -5,5 +5,6 @@
   "migrate": "node scripts/migrate.mjs",
   "seed": "node scripts/seed-preview.mjs",
   "worker": "node worker-runner.mjs",
-  "images": ["web", "worker"]
+  "images": ["web", "worker"],
+  "dashboard": { "label": "cast", "tagline": "Publication LinkedIn assistée par l'IA", "order": 30 }
 }

@@ -1,19 +1,12 @@
-import { bytesToBase64 } from "@/lib/base64";
+import type { ToolResult } from "./types";
 
-type Block = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
-
-export function jsonResult(data: unknown) {
+// Enveloppe une valeur en content block texte (JSON). URL-only : les tools
+// image renvoient { id, url, ... }, jamais les octets.
+export function jsonResult(data: unknown): ToolResult {
   return { content: [{ type: "text" as const, text: JSON.stringify(data) }] };
 }
 
-// Résultat avec l'image embarquée (content block image MCP) + métadonnées texte.
-// L'image s'affiche inline dans le client sans dépendre de l'URL/CORS ; l'URL
-// reste dans le texte pour réutilisation (docs, posts).
-export function imageResult(bytes: Uint8Array, mimeType: string, meta: unknown) {
-  return {
-    content: [
-      { type: "image" as const, data: bytesToBase64(bytes), mimeType },
-      { type: "text" as const, text: JSON.stringify(meta) },
-    ] satisfies Block[],
-  };
+// Erreur métier (entité introuvable, pré-condition) → résultat MCP isError.
+export function errorResult(message: string): ToolResult {
+  return { content: [{ type: "text" as const, text: message }], isError: true };
 }

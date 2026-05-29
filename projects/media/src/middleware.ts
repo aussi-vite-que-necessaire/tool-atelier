@@ -28,8 +28,8 @@ export function middleware(request: NextRequest): NextResponse {
 
 export const config = {
   matcher: [
-    // Laisse passer : healthz, sign-in, l'API MCP (auth Bearer), /v1 (auth service-key),
-    // .well-known (découverte OAuth), assets Next, favicon.
-    "/((?!healthz|sign-in|api/mcp|v1|\\.well-known|_next|favicon).*)",
+    // Laisse passer : healthz, sign-in, les endpoints internes service-key
+    // (/internal, /v1), assets Next, favicon.
+    "/((?!healthz|sign-in|internal|v1|_next|favicon).*)",
   ],
 };

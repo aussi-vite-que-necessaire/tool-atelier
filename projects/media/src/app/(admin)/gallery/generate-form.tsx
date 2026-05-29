@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { generateAction } from "./actions";
+import { type CreatedMedia, toCreatedMedia } from "@/lib/embed/contract";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -25,11 +26,34 @@ interface StyleOption {
   name: string;
 }
 
-export function GenerateForm({ styles }: { styles: StyleOption[] }) {
+export function GenerateForm({
+  styles,
+  onCreated,
+}: {
+  styles: StyleOption[];
+  onCreated?: (m: CreatedMedia) => void;
+}) {
   const [state, action, pending] = useActionState(generateAction, {});
   // Select contrôlé : la sentinelle NO_STYLE est soumise comme "" (contrat de
   // generateAction : "" → aucun style), via un champ caché.
   const [styleId, setStyleId] = useState<string>(NO_STYLE);
+
+  // Mode embarqué : remonte le média généré au parent (une seule fois par id).
+  const lastNotified = useRef<string | null>(null);
+  useEffect(() => {
+    if (state.id && state.url && onCreated && lastNotified.current !== state.id) {
+      lastNotified.current = state.id;
+      onCreated(
+        toCreatedMedia({
+          id: state.id,
+          url: state.url,
+          kind: state.kind ?? "image",
+          width: state.width ?? null,
+          height: state.height ?? null,
+        }),
+      );
+    }
+  }, [state, onCreated]);
 
   return (
     <Card>
