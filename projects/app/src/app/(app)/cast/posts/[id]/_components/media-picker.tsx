@@ -1,5 +1,7 @@
 'use client';
 
+import { ImagePlus } from 'lucide-react';
+import Link from 'next/link';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -11,13 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import type { MediaItem } from '@/lib/media-catalog/client';
-import { isMediaCreatedMessage } from '@/lib/media-link/embed';
-import {
-  attachCreatedMediaAction,
-  attachMediaAction,
-  searchMediaAction,
-} from '../media-picker-actions';
+import type { MediaItem } from '@/lib/media/catalog';
+import { attachMediaAction, searchMediaAction } from '../media-picker-actions';
 
 const PAGE = 30;
 
@@ -43,26 +40,9 @@ type Props = {
   postId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // Embarquement de la page de création de media (iframe). `embedSrc` est l'URL de
-  // base (`${MEDIA_ENGINE_URL}/embed/new`), `embedOrigin` l'origine à comparer à
-  // `event.origin` des postMessage, `parentOrigin` l'origine de cast transmise à
-  // l'iframe (qu'elle valide avant de poster).
-  embedSrc: string;
-  embedOrigin: string;
-  parentOrigin: string;
 };
 
-type Mode = 'choisir' | 'creer';
-
-export function MediaPicker({
-  postId,
-  open,
-  onOpenChange,
-  embedSrc,
-  embedOrigin,
-  parentOrigin,
-}: Props) {
-  const [mode, setMode] = useState<Mode>('choisir');
+export function MediaPicker({ postId, open, onOpenChange }: Props) {
   const [q, setQ] = useState('');
   const [kind, setKind] = useState('all');
   const [orientation, setOrientation] = useState('all');
@@ -99,7 +79,7 @@ export function MediaPicker({
   );
 
   // (Re)charge depuis le début à l'ouverture et à chaque changement de filtre,
-  // avec un léger débounce pour ne pas spammer le service à chaque frappe.
+  // avec un léger débounce pour ne pas spammer la requête à chaque frappe.
   useEffect(() => {
     if (!open) return;
     const handle = setTimeout(() => {
@@ -120,149 +100,98 @@ export function MediaPicker({
     });
   };
 
-  // Mode « Créer » : écoute les postMessage de l'iframe media. On valide l'origine
-  // (event.origin === embedOrigin) puis le type ; le payload est revalidé côté
-  // serveur par attachCreatedMediaAction avant d'attacher.
-  useEffect(() => {
-    if (!open || mode !== 'creer') return;
-    function onMessage(e: MessageEvent) {
-      if (e.origin !== embedOrigin || !isMediaCreatedMessage(e.data)) return;
-      const { media } = e.data as { media: unknown };
-      startAttach(async () => {
-        const r = await attachCreatedMediaAction(postId, media);
-        if (r.status === 'error') {
-          toast.error(r.message);
-        } else {
-          toast.success('Média créé et attaché');
-          onOpenChange(false);
-        }
-      });
-    }
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [open, mode, embedOrigin, postId, onOpenChange]);
-
-  // Repart sur « Choisir » à chaque réouverture.
-  useEffect(() => {
-    if (!open) setMode('choisir');
-  }, [open]);
-
   const hasMore = items.length < total;
-  const iframeSrc = `${embedSrc}?parentOrigin=${encodeURIComponent(parentOrigin)}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[85vh] max-w-4xl flex-col sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{mode === 'choisir' ? 'Choisir un média' : 'Créer un média'}</DialogTitle>
+          <DialogTitle>Choisir un média</DialogTitle>
           <DialogDescription>
-            {mode === 'choisir'
-              ? 'Les médias de la bibliothèque, du plus récent au plus ancien.'
-              : 'Upload, génération IA, PDF ou template — attaché au post une fois créé.'}
+            Les médias de ta bibliothèque, du plus récent au plus ancien.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-1">
-          <Button
-            type="button"
-            variant={mode === 'choisir' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setMode('choisir')}
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Rechercher…"
+            className="h-9 w-48"
+          />
+          <select
+            value={kind}
+            onChange={(e) => setKind(e.target.value)}
+            className={selectClass}
+            aria-label="Type de média"
           >
-            Choisir
-          </Button>
-          <Button
-            type="button"
-            variant={mode === 'creer' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setMode('creer')}
+            {KIND_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={orientation}
+            onChange={(e) => setOrientation(e.target.value)}
+            className={selectClass}
+            aria-label="Orientation"
           >
-            Créer un média
-          </Button>
+            {ORIENTATION_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <Input
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+            placeholder="Tag"
+            className="h-9 w-32"
+          />
+          <div className="ml-auto">
+            <Button variant="secondary" size="sm" render={<Link href="/media/gallery" />}>
+              <ImagePlus className="h-4 w-4" />
+              Créer un média
+            </Button>
+          </div>
         </div>
 
-        {mode === 'choisir' ? (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Rechercher…"
-                className="h-9 w-48"
-              />
-              <select
-                value={kind}
-                onChange={(e) => setKind(e.target.value)}
-                className={selectClass}
-                aria-label="Type de média"
-              >
-                {KIND_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={orientation}
-                onChange={(e) => setOrientation(e.target.value)}
-                className={selectClass}
-                aria-label="Orientation"
-              >
-                {ORIENTATION_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              <Input
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
-                placeholder="Tag"
-                className="h-9 w-32"
-              />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {items.length === 0 && !loading ? (
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <p className="text-muted-foreground text-sm">Aucun média dans ta bibliothèque.</p>
+              <Button variant="outline" size="sm" render={<Link href="/media/gallery" />}>
+                <ImagePlus className="h-4 w-4" />
+                Aller au studio média
+              </Button>
             </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {items.length === 0 && !loading ? (
-                <p className="py-10 text-center text-muted-foreground text-sm">Aucun média.</p>
-              ) : (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                  {items.map((item) => (
-                    <MediaTile
-                      key={item.id}
-                      item={item}
-                      disabled={attaching}
-                      onSelect={() => select(item)}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {hasMore && (
-                <div className="flex justify-center py-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={loading}
-                    onClick={() => void fetchPage(offset + PAGE)}
-                  >
-                    {loading ? 'Chargement…' : 'Charger plus'}
-                  </Button>
-                </div>
-              )}
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {items.map((item) => (
+                <MediaTile
+                  key={item.id}
+                  item={item}
+                  disabled={attaching}
+                  onSelect={() => select(item)}
+                />
+              ))}
             </div>
-          </>
-        ) : (
-          <div className="min-h-0 flex-1 overflow-hidden rounded-lg border">
-            <iframe
-              src={iframeSrc}
-              title="Créer un média"
-              className="h-full w-full"
-              // Upload de fichiers + scripts (postMessage) nécessaires.
-              sandbox="allow-scripts allow-same-origin allow-forms"
-            />
-          </div>
-        )}
+          )}
+
+          {hasMore && (
+            <div className="flex justify-center py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading}
+                onClick={() => void fetchPage(offset + PAGE)}
+              >
+                {loading ? 'Chargement…' : 'Charger plus'}
+              </Button>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -285,7 +214,6 @@ function MediaTile({
       className="group relative aspect-square overflow-hidden rounded-lg border bg-neutral-50 outline-none ring-offset-2 transition hover:ring-2 hover:ring-ring focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     >
       {item.kind === 'video' ? (
-        // biome-ignore lint/a11y/useMediaCaption: vignette vidéo sans piste
         <video src={item.url} muted className="h-full w-full object-cover" />
       ) : item.kind === 'pdf' ? (
         <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-neutral-500">

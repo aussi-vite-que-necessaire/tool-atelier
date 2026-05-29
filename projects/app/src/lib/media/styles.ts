@@ -53,5 +53,7 @@ export async function updateStyle(
 }
 
 export async function deleteStyle(userId: string, id: string): Promise<void> {
-  await db.delete(visualStyles).where(and(eq(visualStyles.id, id), eq(visualStyles.userId, userId)));
+  await db
+    .delete(visualStyles)
+    .where(and(eq(visualStyles.id, id), eq(visualStyles.userId, userId)));
 }

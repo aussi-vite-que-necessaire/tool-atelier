@@ -1,5 +1,5 @@
-import { extensionForMime, parseImageDimensions } from './image-meta';
 import { newId } from './ids';
+import { extensionForMime, parseImageDimensions } from './image-meta';
 import { insertMedia } from './repository';
 import { deleteObject, objectKey, publicUrl, putImage } from './storage';
 import type { MediaKind, MediaRecord, MediaSource } from './types';
@@ -29,9 +29,9 @@ export async function store(input: StoreInput): Promise<MediaRecord> {
   const dims =
     input.width && input.height
       ? { width: input.width, height: input.height }
-      : (input.kind === 'image' || input.kind === 'render'
+      : ((input.kind === 'image' || input.kind === 'render'
           ? parseImageDimensions(input.bytes)
-          : null) ?? { width: null, height: null };
+          : null) ?? { width: null, height: null });
 
   const record: MediaRecord = {
     id,

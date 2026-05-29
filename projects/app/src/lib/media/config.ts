@@ -54,12 +54,16 @@ export function isBrowserConfigured(): boolean {
 export const config = {
   geminiApiKey(): string {
     const v = val('GEMINI_API_KEY');
-    if (!v) throw new MediaUnavailableError('Génération d’image indisponible : GEMINI_API_KEY manquante.');
+    if (!v)
+      throw new MediaUnavailableError(
+        'Génération d’image indisponible : GEMINI_API_KEY manquante.',
+      );
     return v;
   },
   browserUrl(): string {
     const v = val('BROWSER_URL');
-    if (!v) throw new MediaUnavailableError('Rendu HTML→image indisponible : BROWSER_URL manquant.');
+    if (!v)
+      throw new MediaUnavailableError('Rendu HTML→image indisponible : BROWSER_URL manquant.');
     return v;
   },
   r2(): R2Config {

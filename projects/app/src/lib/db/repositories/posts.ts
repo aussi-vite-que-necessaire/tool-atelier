@@ -1,5 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
-import type { MediaRef } from '@/lib/media-link/resolve';
+import type { MediaRef } from '@/lib/media/media-ref';
 import { db } from '../client';
 import { createId } from '../id';
 import { type Post, posts } from '../schema';

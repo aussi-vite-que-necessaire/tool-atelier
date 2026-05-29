@@ -1,6 +1,6 @@
 import puppeteer, { type ScreenshotOptions } from 'puppeteer-core';
 import { config } from './config';
-import { type RenderFormat, mimeForFormat } from './image-meta';
+import { mimeForFormat, type RenderFormat } from './image-meta';
 import { isBlockedUrl } from './url-guard';
 
 export interface RenderOptions {
@@ -16,7 +16,9 @@ const MAX_WAIT_MS = 15000;
 
 // Rend un HTML autonome en image via le Chromium partagé (browserless, CDP WebSocket).
 // L'agent appelant fournit tout le HTML/CSS ; aucun templating ici.
-export async function renderHtml(opts: RenderOptions): Promise<{ bytes: Uint8Array; mimeType: string }> {
+export async function renderHtml(
+  opts: RenderOptions,
+): Promise<{ bytes: Uint8Array; mimeType: string }> {
   const format: RenderFormat = opts.format ?? 'png';
   const browser = await puppeteer.connect({ browserWSEndpoint: config.browserUrl() });
   try {
@@ -42,7 +44,9 @@ export async function renderHtml(opts: RenderOptions): Promise<{ bytes: Uint8Arr
     });
 
     if (typeof opts.waitFor === 'number') {
-      await new Promise((resolve) => setTimeout(resolve, Math.min(opts.waitFor as number, MAX_WAIT_MS)));
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(opts.waitFor as number, MAX_WAIT_MS)),
+      );
     } else if (typeof opts.waitFor === 'string') {
       await page.waitForSelector(opts.waitFor, { timeout: MAX_WAIT_MS });
     }

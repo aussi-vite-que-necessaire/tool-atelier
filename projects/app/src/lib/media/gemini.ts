@@ -9,7 +9,10 @@ export interface GeminiImageResult {
   mimeType: string;
 }
 
-export async function generateImage(prompt: string, aspectRatio: string): Promise<GeminiImageResult> {
+export async function generateImage(
+  prompt: string,
+  aspectRatio: string,
+): Promise<GeminiImageResult> {
   const ai = new GoogleGenAI({ apiKey: config.geminiApiKey() });
   const response = await ai.models.generateContent({
     model: MODEL,

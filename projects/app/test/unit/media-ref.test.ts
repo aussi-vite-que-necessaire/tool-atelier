@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveMediaRef } from '@/lib/media-link/resolve';
+import { resolveMediaRef } from '@/lib/media/media-ref';
 
 describe('resolveMediaRef', () => {
   it('résout par URL directe (agnostique)', async () => {

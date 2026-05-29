@@ -21,20 +21,9 @@ type Props = {
   mediaInfo: MediaInfo | null;
   author: LinkedInAuthor;
   publication: Publication | null;
-  embedSrc: string;
-  embedOrigin: string;
-  parentOrigin: string;
 };
 
-export function PostEditor({
-  post,
-  mediaInfo,
-  author,
-  publication,
-  embedSrc,
-  embedOrigin,
-  parentOrigin,
-}: Props) {
+export function PostEditor({ post, mediaInfo, author, publication }: Props) {
   const [title, setTitle] = useState(post.title);
   const [content, setContent] = useState(post.content);
   const [savingTitle, startSaveTitle] = useTransition();
@@ -115,14 +104,7 @@ export function PostEditor({
         </aside>
       </div>
 
-      <MediaPicker
-        postId={post.id}
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        embedSrc={embedSrc}
-        embedOrigin={embedOrigin}
-        parentOrigin={parentOrigin}
-      />
+      <MediaPicker postId={post.id} open={pickerOpen} onOpenChange={setPickerOpen} />
     </div>
   );
 }

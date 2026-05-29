@@ -1,4 +1,4 @@
-import { type MediaKind, kindForMime } from './types';
+import { kindForMime, type MediaKind } from './types';
 
 const LIMITS: Record<string, number> = {
   'image/png': 10_000_000,

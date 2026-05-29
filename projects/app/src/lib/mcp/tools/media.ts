@@ -1,8 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { clearPostMedia, setPostMedia } from '@/lib/db/repositories/posts';
-import { getMedia } from '@/lib/media-catalog/client';
-import { resolveMediaRef } from '@/lib/media-link/resolve';
+import { getMedia } from '@/lib/media/catalog';
+import { resolveMediaRef } from '@/lib/media/media-ref';
 import { handle } from '../register';
 
 export async function attachMediaTool(

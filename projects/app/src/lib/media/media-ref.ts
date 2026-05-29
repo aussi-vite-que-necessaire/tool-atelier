@@ -1,5 +1,5 @@
 import type { MediaItem } from './catalog';
-import { type MediaKind, kindFromUrl } from './types';
+import { kindFromUrl, type MediaKind } from './types';
 
 // Référence d'attache d'un média à un post (colonnes media* du post).
 export type MediaRef = {

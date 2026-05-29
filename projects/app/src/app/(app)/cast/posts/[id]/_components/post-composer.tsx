@@ -4,7 +4,7 @@ import { ImagePlus, RefreshCw, Trash2 } from 'lucide-react';
 import { useLayoutEffect, useRef, useTransition } from 'react';
 import { toast } from 'sonner';
 import type { LinkedInAuthor } from '@/lib/linkedin/identity';
-import type { MediaKind } from '@/lib/media-catalog/kind';
+import type { MediaKind } from '@/lib/media/types';
 import { cn } from '@/lib/utils';
 import { detachMediaAction } from '../media-picker-actions';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kindFromUrl } from '@/lib/media-catalog/kind';
+import { kindFromUrl } from '@/lib/media/types';
 
 describe('kindFromUrl', () => {
   it("déduit le kind de l'extension", () => {
