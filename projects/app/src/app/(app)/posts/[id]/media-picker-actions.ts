@@ -2,11 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireUserId } from '@/lib/auth/session';
+import { clearPostMedia, setPostMedia } from '@/lib/db/repositories/posts';
 import { getMedia, listMedia, type MediaItem } from '@/lib/media-catalog/client';
 import type { MediaKind } from '@/lib/media-catalog/kind';
-import { clearPostMedia, setPostMedia } from '@/lib/db/repositories/posts';
-import { resolveMediaRef } from '@/lib/media-link/resolve';
 import { mediaRefFromCreatedMedia } from '@/lib/media-link/embed';
+import { resolveMediaRef } from '@/lib/media-link/resolve';
 
 type SearchResult = { items: MediaItem[]; total: number; limit: number; offset: number };
 

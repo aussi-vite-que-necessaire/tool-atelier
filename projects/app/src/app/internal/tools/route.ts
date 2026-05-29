@@ -1,5 +1,5 @@
-import { allowInternal } from '@/lib/mcp/internal-auth';
 import { listToolsResponse } from '@/lib/mcp/internal';
+import { allowInternal } from '@/lib/mcp/internal-auth';
 
 export const dynamic = 'force-dynamic';
 

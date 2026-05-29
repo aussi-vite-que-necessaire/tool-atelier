@@ -1,9 +1,9 @@
 import type { Job } from 'bullmq';
 import { getPublication, updatePublication } from '@/lib/db/repositories/publications';
 import { getSocialAccount } from '@/lib/db/repositories/social-accounts';
-import { fetchBytes } from '@/lib/media-catalog/fetch-bytes';
 import { toLinkedInMediaKind } from '@/lib/linkedin/media-kind';
 import { LinkedInPublishError, type PublishFn, type PublishMedia } from '@/lib/linkedin/publish';
+import { fetchBytes } from '@/lib/media-catalog/fetch-bytes';
 import type { PublishLinkedinJob, PublishLinkedinResult } from '@/lib/queue/client';
 
 const TRANSIENT = new Set(['rate_limit', 'platform_5xx', 'network']);

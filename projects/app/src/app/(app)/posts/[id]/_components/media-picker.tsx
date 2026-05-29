@@ -154,9 +154,7 @@ export function MediaPicker({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[85vh] max-w-4xl flex-col sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'choisir' ? 'Choisir un média' : 'Créer un média'}
-          </DialogTitle>
+          <DialogTitle>{mode === 'choisir' ? 'Choisir un média' : 'Créer un média'}</DialogTitle>
           <DialogDescription>
             {mode === 'choisir'
               ? 'Les médias de la bibliothèque, du plus récent au plus ancien.'

@@ -100,10 +100,7 @@ export async function setPostMedia(
   return rows[0];
 }
 
-export async function clearPostMedia(
-  userId: string,
-  postId: string,
-): Promise<Post | undefined> {
+export async function clearPostMedia(userId: string, postId: string): Promise<Post | undefined> {
   const rows = await db
     .update(posts)
     .set({

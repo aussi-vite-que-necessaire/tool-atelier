@@ -1,10 +1,13 @@
-import { allowInternal } from '@/lib/mcp/internal-auth';
 import { callToolByName } from '@/lib/mcp/internal';
+import { allowInternal } from '@/lib/mcp/internal-auth';
 
 export const dynamic = 'force-dynamic';
 
 function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
 export async function POST(

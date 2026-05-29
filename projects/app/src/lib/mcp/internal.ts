@@ -1,6 +1,6 @@
-import { z } from 'zod';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
-import { tools, toolsByName, type ToolResult } from './registry';
+import { z } from 'zod';
+import { type ToolResult, tools, toolsByName } from './registry';
 
 // Catalogue : nom + description + JSON Schema (Zod → JSON Schema via Zod v4).
 export function listToolsResponse() {
@@ -30,6 +30,11 @@ export async function callToolByName(
     const msg = issue?.message ?? 'Arguments invalides';
     throw new Error(path ? `${path}: ${msg}` : msg);
   }
-  const authInfo: AuthInfo = { token: 'internal', clientId: 'mcp-gateway', scopes: [], extra: { userId } };
+  const authInfo: AuthInfo = {
+    token: 'internal',
+    clientId: 'mcp-gateway',
+    scopes: [],
+    extra: { userId },
+  };
   return tool.handler(parsed.data as Record<string, unknown>, { authInfo });
 }

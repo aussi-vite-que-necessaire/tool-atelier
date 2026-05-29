@@ -1,14 +1,14 @@
 import { notFound } from 'next/navigation';
-import { requireUserId } from '@/lib/auth/session';
 import { isPreview } from '@/lib/auth/preview';
-import { env } from '@/lib/env';
-import { mediaEmbedOrigin } from '@/lib/media-link/embed';
+import { requireUserId } from '@/lib/auth/session';
 import { getPost } from '@/lib/db/repositories/posts';
 import { getLatestPublicationForPost } from '@/lib/db/repositories/publications';
+import { env } from '@/lib/env';
 import { getAuthorIdentity } from '@/lib/linkedin/identity';
 import type { MediaKind } from '@/lib/media-catalog/kind';
-import { PostEditor } from './_components/post-editor';
+import { mediaEmbedOrigin } from '@/lib/media-link/embed';
 import type { MediaInfo } from './_components/post-composer';
+import { PostEditor } from './_components/post-editor';
 
 export default async function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

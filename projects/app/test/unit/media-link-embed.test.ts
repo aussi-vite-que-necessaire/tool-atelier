@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MEDIA_CREATED,
   isMediaCreatedMessage,
+  MEDIA_CREATED,
   mediaEmbedOrigin,
   mediaRefFromCreatedMedia,
 } from '@/lib/media-link/embed';

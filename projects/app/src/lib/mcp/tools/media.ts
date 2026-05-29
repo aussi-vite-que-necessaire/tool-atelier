@@ -9,9 +9,8 @@ export async function attachMediaTool(
   userId: string,
   input: { postId: string; mediaId?: string; mediaUrl?: string },
 ) {
-  const ref = await resolveMediaRef(
-    { mediaId: input.mediaId, mediaUrl: input.mediaUrl },
-    (id) => getMedia(userId, id),
+  const ref = await resolveMediaRef({ mediaId: input.mediaId, mediaUrl: input.mediaUrl }, (id) =>
+    getMedia(userId, id),
   );
   return setPostMedia(userId, input.postId, ref);
 }
@@ -30,10 +29,7 @@ export function registerMediaTools(server: McpServer): void {
         'Attache un média du service `media` (par `media_id`) OU n’importe quelle URL (`media_url`) à un post. Au moins l’un des deux.',
       inputSchema: {
         post_id: z.string().describe('Identifiant du post.'),
-        media_id: z
-          .string()
-          .optional()
-          .describe('Identifiant d’un média du service `media`.'),
+        media_id: z.string().optional().describe('Identifiant d’un média du service `media`.'),
         media_url: z
           .string()
           .optional()

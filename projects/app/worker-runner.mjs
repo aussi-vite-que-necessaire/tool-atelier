@@ -4,8 +4,8 @@
 // paths du tsconfig nativement. La plateforme lab démarre ce process dans le
 // service `worker` du compose (REDIS_URL, DATABASE_URL et secrets injectés).
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const tsx = resolve(root, 'node_modules/.bin/tsx');

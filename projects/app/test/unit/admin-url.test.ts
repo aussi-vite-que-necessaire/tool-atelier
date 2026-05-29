@@ -15,8 +15,6 @@ describe('adminUrl', () => {
 
 describe('dbNameFromUrl', () => {
   test('extrait le nom de la base cible', () => {
-    expect(dbNameFromUrl('postgres://app:app@localhost:5432/cast_test')).toBe(
-      'cast_test',
-    );
+    expect(dbNameFromUrl('postgres://app:app@localhost:5432/cast_test')).toBe('cast_test');
   });
 });
