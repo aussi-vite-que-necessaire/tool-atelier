@@ -1,6 +1,8 @@
+import { SignOutButton } from '@/components/sign-out-button';
 import { AppShell } from '@/components/ui/app-shell';
 import { Toaster } from '@/components/ui/sonner';
-import { requireUserId, signOutUrl } from '@/lib/auth/session';
+import { isPreview } from '@/lib/auth/preview';
+import { requireUserId } from '@/lib/auth/session';
 import { centralUrl } from '@/lib/central-url';
 import { env } from '@/lib/env';
 import { castSections } from '../cast-nav';
@@ -12,11 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       project="Cast"
       homeUrl={centralUrl(env.APP_ENV)}
       sections={castSections}
-      footer={
-        <a href={signOutUrl()} className="hover:text-foreground">
-          Déconnexion
-        </a>
-      }
+      footer={<SignOutButton preview={isPreview} className="hover:text-foreground" />}
     >
       {children}
       <Toaster />

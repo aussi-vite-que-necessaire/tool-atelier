@@ -5,9 +5,8 @@ const envSchema = z.object({
   APP_URL: z.string().url(),
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
-  // URL du provider d'auth de la suite contentos. Défaut prod = auth.contentos.ch.
-  // En preview, isPreview court-circuite tout fetch vers auth.
-  AUTH_URL: z.string().url().default('https://auth.contentos.ch'),
+  // Secret de signature des sessions BetterAuth (auth in-app). Requis.
+  BETTER_AUTH_SECRET: z.string().min(1),
   LINKEDIN_CLIENT_ID: z.string().optional(),
   LINKEDIN_CLIENT_SECRET: z.string().optional(),
   TOKEN_ENCRYPTION_KEY: z.string().optional(),

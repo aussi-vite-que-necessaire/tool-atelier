@@ -4,8 +4,8 @@ export const socialAccounts = pgTable(
   'social_accounts',
   {
     id: text('id').primaryKey(),
-    // user_id : référence l'id du user dans auth.contentos.ch (pas de FK locale,
-    // la table user est gérée par le service SSO).
+    // user_id : référence l'id du user (table "user", auth in-app). Pas de FK
+    // locale : ces tables cast restent découplées du cycle de vie des comptes.
     userId: text('user_id').notNull(),
     platform: text('platform').notNull(),
     externalId: text('external_id').notNull(),

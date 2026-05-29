@@ -1,9 +1,11 @@
 // Seed de démo (preview uniquement, jamais en prod). Autonome : n'utilise que
 // `pg` (dep de prod) + SQL brut, comme migrate.mjs — l'image `web` ne contient
 // PAS les sources TS (src/), donc on ne peut pas réutiliser seedDev ici.
-// Insère, pour CHAQUE opérateur de preview (preview-op-1, preview-op-2) :
-// 1 voix, 1 template d'écriture, 2 posts d'exemple.
-// Idempotent (ids préfixés par userId + ON CONFLICT DO NOTHING).
+// Crée, pour CHAQUE opérateur de preview (preview-op-1, preview-op-2) :
+// - son compte auth (tables user + account, mot de passe email/password connu) ;
+// - ses données cast : 1 voix, 1 template d'écriture, 2 posts d'exemple.
+// L'auto-login de preview (/preview-login) ouvre une vraie session pour ces
+// comptes. Idempotent (ids déterministes + ON CONFLICT DO NOTHING).
 import pg from 'pg';
 
 if (process.env.APP_ENV === 'prod') {
@@ -16,10 +18,32 @@ if (!url) {
   process.exit(0);
 }
 
+// Mot de passe partagé des comptes de test : 'password'. Hash scrypt au format
+// BetterAuth (salt:hexkey, N=16384 r=16 p=1 dkLen=64). Sel fixe car preview-only
+// (jamais de prod) → seed déterministe, vérifiable par auth.api.signInEmail.
+const PREVIEW_PASSWORD_HASH =
+  '0123456789abcdef0123456789abcdef:f7c278f7f739ad5077f0a82b9a3d67831a7d1b05bc7b8e41fd9d55eb65c87a3f51cefaa870eda509939a162697e744990e3143cfc78ed746f2f981bb61c569e2';
+
 const USERS = [
-  { id: 'preview-op-1', label: 'User 1' },
-  { id: 'preview-op-2', label: 'User 2' },
+  { id: 'preview-op-1', label: 'User 1', email: 'op@contentos.test', name: 'Opérateur 1' },
+  { id: 'preview-op-2', label: 'User 2', email: 'op2@contentos.test', name: 'Opérateur 2' },
 ];
+
+async function seedAuthUser(client, u) {
+  await client.query(
+    `INSERT INTO "user" (id, name, email, email_verified, role, created_at, updated_at)
+     VALUES ($1, $2, $3, true, 'operator', now(), now())
+     ON CONFLICT (id) DO NOTHING`,
+    [u.id, u.name, u.email],
+  );
+  // Compte credential email/password (providerId 'credential', accountId = userId).
+  await client.query(
+    `INSERT INTO account (id, user_id, account_id, provider_id, password, created_at, updated_at)
+     VALUES ($1, $2, $3, 'credential', $4, now(), now())
+     ON CONFLICT (id) DO NOTHING`,
+    [`seed-cred-${u.id}`, u.id, u.id, PREVIEW_PASSWORD_HASH],
+  );
+}
 
 const VOICE_CONTENT = `# Voix éditoriale
 
@@ -79,6 +103,7 @@ try {
   const client = await pool.connect();
   try {
     for (const u of USERS) {
+      await seedAuthUser(client, u);
       await seedForUser(client, u.id, u.label);
     }
   } finally {

@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 import { seedDev } from '@/lib/db/seeds/dev-sample';
 
-// La table user vit côté auth.contentos.ch — résoudre l'email en userId se
-// fait depuis là. Ici on attend juste un userId déjà connu.
+// Seede les données cast d'un user existant (table "user", auth in-app).
+// Ici on attend juste un userId déjà connu.
 async function main(): Promise<void> {
   const userId = process.argv[2];
   if (!userId) {

@@ -1,6 +1,4 @@
-// Code OTP déterministe accepté en preview (jamais en prod). L'OTP réel passe
-// par auth.contentos.ch ; conservé pour d'éventuels helpers de test.
-export const PREVIEW_OTP = '000000';
+export { DEFAULT_PREVIEW_USER } from './preview-users';
 
 // Preview = environnement déployé non-prod (APP_ENV = slug de branche).
 // En prod APP_ENV vaut 'prod' ; en local il est absent. APP_ENV est le seul
@@ -13,42 +11,30 @@ export function isPreviewEnv(appEnv: string | undefined): boolean {
 
 export const isPreview = isPreviewEnv(process.env.APP_ENV);
 
-// Identités de preview (convention partagée avec auth + autres clients).
-export const PREVIEW_OP_1_ID = 'preview-op-1';
-export const PREVIEW_OP_2_ID = 'preview-op-2';
-export const PREVIEW_AUD_3_ID = 'preview-aud-3';
-// Utilisateur auto-connecté par défaut sur cette app (1 = op1).
-export const DEFAULT_PREVIEW_USER: 1 | 2 | 3 = 1;
-
-// Présence d'un cookie de session BetterAuth. Accepte le préfixe prod
-// (`better-auth`) ET le préfixe preview (`better-auth-preview`) — distincts pour
-// éviter la collision entre le cookie prod (.contentos.ch, qui fuit sur les
-// sous-domaines preview) et celui de la preview.
+// Présence d'un cookie de session BetterAuth (auth in-app, une seule origine).
 export function hasSessionCookie(cookieHeader: string | null | undefined): boolean {
-  return (
-    !!cookieHeader &&
-    /(?:^|;\s*)(?:__Secure-)?better-auth(?:-preview)?\.session_token=/.test(cookieHeader)
-  );
+  return !!cookieHeader && /(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(cookieHeader);
 }
 
 const MARKER = 'cos_preview_login';
-// Marqueur posé au logout en preview : tant qu'il est là, on montre le chooser.
+// Marqueur posé au logout en preview : tant qu'il est là, on montre le chooser
+// (page /signin) au lieu d'auto-connecter l'opérateur de test.
 export function hasManualMarker(cookieHeader: string | null | undefined): boolean {
   return !!cookieHeader && new RegExp(`(?:^|;\\s*)${MARKER}=manual`).test(cookieHeader);
 }
 
-// URL de redirection pour un visiteur sans session. Pur (pas d'env) → testable.
-// preview sans marqueur → auto-login ; preview avec marqueur ou prod → chooser SSO.
+// URL de redirection pour un visiteur sans session. Pure (pas d'env) → testable.
+// preview sans marqueur → auto-login local (/preview-login) ;
+// preview avec marqueur, ou prod → page de connexion locale (/signin).
 export function loginRedirect(opts: {
-  authUrl: string;
   back: string;
   preview: boolean;
   cookieHeader: string | null | undefined;
-  defaultUser?: 1 | 2 | 3;
+  defaultUser?: string;
 }): string {
   const r = encodeURIComponent(opts.back);
   if (opts.preview && !hasManualMarker(opts.cookieHeader)) {
-    return `${opts.authUrl}/preview-login?user=${opts.defaultUser ?? DEFAULT_PREVIEW_USER}&redirect=${r}`;
+    return `/preview-login?user=${opts.defaultUser ?? '1'}&redirect=${r}`;
   }
-  return `${opts.authUrl}/sign-in?redirect=${r}`;
+  return `/signin?redirect=${r}`;
 }

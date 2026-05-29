@@ -1,3 +1,4 @@
+export * from './schemas/auth';
 export * from './schemas/posts';
 export * from './schemas/publications';
 export * from './schemas/social-accounts';

@@ -1,43 +1,35 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { env } from '@/lib/env';
+import { auth } from '@/lib/auth';
 import { seedUserDefaults } from '@/lib/db/seeds/user-defaults';
-import { isPreview, loginRedirect, DEFAULT_PREVIEW_USER } from './preview';
+import { DEFAULT_PREVIEW_USER, isPreview, loginRedirect } from './preview';
 
 type Session = { user: { id: string } };
 
-// Récupère la session via fetch HTTP vers auth.contentos.ch (cookie forwardé).
-// Même chemin en preview qu'en prod : la connexion est réelle (auto-login user1
-// en preview géré au niveau de la redirection — cf. loginRedirect/middleware).
+// Lit la session localement (auth in-app : même base, même origine). Plus de
+// fetch HTTP vers un provider distant — l'instance BetterAuth tourne ici.
 export async function fetchSession(h: Headers): Promise<Session | null> {
-  const cookie = h.get('cookie');
-  if (!cookie) return null;
-  const res = await fetch(`${env.AUTH_URL}/api/auth/get-session`, {
-    headers: { cookie },
-    cache: 'no-store',
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data?.user?.id ? { user: { id: data.user.id } } : null;
+  const s = await auth.api.getSession({ headers: h });
+  return s?.user?.id ? { user: { id: s.user.id } } : null;
 }
 
 function signInRedirectUrl(cookieHeader?: string | null): string {
   return loginRedirect({
-    authUrl: env.AUTH_URL,
-    back: env.APP_URL,
+    back: '/',
     preview: isPreview,
     cookieHeader: cookieHeader ?? null,
     defaultUser: DEFAULT_PREVIEW_USER,
   });
 }
 
-// URL de déconnexion. En preview → preview-logout (efface la session + pose le
-// marqueur → chooser). En prod → home du provider.
+// URL/chemin de déconnexion. En preview → /preview-logout (efface la session +
+// pose le marqueur → chooser). En prod → /signin (le bouton client appelle
+// signOut() puis y renvoie ; ce lien reste un fallback sans JS).
 export function signOutUrl(): string {
   if (isPreview) {
-    return `${env.AUTH_URL}/preview-logout?redirect=${encodeURIComponent(env.APP_URL)}`;
+    return `/preview-logout?redirect=${encodeURIComponent('/')}`;
   }
-  return env.AUTH_URL;
+  return '/signin';
 }
 
 // Cache process-level pour éviter de retaper la DB à chaque requête.

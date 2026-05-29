@@ -204,6 +204,13 @@
       "when": 1780087200000,
       "tag": "0028_drop_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1780090983020,
+      "tag": "0029_add_auth_tables",
+      "breakpoints": true
     }
   ]
 }

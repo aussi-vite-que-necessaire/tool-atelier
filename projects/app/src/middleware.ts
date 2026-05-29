@@ -1,30 +1,32 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { env } from '@/lib/env';
-import { isPreview, loginRedirect, hasSessionCookie, DEFAULT_PREVIEW_USER } from '@/lib/auth/preview';
+import {
+  DEFAULT_PREVIEW_USER,
+  hasSessionCookie,
+  isPreview,
+  loginRedirect,
+} from '@/lib/auth/preview';
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const cookie = request.headers.get('cookie') ?? '';
-  // Cookie posé par auth.contentos.ch (cross-subdomain .contentos.ch / .preview…).
+  // Cookie de session BetterAuth (auth in-app, une seule origine).
   if (!hasSessionCookie(cookie)) {
-    // L'URL interne du conteneur derrière le proxy lab fuiterait dans request.url ;
-    // on reconstruit depuis APP_URL (origine publique) + pathname + search.
-    const url = new URL(request.url);
-    const back = `${env.APP_URL}${url.pathname}${url.search}`;
-    // En preview, l'absence de cookie déclenche l'auto-login user1 via loginRedirect.
+    // Destination relative à l'origine courante (auth in-app) : pas d'URL externe.
+    // back = chemin demandé (relatif) pour revenir après connexion.
+    const back = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+    // En preview, l'absence de cookie déclenche l'auto-login local via loginRedirect.
     const dest = loginRedirect({
-      authUrl: env.AUTH_URL,
       back,
       preview: isPreview,
       cookieHeader: cookie,
       defaultUser: DEFAULT_PREVIEW_USER,
     });
-    return NextResponse.redirect(dest);
+    return NextResponse.redirect(new URL(dest, request.url));
   }
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/((?!healthz|signin|oauth|api/auth|internal|api/preview-login|api/__test__|_next|favicon).*)',
+    '/((?!healthz|signin|preview-login|preview-logout|oauth|api/auth|internal|api/preview-login|api/__test__|_next|favicon).*)',
   ],
 };

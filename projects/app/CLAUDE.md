@@ -41,11 +41,16 @@ et mappe `mediaKind → LinkedIn` (`pdf→document`, `video→video`, `image|ren
 
 **Next.js 16** (App Router, sortie `standalone`) + **Drizzle ORM** (driver `pg`/node-postgres,
 schéma `src/lib/db/schema.ts`, client paresseux `src/lib/db/client.ts`) + **BullMQ + ioredis**.
-Sessions web déléguées à **`auth.contentos.ch`** (cookie cross-subdomain `.contentos.ch`) —
-`src/lib/auth/session.ts` lit la session via fetch HTTP. L'auth MCP (OAuth) est centralisée à la
+**Auth intégrée in-app** : BetterAuth tourne dans cette app (`src/lib/auth.ts`, adapter Drizzle
+sur le client local, email/mot de passe, champ `role` défaut `operator`), une seule origine
+(`env.APP_URL`), mêmes tables (`src/lib/db/schemas/auth.ts` : user/session/account/verification),
+une seule session. Handler monté sous `/api/auth/*` (`src/app/api/auth/[...all]/route.ts`),
+client `src/lib/auth-client.ts`, page de connexion `/signin`. `src/lib/auth/session.ts` lit la
+session localement (`auth.api.getSession`). En preview, `/preview-login` ouvre une vraie session
+pour l'opérateur de test seedé (`/preview-logout` la ferme et pose le marqueur chooser) ; en prod,
+connexion normale par `/signin`. L'auth MCP (OAuth) est centralisée à la
 passerelle `mcp.contentos.ch` ; cast n'expose que `/internal/tools` (clé partagée), et ses tools
-reçoivent le `userId` transmis (`src/lib/mcp/auth.ts` → `userIdFrom`). Voir
-`docs/superpowers/specs/2026-05-28-cast-sso-migration-design.md`. Migrations SQL committées
+reçoivent le `userId` transmis (`src/lib/mcp/auth.ts` → `userIdFrom`). Migrations SQL committées
 dans `drizzle/`, appliquées au déploiement par le one-shot `scripts/migrate.mjs`
 (`drizzle-orm/node-postgres`, deps de prod — pas de drizzle-kit). `GET /healthz` → `ok` sans DB.
 
@@ -75,7 +80,7 @@ environnement. Le one-shot `migrate` applique `drizzle/` avant le démarrage.
 Les autres secrets viennent du coffre `cast` de l'atelier (`/lab-secret`, scope `cast`),
 déchiffrés et injectés par `deploy.sh` :
 
-- `AUTH_URL` — URL du provider d'auth de la suite (défaut `https://auth.contentos.ch`).
+- `BETTER_AUTH_SECRET` — secret de signature des sessions BetterAuth (auth in-app). Requis.
 - `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_API_VERSION` — publication LinkedIn
 - `TOKEN_ENCRYPTION_KEY` — chiffrement des tokens LinkedIn stockés
 - `MEDIA_ENGINE_SERVICE_KEY` — Bearer du service **media** (`https://media.contentos.ch`) :
