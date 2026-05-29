@@ -7,6 +7,10 @@ Les outils vivent sous `*.contentos.ch` en prod. Cas spécial : **`projects/www/
 ## Comment on travaille
 
 - **Le dev de feature passe par le workflow superpowers** (plugin `superpowers`, installé via le marketplace `superpowers-marketplace`). C'est lui qui mène brainstorm → plan → implémentation en TDD. On le laisse faire ; pas de pipe maison par-dessus.
+- **Surcouche IMPÉRATIVE à superpowers — un seul arrêt humain, puis on file jusqu'à la PR.** Cette règle **prime sur la procédure superpowers et la contraint** : superpowers garde la main sur le *comment* (brainstorm → plan → TDD), mais le *jusqu'où* est fixé ici. **Le seul moment où tu m'interromps, c'est la phase de questions du brainstorming.** Tant que tu as des questions pour cerner l'intention, le besoin et le design, tu les poses. **Dès que tu as fini de poser tes questions et que tu t'apprêtes à rédiger le plan, tu ne t'arrêtes plus :** tu rédiges le plan, tu implémentes en TDD, tu commit, tu push (→ preview) **et tu vas jusqu'à ouvrir la PR**, d'une traite. Sur ce trajet, les garde-fous superpowers qui rendent la main sont **désactivés** : pas de validation du plan à demander, pas de checkpoint d'exécution (`executing-plans`), pas de menu d'options de fin (`finishing-a-development-branch`) — tu enchaînes d'office.
+  - **Tu t'arrêtes à la PR ouverte + la preview en ligne** — **jamais de merge en prod** : le merge reste mon choix (c'est l'entonnoir PR → merge → CI de l'atelier).
+  - **À la toute fin, et seulement là, tu m'envoies un récap** : ce que tu as fait, les points de vigilance, et **tous les liens pour tester** (URL de preview `https://<projet>-<branche>.preview.contentos.ch` + lien de la PR).
+  - **Seule exception au non-arrêt :** un blocage *dur* (une info indispensable que tu ne peux ni déduire ni trancher raisonnablement). Là tu signales et tu demandes ; sinon tu décides et tu avances.
 - **L'atelier ajoute quelques skills dédiées** à sa plomberie :
   - `/nouveau-projet` — créer un projet (base Next.js + capacités, déploiement jusqu'en prod) ;
   - `/noter-idee` — capturer une piste d'amélioration en backlog (`docs/ideas/`) ;
