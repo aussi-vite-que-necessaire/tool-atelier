@@ -6,7 +6,7 @@ Les specs/plans par chantier (trace historique, spec-1 → spec-21) vivent dans 
 
 ## En un mot
 
-ContentOS = plateforme SaaS **« OS pour agents »** : détient l'**état** (idées, posts, médias, calendrier, marque, connexions sociales) + l'**UI de contrôle humain** + une **surface de tools** (MCP). Le **cerveau** (rédaction, idéation) vit dans des **skills externes** interchangeables. Trois dépôts :
+ContentOS = plateforme SaaS **« OS pour agents »** : détient l'**état** (posts, médias, calendrier, marque, connexions sociales) + l'**UI de contrôle humain** + une **surface de tools** (MCP). Le **cerveau** (rédaction) vit dans des **skills externes** interchangeables. Trois dépôts :
 
 - **`content-os-v2`** — la plateforme (état + UI + tools).
 - **`media-manager`** (worker Cloudflare `image-studio`) — le moteur média : calcul (Gemini, HTML→PNG) + stockage, exposé en API `/v1` à clé de service.
@@ -14,7 +14,7 @@ ContentOS = plateforme SaaS **« OS pour agents »** : détient l'**état** (id�
 
 ## ✅ Livré
 
-- Pipeline **idée → post → publication LinkedIn** (+ calendrier, carrousels, vidéo).
+- Pipeline **post → publication LinkedIn** (+ calendrier, carrousels, vidéo).
 - Visuels : **templates de marque** (Handlebars→PNG) + **génération IA** (Gemini) + galerie.
 - **Skill de rédaction** `content-os-redaction` (spec-20) — preuve du modèle « OS pour agents », validée en réel.
 - **Rédaction in-app retirée** (`generate_post` + clé Anthropic) ; création de post humaine via « Créer un post ».
