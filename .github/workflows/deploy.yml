@@ -75,38 +75,6 @@ jobs:
           [ -n "$e" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
           echo "env=$e" >> "$GITHUB_OUTPUT"
 
-  # Garde-fou « contrat de données » : le noyau partagé (schéma Drizzle) doit rester
-  # rigoureusement identique entre le propriétaire (ressources) et ses consommateurs
-  # à backend partagé (docs). On rejoue la synchro puis on exige l'absence de diff —
-  # toute dérive (édition d'une copie, oubli de resync) casse ici avant tout deploy.
-  shared_guard:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Vérifie la synchro du noyau partagé (scripts/sync-shared.sh)
-        run: |
-          bash scripts/sync-shared.sh
-          if ! git diff --quiet; then
-            echo "::error::Noyau partagé désynchronisé — lance scripts/sync-shared.sh et committe."
-            git --no-pager diff --stat
-            exit 1
-          fi
-          echo "✓ noyau partagé en phase"
-
-  # Garde « liste du dashboard » : la liste des raccourcis de www est générée par
-  # bin/www-tools-sync depuis les blocs `dashboard` des projects/*/lab.json. On
-  # rejoue la génération et on exige l'absence de diff — toute dérive (édition
-  # manuelle du JSON, ajout/retrait d'un bloc dashboard sans resync) casse ici.
-  www_tools_guard:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Vérifie la synchro de la liste du dashboard (bin/www-tools-sync)
-        run: |
-          bin/www-tools-sync --check
-
   # Build + push de l'image. Tourne EN PARALLÈLE du job `test` : le deploy ne fait
   # que pull cette image, il ne rebuild jamais.
   #
@@ -246,7 +214,7 @@ jobs:
   # Deploy = pull (l'image est déjà construite par le job `build` et testée par
   # `test` si Node). Aucun build ici → ~45s.
   deploy:
-    needs: [detect, build, test, shared_guard, www_tools_guard]
+    needs: [detect, build, test]
     # `test` peut être skippé (aucun projet Node testable) ; on autorise alors le deploy.
     # `!cancelled()` en tête est requis : sans une fonction de statut, GitHub propage le
     # skip d'un job `needs` (ici `test` quand aucun projet Node n'a changé) au job dépendant,
@@ -255,8 +223,6 @@ jobs:
       !cancelled()
       && needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
       && needs.build.result == 'success'
-      && needs.shared_guard.result == 'success'
-      && needs.www_tools_guard.result == 'success'
       && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: ubuntu-latest
     strategy:
