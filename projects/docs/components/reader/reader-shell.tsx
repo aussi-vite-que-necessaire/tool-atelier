@@ -2,7 +2,9 @@ import Link from "next/link"
 import { BookOpen } from "lucide-react"
 import type { TreePage } from "@/lib/content/tree"
 import type { TocItem } from "@/lib/content/toc"
+import type { ThemeConfig } from "@/lib/theme"
 import { Logo } from "@/components/brand/logo"
+import { ThemeStyle } from "@/components/theme-style"
 import { cn } from "@/lib/utils"
 import { ReadingProgress } from "./reading-progress"
 import { PageTree } from "./page-tree"
@@ -14,6 +16,7 @@ export function ReaderShell({
   basePath,
   currentId,
   toc,
+  theme,
   children,
 }: {
   resourceTitle: string
@@ -21,6 +24,7 @@ export function ReaderShell({
   basePath: string
   currentId: string
   toc: TocItem[]
+  theme: ThemeConfig | null
   children: React.ReactNode
 }) {
   const showTree = root.children.length > 0
@@ -36,6 +40,7 @@ export function ReaderShell({
 
   return (
     <div className="min-h-screen">
+      <ThemeStyle theme={theme} />
       <ReadingProgress />
 
       <header className="sticky top-0 z-40 h-14 border-b-2 border-ink bg-paper/90 backdrop-blur">
