@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import JSZip from "jszip";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { getSkill, getSkillDir } from "@/lib/skills-fs";
 
 export const prerender = false;
@@ -17,7 +17,7 @@ async function addDirToZip(zip: JSZip, absDir: string, zipDir: string) {
 }
 
 export const GET: APIRoute = async ({ request, params }) => {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getSession(request.headers);
   if (!session) return new Response("Connecte-toi pour télécharger.", { status: 401 });
 
   const name = params.name;
