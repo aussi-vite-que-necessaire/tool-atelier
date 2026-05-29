@@ -213,8 +213,12 @@ jobs:
   deploy:
     needs: [detect, build, test]
     # `test` peut être skippé (aucun projet Node testable) ; on autorise alors le deploy.
+    # `!cancelled()` en tête est requis : sans une fonction de statut, GitHub propage le
+    # skip d'un job `needs` (ici `test` quand aucun projet Node n'a changé) au job dépendant,
+    # même quand la condition l'autorise — ce qui empêchait tout push non-Node de déployer.
     if: |
-      needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
+      !cancelled()
+      && needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
       && needs.build.result == 'success'
       && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: ubuntu-latest
