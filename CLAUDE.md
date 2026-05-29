@@ -47,6 +47,8 @@ Au déploiement, `deploy.sh` :
 
 Preview = base vide + seed, droppée au teardown. Exemples : `projects/hello/` (rien), `projects/counter/` (db).
 
+**Dev local.** La même déclaration `lab.json` alimente le dev sur ta machine : `scripts/dev-db.sh up <projet>` monte un Postgres (et Redis si déclaré) local **partagé** par l'atelier, crée la base `<projet>_dev`, joue `migrate` puis `seed`, et écrit le `.env.local` du projet (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL=http://localhost:3000`). Calque le modèle du Postgres central de la prod, côté local. `reset <projet>` repart de zéro, `down` arrête les conteneurs (données conservées), `nuke` efface tout.
+
 ## Secrets — `/lab-secret`
 
 Les clés API et variables sensibles se gèrent avec **`/lab-secret`** : secrets `age`-chiffrés versionnés dans `secrets/`, déverrouillés par l'unique variable `LAB_SECRETS_KEY`, par scope (`global` partagé / `sysadmin` opérateur / `<projet>`). Au déploiement, `deploy.sh` déchiffre et injecte `global` + le scope du projet. Les variables auto-fournies (`APP_URL`, `DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY`) ne sont pas à gérer à la main.
