@@ -17,18 +17,18 @@ Trois rails, trois skills :
 
 ## Flow
 
-**Étape 1 — Pose la question principale** via `AskUserQuestion` (ou en prose si pas d'UI interactive) :
+**Étape 1 — Le rail** via `AskUserQuestion` (3 options, ou prose si pas d'UI interactive) :
 
 > Qu'est-ce qu'on fait dans cette session ?
 > - Travailler sur un projet existant
 > - Créer un nouveau projet
 > - Plomberie de l'atelier
 
-**Étape 2 — Selon le choix :**
+**Étape 2 — Selon le rail :**
 
 ### A) Projet existant
 
-Scanne les projets en lisant chaque `projects/*/lab.json` :
+Scanne les projets pour afficher les noms valides comme repère :
 
 ```bash
 for f in projects/*/lab.json; do
@@ -38,7 +38,11 @@ for f in projects/*/lab.json; do
 done
 ```
 
-Présente la liste numérotée en prose (nom + description courte). Attends la réponse de Manu (numéro ou nom), puis invoque `/lab-ship <projet>`.
+Affiche la liste (nom + description courte), puis **demande en texte libre, en une seule question** :
+
+> Sur quel projet veux-tu travailler, et qu'est-ce que tu veux y faire ?
+
+Manu répond le projet **et** son brief d'un coup (ex. « media — ajouter l'export PDF des cartes »). Extrais le nom du projet, vérifie qu'il existe dans `projects/`, puis invoque `/lab-ship <projet>`. **Le brief reste dans le fil** : `/lab-cadrer` part de là pour ses clarifying questions au lieu de redemander l'objectif. Ne re-pose pas la question de l'intention.
 
 ### B) Nouveau projet
 
