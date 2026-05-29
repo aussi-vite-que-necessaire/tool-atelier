@@ -36,6 +36,13 @@
       "when": 1780033568666,
       "tag": "0004_third_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1780065547045,
+      "tag": "0005_add_operator_theme",
+      "breakpoints": true
     }
   ]
 }
