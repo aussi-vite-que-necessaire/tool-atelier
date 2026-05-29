@@ -11,10 +11,17 @@ const envSchema = z.object({
   LINKEDIN_CLIENT_SECRET: z.string().optional(),
   TOKEN_ENCRYPTION_KEY: z.string().optional(),
   CONTENT_OS_LINKEDIN_STUB: z.enum(['0', '1']).default('0'),
-  // URL du service media de la suite contentos. Défaut prod = media.contentos.ch
-  // (origine publique, cert valide), surchargeable par env pour le dev local.
-  MEDIA_ENGINE_URL: z.string().url().default('https://media.contentos.ch'),
-  MEDIA_ENGINE_SERVICE_KEY: z.string().optional(),
+  // Module media (in-app). Tous optionnels au boot : l'app démarre sans, et chaque
+  // capacité se désactive proprement si son secret manque (cf. src/lib/media/config).
+  GEMINI_API_KEY: z.string().optional(),
+  BROWSER_URL: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_S3_ENDPOINT: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
+  R2_PUBLIC_BASE_URL: z.string().optional(),
+  // Force le mode dégradé du module media (jamais d'appel R2/Gemini/Chromium).
+  CONTENT_OS_MEDIA_STUB: z.enum(['0', '1']).default('0'),
   LINKEDIN_API_VERSION: z.string().default('202604'),
   E2E_TESTING: z.string().optional(),
   // Injecté par deploy.sh : 'prod' en prod, sinon le slug de branche (preview).
