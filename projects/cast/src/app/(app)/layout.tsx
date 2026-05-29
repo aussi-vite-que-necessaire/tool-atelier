@@ -1,16 +1,25 @@
-import { AppHeader } from '@/components/layout/app-header';
+import { AppShell } from '@/components/ui/app-shell';
 import { Toaster } from '@/components/ui/sonner';
 import { requireUserId } from '@/lib/auth/session';
+import { centralUrl } from '@/lib/central-url';
 import { env } from '@/lib/env';
+import { castSections } from '../cast-nav';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   await requireUserId();
-
   return (
-    <div className="min-h-screen overflow-x-clip bg-neutral-50">
-      <AppHeader authUrl={env.AUTH_URL} />
-      <main className="max-w-6xl mx-auto p-6">{children}</main>
+    <AppShell
+      project="Cast"
+      homeUrl={centralUrl(env.APP_ENV)}
+      sections={castSections}
+      footer={
+        <a href={env.AUTH_URL} className="hover:text-foreground">
+          Déconnexion
+        </a>
+      }
+    >
+      {children}
       <Toaster />
-    </div>
+    </AppShell>
   );
 }
