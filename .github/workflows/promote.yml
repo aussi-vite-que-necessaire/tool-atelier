@@ -1,0 +1,144 @@
+name: promote
+# Promotion explicite vers la PROD, déclenchée à la main. Ne REBUILD jamais : re-tague les images
+# `:integration` (déjà construites et testées sur le palier d'intégration = main) en `:prod` côté
+# GHCR — la MÊME image, donc exactement ce qui a été validé — puis déploie en prod (deploy.sh
+# régénère le .env prod : APP_URL propre, pas d'AUTH_URL → défaut auth.contentos.ch, secrets prod).
+on:
+  workflow_dispatch:
+    inputs:
+      projects:
+        description: "Projets à promouvoir (séparés par des espaces ; vide = toute la suite)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write   # pousser le tag de promotion
+  packages: write   # re-taguer sur GHCR
+
+concurrency:
+  # Une promotion à la fois (le verrou flock de deploy.sh sérialise déjà côté lab ; on évite en
+  # plus deux promotions CI concurrentes).
+  group: promote-prod
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.list.outputs.projects }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          set -euo pipefail
+          sel='${{ github.event.inputs.projects }}'
+          if [ -z "$sel" ]; then
+            # toute la suite : tout projet avec un Dockerfile
+            sel="$(ls -1 projects/ | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done)"
+          fi
+          projects="$(printf '%s\n' $sel | grep -v '^$' | jq -R . | jq -cs .)"
+          [ "$projects" != '[]' ] || { echo "::error::aucun projet à promouvoir"; exit 1; }
+          echo "projects=$projects" >> "$GITHUB_OUTPUT"
+          echo "projets à promouvoir: $projects"
+
+  promote:
+    needs: resolve
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Sérialisé : un seul deploy à la fois sur le daemon Docker du lab (cf. deploy.yml).
+      max-parallel: 1
+      matrix:
+        project: ${{ fromJson(needs.resolve.outputs.projects) }}
+    env:
+      PROJ: ${{ matrix.project }}
+      ENV: prod
+      OWNER: ${{ github.repository_owner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Re-tag :integration → :prod (sans rebuild) + compute IMAGES
+        id: images
+        run: |
+          set -euo pipefail
+          if [ -f "projects/$PROJ/lab.json" ] && [ "$(jq -r '.images // [] | length' "projects/$PROJ/lab.json")" -gt 0 ]; then
+            # Multi-rôles : re-tag chaque rôle, param "role=ref,role=ref"
+            PARTS=""
+            while IFS= read -r role; do
+              [ -n "$role" ] || continue
+              src="ghcr.io/$OWNER/atelier-$PROJ-$role:integration"
+              dst="ghcr.io/$OWNER/atelier-$PROJ-$role:prod"
+              echo "::group::re-tag $src → :prod"
+              docker buildx imagetools create --tag "$dst" "$src"
+              echo "::endgroup::"
+              PARTS="${PARTS:+$PARTS,}$role=$dst"
+            done < <(jq -r '.images[]' "projects/$PROJ/lab.json")
+            IMAGES_PARAM="$PARTS"
+          else
+            # Mono-image
+            src="ghcr.io/$OWNER/atelier-$PROJ:integration"
+            dst="ghcr.io/$OWNER/atelier-$PROJ:prod"
+            echo "::group::re-tag $src → :prod"
+            docker buildx imagetools create --tag "$dst" "$src"
+            echo "::endgroup::"
+            IMAGES_PARAM="$dst"
+          fi
+          echo "param=$IMAGES_PARAM" >> "$GITHUB_OUTPUT"
+          echo "IMAGES=$IMAGES_PARAM"
+      - name: Deploy to lab (prod)
+        env:
+          LAB_SSH_KEY: ${{ secrets.LAB_SSH_KEY }}
+          LAB_HOST: ${{ secrets.LAB_HOST }}
+          IMAGES: ${{ steps.images.outputs.param }}
+        run: |
+          install -m700 -d ~/.ssh
+          printf '%s\n' "$LAB_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$LAB_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          SSH="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes root@$LAB_HOST"
+          SCP="scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
+          $SSH "mkdir -p /opt/lab/apps/${PROJ}-${ENV}"
+          $SCP scripts/deploy.sh "root@$LAB_HOST:/opt/lab/deploy.sh"
+          $SCP "projects/${PROJ}/compose.yml" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/compose.yml"
+          if [ -f "projects/${PROJ}/lab.json" ]; then
+            $SCP "projects/${PROJ}/lab.json" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/lab.json"
+          else
+            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/lab.json"
+          fi
+          # Secrets chiffrés (age) : global + projet. deploy.sh les déchiffre sur lab. sysadmin jamais copié.
+          if [ -f secrets/global.env.age ]; then
+            $SCP secrets/global.env.age "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/global.env.age"
+          else
+            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/global.env.age"
+          fi
+          if [ -f "secrets/projects/${PROJ}.env.age" ]; then
+            $SCP "secrets/projects/${PROJ}.env.age" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/${PROJ}.env.age"
+          else
+            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/${PROJ}.env.age"
+          fi
+          $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGES'"
+      - name: Résumé
+        run: |
+          if [ "$PROJ" = "www" ]; then host="contentos.ch"; else host="${PROJ}.contentos.ch"; fi
+          echo "🚀 **${PROJ}** promu en **prod** → https://${host}" >> "$GITHUB_STEP_SUMMARY"
+
+  tag:
+    needs: promote
+    if: ${{ !cancelled() && needs.promote.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pose un tag de promotion (traçabilité / rollback)
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          tag="prod-$(date -u +%Y%m%d-%H%M%S)"
+          git tag -a "$tag" -m "Promotion prod (workflow promote)"
+          git push origin "$tag"
+          echo "🏷️ tag **$tag** posé sur \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"

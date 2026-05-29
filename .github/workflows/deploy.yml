@@ -66,7 +66,10 @@ jobs:
       - id: env
         run: |
           ref='${{ github.ref_name }}'
-          if [ "$ref" = "main" ]; then e=prod; else
+          # main = palier d'INTÉGRATION (toute la suite assemblée sur *.preview.contentos.ch).
+          # prod n'est plus un envoi auto au merge : c'est une promotion explicite d'artefact
+          # (cf. .github/workflows/promote.yml). Les autres branches → preview par-branche.
+          if [ "$ref" = "main" ]; then e=integration; else
             e="$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
           fi
           [ -n "$e" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
@@ -323,6 +326,8 @@ jobs:
         run: |
           if [ "$ENV" = "prod" ]; then
             if [ "$PROJ" = "www" ]; then host="contentos.ch"; else host="${PROJ}.contentos.ch"; fi
+          elif [ "$ENV" = "integration" ]; then
+            host="${PROJ}.preview.contentos.ch"
           else
             host="${PROJ}-${ENV}.preview.contentos.ch"
           fi

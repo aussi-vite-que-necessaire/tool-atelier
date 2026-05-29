@@ -1,12 +1,12 @@
 ---
 name: nouveau-projet
-description: Créer un nouveau projet dans l'atelier en composant une base Next.js + des capacités (base de données, Redis, auth, serveur MCP), avec thème écrit par l'IA, puis déploiement automatique jusqu'en prod. À utiliser quand Manu veut démarrer un projet, une app, un service, un site, un MCP.
+description: Créer un nouveau projet dans l'atelier en composant une base Next.js + des capacités (base de données, Redis, auth, serveur MCP), avec thème écrit par l'IA, puis déploiement jusqu'à l'intégration (prod = promotion explicite). À utiliser quand Manu veut démarrer un projet, une app, un service, un site, un MCP.
 ---
 
 # /nouveau-projet — créer un projet par composition
 
 Wizard guidé : tu poses les options, tu composes le projet depuis `starters/base` + les modules
-de `starters/modules/`, tu écris le thème à l'IA, et tu déploies jusqu'en prod. La composition
+de `starters/modules/`, tu écris le thème à l'IA, et tu déploies jusqu'à l'intégration. La composition
 est déterministe (`scripts/compose-project.mjs`) ; toi tu n'écris que le créatif (thème, outils
 MCP).
 
@@ -79,18 +79,19 @@ npm run build         # doit réussir (exit 0)
 
 Corrige toute erreur de build avant de pousser. Reviens à la racine de l'atelier ensuite.
 
-## 8. Déploie jusqu'en prod
+## 8. Déploie (preview → intégration)
 
 ```bash
 git add projects/<nom> && git commit -m "🤖 nouveau projet <nom>"
 git push                                  # → preview https://<nom>-<branche>.preview.contentos.ch
 gh pr create --fill                       # titre : ✨ nouveau projet <nom>
 gh run watch                              # attendre la CI verte (build + deploy preview)
-gh pr merge <#> --squash                  # → prod ; la branche distante s'auto-supprime
-gh run watch                              # attendre la CI de prod
+gh pr merge <#> --squash                  # → intégration ; la branche distante s'auto-supprime
+gh run watch                              # attendre la CI d'intégration
 ```
 
-Renvoie à Manu le **lien prod** `https://<nom>.contentos.ch`. Pour une app avec auth en prod,
+Renvoie à Manu le **lien d'intégration** `https://<nom>.preview.contentos.ch` (la prod, `https://<nom>.contentos.ch`,
+se fait ensuite par **promotion explicite** : workflow `promote`, son choix). Pour une app avec auth en prod,
 `BETTER_AUTH_SECRET` doit exister (secret de scope `<nom>` via `bin/lab-secret-add`, `openssl rand -base64 32`) ;
 sans lui l'auth tourne sur un secret par défaut non sûr.
 
