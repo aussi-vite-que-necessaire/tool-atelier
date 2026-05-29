@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Hook SessionStart : accueil adapté au scope de la session.
-#   - worktree lié → session isolée : oriente vers /start (qui décide quoi faire).
-#   - checkout principal → oriente vers le lanceur Atelier.command (local ou cloud).
+# Hook SessionStart : accueil de session. Modèle cloud — 1 session = 1 conteneur isolé = 1 branche.
+# On annonce la branche courante. Le dev de feature passe par le workflow superpowers ;
+# l'atelier ajoute quelques skills dédiées (/nouveau-projet, /noter-idee, /travailler-infra, lab-ssh).
 set -uo pipefail
 
 emit() {
@@ -10,15 +10,13 @@ emit() {
 }
 
 git rev-parse --git-dir >/dev/null 2>&1 || { emit "🛠️ Atelier (hors dépôt git)."; exit 0; }
-gd="$(git rev-parse --absolute-git-dir 2>/dev/null)"
-gcd="$(cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)"
-super="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
 branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
 
-# Worktree lié = git-dir distinct du git-dir commun, et pas un sous-module.
-if [ -n "$gd" ] && [ "$gd" != "$gcd" ] && [ -z "$super" ]; then
-  emit "🛠️ Session isolée (branche \`$branch\`). Lance \`/start\` pour décider quoi faire. Jamais de commit sur main ; push de branche = preview, PR mergée = prod."
+base="Dis ce que tu veux faire — le dev de feature passe par superpowers ; skills atelier : \`/nouveau-projet\`, \`/noter-idee\`, \`/travailler-infra\`. Jamais de commit sur main ; push de branche = preview, PR mergée = prod."
+
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  emit "🛠️ Atelier — tu es sur \`$branch\`. Avant de coder, bascule sur ta branche de session (\`git switch -c <branche>\`). $base"
 else
-  emit "🛠️ Atelier — **checkout principal**. Pour bosser, lance le lanceur **\`Atelier.command\`** (local ou cloud) ; il ne fait que sandboxer, tout le reste se décide dans \`/start\`. Le garde-fou interdit le dev projet ici."
+  emit "🛠️ Atelier — session isolée sur la branche \`$branch\`. $base"
 fi
 exit 0

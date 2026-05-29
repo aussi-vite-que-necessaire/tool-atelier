@@ -1,17 +1,17 @@
 ---
-name: lab-new
+name: nouveau-projet
 description: Créer un nouveau projet dans l'atelier en composant une base Next.js + des capacités (base de données, Redis, auth, serveur MCP), avec thème écrit par l'IA, puis déploiement automatique jusqu'en prod. À utiliser quand Manu veut démarrer un projet, une app, un service, un site, un MCP.
 ---
 
-# /lab-new — créer un projet par composition
+# /nouveau-projet — créer un projet par composition
 
 Wizard guidé : tu poses les options, tu composes le projet depuis `starters/base` + les modules
 de `starters/modules/`, tu écris le thème à l'IA, et tu déploies jusqu'en prod. La composition
 est déterministe (`scripts/compose-project.mjs`) ; toi tu n'écris que le créatif (thème, outils
 MCP).
 
-Tu tournes dans une session worktree isolée, déjà sur sa branche : **aucun `git switch`**, tu
-commites le projet sur la branche courante.
+Tu tournes dans une session isolée (ton propre conteneur), déjà sur sa branche : **aucun
+`git switch`**, tu commites le projet sur la branche courante.
 
 ## 1. Cadre le projet
 
@@ -91,7 +91,7 @@ gh run watch                              # attendre la CI de prod
 ```
 
 Renvoie à Manu le **lien prod** `https://<nom>.contentos.ch`. Pour une app avec auth en prod,
-`BETTER_AUTH_SECRET` doit exister (`/lab-secret`, scope `<nom>`, `openssl rand -base64 32`) ;
+`BETTER_AUTH_SECRET` doit exister (secret de scope `<nom>` via `bin/lab-secret-add`, `openssl rand -base64 32`) ;
 sans lui l'auth tourne sur un secret par défaut non sûr.
 
 Le projet est **déviable** : Manu peut tout modifier ensuite, les modules ne sont qu'un point de
