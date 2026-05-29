@@ -44,10 +44,14 @@ COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public
 
-# Migrations + script + deps de prod, pour le conteneur one-shot `migrate`
-# (la même image sert au migrate : scripts/migrate.mjs require drizzle-orm + postgres).
+# Migrations + seed + deps de prod, pour les conteneurs one-shot `migrate`/`seed`
+# (la même image sert : scripts/migrate.mjs require drizzle-orm + postgres ;
+# le seed `node --import tsx db/seed.ts` a besoin de db/ + lib/ + tsx — tsx est en
+# dependencies pour être présent dans node_modules de prod).
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
 COPY --from=build --chown=node:node /app/scripts ./scripts
+COPY --from=build --chown=node:node /app/db ./db
+COPY --from=build --chown=node:node /app/lib ./lib
 COPY --from=proddeps --chown=node:node /app/node_modules ./node_modules
 
 USER node
