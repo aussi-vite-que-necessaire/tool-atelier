@@ -25,6 +25,7 @@ git -C "$REPO" switch -c work/iso -q
 run "$REPO" | grep -q "session isolée" || fail "branche de session non annoncée comme isolée"
 run "$REPO" | grep -q "work/iso"       || fail "branche de session non nommée"
 run "$REPO" | grep -q "superpowers"    || fail "branche de session ne mentionne pas superpowers"
+run "$REPO" | grep -q "/apercu"        || fail "branche de session ne mentionne pas /apercu"
 run "$REPO" | grep -qi "worktree" && fail "le message mentionne encore worktree"
 run "$REPO" | grep -q "Atelier.command" && fail "le message mentionne encore le lanceur local"
 run "$REPO" | grep -q "/start" && fail "le message mentionne encore l'ancien menu /start"

@@ -1,0 +1,12 @@
+{
+  "name": "@atelier/apercu",
+  "private": true,
+  "type": "module",
+  "description": "L'œil de l'agent : screenshot headless d'une page en cours de dev (cf. bin/apercu, skill /apercu).",
+  "bin": {
+    "apercu-shot": "shot.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}
