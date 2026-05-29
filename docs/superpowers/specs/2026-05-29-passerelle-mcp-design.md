@@ -1,17 +1,18 @@
-# Passerelle MCP centrale — tranche `media` pilote (design)
+# Passerelle MCP centrale (design)
 
 **Date.** 2026-05-29
 **Cadre.** ADR-0003 (`docs/decisions/0003-passerelle-mcp-centrale.md`)
-**Périmètre.** Première tranche verticale : squelette de la passerelle + contrat interne
-passerelle↔backend + un seul outil pilote (`media`) câblé de bout en bout. `cast`, `ressources`
-et la refonte du starter `mcp` / `/nouveau-projet` font l'objet de specs séparés.
+**Périmètre.** Squelette de la passerelle + contrat interne passerelle↔backend, et les trois
+backends de la suite (`media`, `cast`, `ressources`) câblés de bout en bout. La refonte du starter
+`mcp` / `/nouveau-projet` fait l'objet d'un spec séparé.
 
 ## Objectif
 
-Un seul serveur MCP public — `mcp.contentos.ch` — qui fédère les tools des outils de la suite.
-Cette tranche prouve tout le pattern sur `media` : OAuth uniquement à la passerelle, backend
-devenu interne (service-key + `userId` transmis), namespacing des tools, sorties URL-only,
-dégradation partielle.
+Un seul serveur MCP public — `mcp.contentos.ch` — qui fédère les tools des outils de la suite :
+OAuth uniquement à la passerelle, backends devenus internes (clé partagée `MCP_INTERNAL_KEY` +
+`userId` transmis), namespacing des tools, sorties URL-only, dégradation partielle. Les URLs des
+backends sont dérivées de l'`APP_URL` de la passerelle (même environnement) ; en preview, la garde
+interne est court-circuitée (fédération sans secret).
 
 ## Architecture & flux
 

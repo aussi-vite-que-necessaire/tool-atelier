@@ -43,21 +43,28 @@ les outils. Les outils n'exposent plus de MCP public : ils exposent un endpoint 
 - **OAuth uniquement à la passerelle.** Elle est l'unique *ressource protégée* (`resource =
   https://mcp.contentos.ch`, un seul `.well-known`, un seul `verifyMcpToken`). L'AS reste
   `auth.contentos.ch`, inchangé. Les outils, devenus internes, **ne revérifient plus le token** :
-  ils font confiance à la passerelle (service-key sur le réseau lab, précédent : l'API `/v1` de
-  `media`) qui leur transmet le `userId` déjà résolu. → on *retire* du code (`withMcpAuth` +
-  `.well-known` de chaque outil), on n'en ajoute pas.
-- **Namespacing des tools** par outil (`media_generate_image`, `res_create_resource`, …) :
+  ils exposent `GET /internal/tools` (schémas JSON) + `POST /internal/tools/:name`
+  (`{ userId, args }`) et font confiance à la passerelle, qui leur transmet le `userId` déjà
+  résolu. → on *retire* du code (`withMcpAuth` + `.well-known` de chaque outil), on n'en ajoute pas.
+- **Clé interne partagée + court-circuit preview.** Les endpoints `/internal` sont gardés par une
+  unique clé `MCP_INTERNAL_KEY` (scope `global`, donc auto-injectée à la passerelle et à tous les
+  backends). En **preview**, la vérif est court-circuitée : la fédération marche sans aucun secret.
+  En **prod**, la clé est exigée.
+- **URLs backend dérivées de l'origine.** La passerelle ne stocke pas d'URL : elle dérive l'origine
+  de chaque backend depuis sa propre `APP_URL` (swap du sous-domaine `mcp` → `media`/`cast`/…).
+  Elle parle donc aux backends du **même environnement** (preview de la même branche, ou prod).
+- **Namespacing des tools** par outil (`media_generate_image`, `ressources_create_resource`, …) :
   l'union des catalogues doit être unique (deux outils ont des `list_*` homonymes). Non
   optionnel — c'est une contrainte du protocole, pas un choix de design.
 - **Autorisation préservée par backend.** La passerelle reste agnostique ; chaque outil applique
-  *sa* règle à partir du `userId` transmis. `ressources` continue d'exiger l'opérateur
+  *sa* règle à partir du `userId` transmis. `ressources` résout l'opérateur depuis le `userId`
   (ADR-0002) ; `media`/`cast` acceptent tout user. La passerelle n'unifie surtout pas ça.
 - **Données binaires interdites sur le canal MCP.** Les tools renvoient des **URL** (R2 publiques
-  et permanentes), jamais de base64 inline. Le rendu image inline de `media` (`imageResult`) est
-  un leftover à supprimer. → la passerelle est un pur relais JSON.
-- **Dégradation partielle.** Un backend indisponible ⇒ ses tools renvoient une erreur ; le
-  `tools/list` global ne tombe pas.
-- **Catalogue statique en v1.** La passerelle tient une liste de backends (URLs internes).
+  et permanentes), jamais de base64 inline. → la passerelle est un pur relais JSON.
+- **Dégradation partielle.** Un backend indisponible ⇒ ses tools sont omis du `tools/list` (qui ne
+  tombe pas) ; un appel vers un backend down renvoie un résultat MCP `isError`.
+- **Catalogue statique en v1.** La passerelle tient la liste des backends (`media`, `cast`,
+  `ressources`) dans `src/lib/backends.ts` ; leurs tools sont récupérés dynamiquement au runtime.
   L'enregistrement automatique via `lab.json` + `deploy.sh` est une amélioration différable.
 
 ## Conséquences
@@ -80,15 +87,16 @@ les outils. Les outils n'exposent plus de MCP public : ils exposent un endpoint 
   `creer-un-visuel/references/outils.md`) passent aux noms namespacés. Comme on est *fresh*,
   c'est un renommage propre, pas une migration.
 
-## Previews — renvoi
+## Previews
 
-Le modèle de preview par-branche (`<projet>-<branche>.preview.contentos.ch`, un seul outil) ne
-permet pas de tester une passerelle qui enjambe plusieurs outils. **Décision : on ne fédère pas
-de previews par-branche.** Les branches restent du dev localisé ; le test MCP réaliste de toute
-la suite se fait sur un **palier d'intégration dédié** (`preview.contentos.ch`), chantier séparé
-documenté en idée (`docs/ideas/2026-05-29-palier-integration-preview.md`, recoupe l'idée
-`2026-05-28-e2e-mutualises.md`). En attendant ce palier, la passerelle se développe et se teste
-sur sa propre branche en pointant vers les endpoints internes de **prod**.
+La passerelle dérive l'origine de ses backends de sa propre `APP_URL` : sur une branche, sa
+preview `mcp-<branche>.preview.contentos.ch` fédère les previews **de la même branche**
+(`media-<branche>.preview…`, etc.), et la garde `/internal` est court-circuitée en preview (pas
+de secret). Une branche qui ne modifie pas tous les outils n'a pas toutes les previews ; les
+backends absents sont simplement omis du catalogue (dégradation partielle). Le test MCP réaliste
+et garanti de **toute** la suite reste l'objet d'un palier d'intégration dédié
+(`preview.contentos.ch`), documenté en idée (`docs/ideas/2026-05-29-palier-integration-preview.md`,
+recoupe `2026-05-28-e2e-mutualises.md`).
 
 ## Alternatives écartées
 
