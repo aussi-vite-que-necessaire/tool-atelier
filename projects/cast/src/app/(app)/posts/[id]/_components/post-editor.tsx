@@ -24,9 +24,20 @@ type Props = {
   mediaInfo: MediaInfo | null;
   author: LinkedInAuthor;
   publication: Publication | null;
+  embedSrc: string;
+  embedOrigin: string;
+  parentOrigin: string;
 };
 
-export function PostEditor({ post, mediaInfo, author, publication }: Props) {
+export function PostEditor({
+  post,
+  mediaInfo,
+  author,
+  publication,
+  embedSrc,
+  embedOrigin,
+  parentOrigin,
+}: Props) {
   const [title, setTitle] = useState(post.title);
   const [content, setContent] = useState(post.content);
   const [status, setStatus] = useState<'draft' | 'validated'>(post.status);
@@ -136,7 +147,14 @@ export function PostEditor({ post, mediaInfo, author, publication }: Props) {
         </aside>
       </div>
 
-      <MediaPicker postId={post.id} open={pickerOpen} onOpenChange={setPickerOpen} />
+      <MediaPicker
+        postId={post.id}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        embedSrc={embedSrc}
+        embedOrigin={embedOrigin}
+        parentOrigin={parentOrigin}
+      />
     </div>
   );
 }

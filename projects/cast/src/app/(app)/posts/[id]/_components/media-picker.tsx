@@ -12,7 +12,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import type { MediaItem } from '@/lib/media-catalog/client';
-import { attachMediaAction, searchMediaAction } from '../media-picker-actions';
+import { isMediaCreatedMessage } from '@/lib/media-link/embed';
+import {
+  attachCreatedMediaAction,
+  attachMediaAction,
+  searchMediaAction,
+} from '../media-picker-actions';
 
 const PAGE = 30;
 
@@ -38,9 +43,26 @@ type Props = {
   postId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // Embarquement de la page de création de media (iframe). `embedSrc` est l'URL de
+  // base (`${MEDIA_ENGINE_URL}/embed/new`), `embedOrigin` l'origine à comparer à
+  // `event.origin` des postMessage, `parentOrigin` l'origine de cast transmise à
+  // l'iframe (qu'elle valide avant de poster).
+  embedSrc: string;
+  embedOrigin: string;
+  parentOrigin: string;
 };
 
-export function MediaPicker({ postId, open, onOpenChange }: Props) {
+type Mode = 'choisir' | 'creer';
+
+export function MediaPicker({
+  postId,
+  open,
+  onOpenChange,
+  embedSrc,
+  embedOrigin,
+  parentOrigin,
+}: Props) {
+  const [mode, setMode] = useState<Mode>('choisir');
   const [q, setQ] = useState('');
   const [kind, setKind] = useState('all');
   const [orientation, setOrientation] = useState('all');
@@ -98,84 +120,151 @@ export function MediaPicker({ postId, open, onOpenChange }: Props) {
     });
   };
 
+  // Mode « Créer » : écoute les postMessage de l'iframe media. On valide l'origine
+  // (event.origin === embedOrigin) puis le type ; le payload est revalidé côté
+  // serveur par attachCreatedMediaAction avant d'attacher.
+  useEffect(() => {
+    if (!open || mode !== 'creer') return;
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== embedOrigin || !isMediaCreatedMessage(e.data)) return;
+      const { media } = e.data as { media: unknown };
+      startAttach(async () => {
+        const r = await attachCreatedMediaAction(postId, media);
+        if (r.status === 'error') {
+          toast.error(r.message);
+        } else {
+          toast.success('Média créé et attaché');
+          onOpenChange(false);
+        }
+      });
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [open, mode, embedOrigin, postId, onOpenChange]);
+
+  // Repart sur « Choisir » à chaque réouverture.
+  useEffect(() => {
+    if (!open) setMode('choisir');
+  }, [open]);
+
   const hasMore = items.length < total;
+  const iframeSrc = `${embedSrc}?parentOrigin=${encodeURIComponent(parentOrigin)}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[85vh] max-w-4xl flex-col sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Choisir un média</DialogTitle>
-          <DialogDescription>Les médias de la bibliothèque, du plus récent au plus ancien.</DialogDescription>
+          <DialogTitle>
+            {mode === 'choisir' ? 'Choisir un média' : 'Créer un média'}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === 'choisir'
+              ? 'Les médias de la bibliothèque, du plus récent au plus ancien.'
+              : 'Upload, génération IA, PDF ou template — attaché au post une fois créé.'}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Rechercher…"
-            className="h-9 w-48"
-          />
-          <select
-            value={kind}
-            onChange={(e) => setKind(e.target.value)}
-            className={selectClass}
-            aria-label="Type de média"
+        <div className="flex gap-1">
+          <Button
+            type="button"
+            variant={mode === 'choisir' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setMode('choisir')}
           >
-            {KIND_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={orientation}
-            onChange={(e) => setOrientation(e.target.value)}
-            className={selectClass}
-            aria-label="Orientation"
+            Choisir
+          </Button>
+          <Button
+            type="button"
+            variant={mode === 'creer' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setMode('creer')}
           >
-            {ORIENTATION_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <Input
-            value={tag}
-            onChange={(e) => setTag(e.target.value)}
-            placeholder="Tag"
-            className="h-9 w-32"
-          />
+            Créer un média
+          </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {items.length === 0 && !loading ? (
-            <p className="py-10 text-center text-muted-foreground text-sm">Aucun média.</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {items.map((item) => (
-                <MediaTile
-                  key={item.id}
-                  item={item}
-                  disabled={attaching}
-                  onSelect={() => select(item)}
-                />
-              ))}
-            </div>
-          )}
-
-          {hasMore && (
-            <div className="flex justify-center py-4">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={loading}
-                onClick={() => void fetchPage(offset + PAGE)}
+        {mode === 'choisir' ? (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Rechercher…"
+                className="h-9 w-48"
+              />
+              <select
+                value={kind}
+                onChange={(e) => setKind(e.target.value)}
+                className={selectClass}
+                aria-label="Type de média"
               >
-                {loading ? 'Chargement…' : 'Charger plus'}
-              </Button>
+                {KIND_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={orientation}
+                onChange={(e) => setOrientation(e.target.value)}
+                className={selectClass}
+                aria-label="Orientation"
+              >
+                {ORIENTATION_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <Input
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                placeholder="Tag"
+                className="h-9 w-32"
+              />
             </div>
-          )}
-        </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {items.length === 0 && !loading ? (
+                <p className="py-10 text-center text-muted-foreground text-sm">Aucun média.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  {items.map((item) => (
+                    <MediaTile
+                      key={item.id}
+                      item={item}
+                      disabled={attaching}
+                      onSelect={() => select(item)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {hasMore && (
+                <div className="flex justify-center py-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={loading}
+                    onClick={() => void fetchPage(offset + PAGE)}
+                  >
+                    {loading ? 'Chargement…' : 'Charger plus'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-hidden rounded-lg border">
+            <iframe
+              src={iframeSrc}
+              title="Créer un média"
+              className="h-full w-full"
+              // Upload de fichiers + scripts (postMessage) nécessaires.
+              sandbox="allow-scripts allow-same-origin allow-forms"
+            />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

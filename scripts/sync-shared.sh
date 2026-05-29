@@ -25,9 +25,13 @@ CONSUMERS=("docs")
 # Chemins du contrat de données, relatifs à projects/<projet>/.
 #   db/schema  → les tables Drizzle (le contrat critique)
 #   db/index.ts → le client postgres-js paresseux (générique, lit DATABASE_URL)
+#   lib/theme  → logique pure des tokens de thème (presets + résolution → CSV) :
+#               l'admin (éditeur + aperçu) et le public (injection) DOIVENT en
+#               produire un rendu identique, donc cette lib reste un contrat partagé.
 SHARED=(
   "db/schema"
   "db/index.ts"
+  "lib/theme"
 )
 
 for consumer in "${CONSUMERS[@]}"; do

@@ -2,16 +2,25 @@ import { redirect } from "next/navigation"
 import { eq } from "drizzle-orm"
 import { db } from "@/db"
 import { operators } from "@/db/schema"
+import type { ThemeConfig } from "@/lib/theme"
 import { getSession, signInUrl } from "./session"
 
 // La porte « opérateur » de ressources = présence d'une ligne `operators` pour
 // le user courant (ADR-0002 : tenancy locale). Provisionnée en tandem avec
 // accountType='operator' côté auth. Marche aussi pour le MCP (qui ne porte que
 // le userId).
-export type Operator = { id: string; handle: string; name: string }
+export type Operator = {
+  id: string
+  handle: string
+  name: string
+  brandName: string | null
+  theme: ThemeConfig | null
+}
 
 function toOperator(row: typeof operators.$inferSelect | undefined): Operator | null {
-  return row ? { id: row.id, handle: row.handle, name: row.name } : null
+  return row
+    ? { id: row.id, handle: row.handle, name: row.name, brandName: row.brandName ?? null, theme: row.theme ?? null }
+    : null
 }
 
 export async function getOperatorById(id: string): Promise<Operator | null> {
