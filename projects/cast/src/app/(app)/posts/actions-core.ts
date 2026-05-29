@@ -30,12 +30,11 @@ const UpdateSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(1).max(200).optional(),
   content: z.string().min(1).max(50000).optional(),
-  status: z.enum(['draft', 'validated']).optional(),
 });
 
 export async function updatePostCore(
   userId: string,
-  input: { id: string; title?: string; content?: string; status?: 'draft' | 'validated' },
+  input: { id: string; title?: string; content?: string },
 ): Promise<ActionState> {
   const parsed = UpdateSchema.safeParse(input);
   if (!parsed.success) {

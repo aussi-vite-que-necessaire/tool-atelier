@@ -23,7 +23,6 @@ describe('posts repository', () => {
     expect(post.userId).toBe('u1');
     expect(post.title).toBe('Mon titre');
     expect(post.content).toBe('draft text');
-    expect(post.status).toBe('draft');
     expect(post.mediaId).toBeNull();
   });
 
@@ -42,17 +41,15 @@ describe('posts repository', () => {
     expect(rows).toHaveLength(2);
   });
 
-  test('updatePost modifie content et status', async () => {
+  test('updatePost modifie content', async () => {
     await makeUser('u1', 'a@test.com');
     const created = await createPost('u1', { title: 'T', content: 'old' });
     const before = created.updatedAt;
     await new Promise((r) => setTimeout(r, 1100));
     const updated = await updatePost('u1', created.id, {
       content: 'new',
-      status: 'validated',
     });
     expect(updated?.content).toBe('new');
-    expect(updated?.status).toBe('validated');
     expect(updated!.updatedAt.getTime()).toBeGreaterThan(before.getTime());
   });
 

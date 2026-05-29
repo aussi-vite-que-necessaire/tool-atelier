@@ -15,7 +15,7 @@ export default async function PostsPage() {
         <p className="text-muted-foreground text-sm">
           {posts.length === 0
             ? 'Rédige, illustre et planifie tes publications LinkedIn.'
-            : `${posts.length} post${posts.length > 1 ? 's' : ''} · brouillons et publications`}
+            : `${posts.length} post${posts.length > 1 ? 's' : ''}`}
         </p>
       </header>
 

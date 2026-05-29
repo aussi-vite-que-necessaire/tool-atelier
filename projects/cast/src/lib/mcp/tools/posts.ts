@@ -17,13 +17,10 @@ export const postImpl = {
     input: {
       title: string;
       content: string;
-      status?: 'draft' | 'validated';
     },
   ) => createPost(userId, input),
   edit: (userId: string, input: { id: string; content: string }) =>
     updatePost(userId, input.id, { content: input.content }),
-  setStatus: (userId: string, input: { id: string; status: 'draft' | 'validated' }) =>
-    updatePost(userId, input.id, { status: input.status }),
   remove: async (userId: string, input: { id: string }) => {
     await deletePost(userId, input.id);
     return { deleted: input.id };
@@ -49,7 +46,6 @@ export function registerPostTools(server: McpServer): void {
       inputSchema: {
         title: z.string(),
         content: z.string(),
-        status: z.enum(['draft', 'validated']).optional(),
       },
     },
     (input, extra) => handle(extra, (userId) => postImpl.create(userId, input)),
@@ -62,15 +58,6 @@ export function registerPostTools(server: McpServer): void {
       inputSchema: { id: z.string(), content: z.string() },
     },
     (input, extra) => handle(extra, (userId) => postImpl.edit(userId, input)),
-  );
-  server.registerTool(
-    'set_post_status',
-    {
-      title: 'Changer le statut d’un post',
-      description: 'Passe un post en draft ou validated.',
-      inputSchema: { id: z.string(), status: z.enum(['draft', 'validated']) },
-    },
-    (input, extra) => handle(extra, (userId) => postImpl.setStatus(userId, input)),
   );
   server.registerTool(
     'delete_post',

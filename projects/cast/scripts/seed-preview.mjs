@@ -70,8 +70,8 @@ async function seedForUser(client, userId, label) {
   for (let i = 0; i < SAMPLE_POSTS.length; i++) {
     const p = SAMPLE_POSTS[i];
     const res = await client.query(
-      `INSERT INTO posts (id, user_id, title, content, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, 'draft', now(), now())
+      `INSERT INTO posts (id, user_id, title, content, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, now(), now())
        ON CONFLICT (id) DO NOTHING
        RETURNING id`,
       [`seed-post-${i + 1}-${userId}`, userId, `${p.title} (${label})`, p.content],

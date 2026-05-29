@@ -21,7 +21,6 @@ export async function updatePostAction(input: {
   id: string;
   title?: string;
   content?: string;
-  status?: 'draft' | 'validated';
 }): Promise<ActionState> {
   const userId = await requireUserId();
   const result = await updatePostCore(userId, input);

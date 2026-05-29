@@ -9,16 +9,16 @@ type Stat = {
 };
 
 export function DashboardStats({
-  drafts,
+  posts,
   scheduled,
   published,
 }: {
-  drafts: number;
+  posts: number;
   scheduled: number;
   published: number;
 }) {
   const stats: Stat[] = [
-    { href: '/posts', label: 'Brouillons', value: drafts, icon: FileText },
+    { href: '/posts', label: 'Posts', value: posts, icon: FileText },
     { href: '/calendar', label: 'Planifiés', value: scheduled, icon: CalendarClock },
     { href: '/calendar', label: 'Publiés', value: published, icon: Send },
   ];

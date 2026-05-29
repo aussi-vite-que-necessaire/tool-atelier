@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     getAuthorIdentity(userId),
   ]);
   const { counts, upcoming, lastPublished } = buildDashboard(pubs);
-  const drafts = posts.filter((p) => p.status === 'draft').length;
+  const postCount = posts.length;
 
   return (
     <div className="space-y-8">
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <DashboardStats drafts={drafts} scheduled={counts.scheduled} published={counts.published} />
+      <DashboardStats posts={postCount} scheduled={counts.scheduled} published={counts.published} />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <UpcomingPublications items={upcoming} />

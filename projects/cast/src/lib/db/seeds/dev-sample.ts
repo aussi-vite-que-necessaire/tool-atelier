@@ -46,7 +46,6 @@ export async function seedDev(userId: string): Promise<void> {
       const created = await createPost(userId, {
         title: p.title,
         content: p.content,
-        status: 'draft',
       });
       postsByContent.set(created.content, created);
     }

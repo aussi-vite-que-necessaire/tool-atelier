@@ -1,10 +1,9 @@
 'use client';
 
-import { ArrowLeft, Check, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,8 +15,6 @@ import { DeletePostDialog } from './delete-post-dialog';
 import { MediaPicker } from './media-picker';
 import { type MediaInfo, PostComposer } from './post-composer';
 import { PublishPanel } from './publish-panel';
-
-const STATUS_LABEL = { draft: 'brouillon', validated: 'validé' } as const;
 
 type Props = {
   post: Post;
@@ -40,10 +37,8 @@ export function PostEditor({
 }: Props) {
   const [title, setTitle] = useState(post.title);
   const [content, setContent] = useState(post.content);
-  const [status, setStatus] = useState<'draft' | 'validated'>(post.status);
   const [savingTitle, startSaveTitle] = useTransition();
   const [saving, startSave] = useTransition();
-  const [toggling, startToggle] = useTransition();
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const saveTitle = () => {
@@ -62,19 +57,6 @@ export function PostEditor({
     });
   };
 
-  const toggleStatus = () => {
-    const next: 'draft' | 'validated' = status === 'draft' ? 'validated' : 'draft';
-    startToggle(async () => {
-      const r = await updatePostAction({ id: post.id, status: next });
-      if (r.status === 'success') {
-        setStatus(next);
-        toast.success(next === 'validated' ? 'Post validé' : 'Remis en brouillon');
-      } else if (r.status === 'error') {
-        toast.error(r.message);
-      }
-    });
-  };
-
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
@@ -85,9 +67,6 @@ export function PostEditor({
           <ArrowLeft className="h-4 w-4" />
           Tous les posts
         </Link>
-        <Badge variant={status === 'validated' ? 'default' : 'secondary'}>
-          {STATUS_LABEL[status]}
-        </Badge>
         <div className="flex-1" />
         <DeletePostDialog
           postId={post.id}
@@ -97,17 +76,6 @@ export function PostEditor({
             </Button>
           }
         />
-        {status === 'draft' ? (
-          <Button onClick={toggleStatus} disabled={toggling}>
-            <Check className="h-4 w-4" />
-            {toggling ? 'Validation…' : 'Valider'}
-          </Button>
-        ) : (
-          <Button variant="outline" onClick={toggleStatus} disabled={toggling}>
-            <Undo2 className="h-4 w-4" />
-            {toggling ? 'Mise à jour…' : 'Repasser en brouillon'}
-          </Button>
-        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
