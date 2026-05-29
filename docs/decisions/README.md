@@ -8,3 +8,4 @@ Capturer une décision : `/lab-adr <sujet>`.
 
 - [ADR-0001](0001-structure-documentation-atelier.md) — Accepted — Structure de documentation de l'atelier (`docs/{specs,plans,ideas,decisions}/`).
 - [ADR-0002](0002-comptes-operateur-audience-tenancy.md) — Accepted — Comptes opérateur/audience (`accountType` central) + tenancy locale à chaque outil.
+- [ADR-0003](0003-passerelle-mcp-centrale.md) — Accepted — Passerelle MCP centrale (`mcp.contentos.ch`) : un seul MCP public qui fédère les tools de tous les outils, OAuth à la passerelle, backends internes.

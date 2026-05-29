@@ -3,7 +3,8 @@
 **Outil d'administration** des ressources de la suite **contentos**
 (`https://ressources.contentos.ch`). Côté **opérateur** (client SaaS) : il édite ici son espace
 de ressources (arborescence de pages faites de modules typés), suit son **audience** et ses
-stats, et pilote le tout par agent via le **serveur MCP**. `ressources` est aussi le
+stats, et le pilote par agent — ses tools sont fédérés par la **passerelle MCP centrale**
+(`mcp.contentos.ch`) via l'endpoint interne `/internal/tools`. `ressources` est aussi le
 **propriétaire du schéma** (tables + migrations) de la plateforme.
 
 La **lecture publique** (landing, espaces `/o/<handle>`, reader SSR, bibliothèque/compte
@@ -29,8 +30,8 @@ ressources/
 ├── drizzle/          migrations SQL committées (appliquées au déploiement)
 ├── scripts/migrate.mjs  applique drizzle/ à la base (migrator drizzle-orm/postgres-js)
 ├── scripts/backfill-operators.mjs  cutover prod single-tenant → multi-tenant (one-shot)
-├── app/              App Router : /admin/*, /api/[transport] (MCP), /.well-known, /connexion,
-│                     / (→ /admin), healthz/route.ts (GET /healthz : 200 "ok", sans DB)
+├── app/              App Router : /admin/*, /internal/tools (contrat de la passerelle MCP),
+│                     /connexion, / (→ /admin), healthz/route.ts (GET /healthz : 200 "ok", sans DB)
 ├── db/ lib/ components/  schéma, accès données, helpers auth/operator, UI admin
 ```
 
@@ -57,11 +58,11 @@ Les helpers vivent sous `lib/auth/` :
   `userId`). Provisionnée en tandem avec `accountType='operator'` côté auth.
 - `lib/auth/preview.ts` : `PREVIEW_USER_ID`, `isPreview` (selon `APP_ENV`). En preview, la
   session est court-circuitée en `operator` (l'opérateur démo `/o/demo`, seedé — visible sur `docs`).
-- `lib/mcp-auth.ts` : `verifyMcpToken(req)` via `${AUTH_URL}/api/auth/mcp/get-session` ; la
-  route MCP exige en plus que le user soit **opérateur** et dépose `operatorId`/`handle` dans
-  `authInfo.extra` (chaque outil n'opère que sur ses ressources).
-- `app/.well-known/oauth-authorization-server` : 302 vers le provider central.
-- `app/.well-known/oauth-protected-resource` : annonce `authorization_servers: [AUTH_URL]`.
+- `lib/mcp-internal.ts` : contrat interne consommé par la passerelle MCP — `listToolsResponse()`
+  (schémas JSON) et `callToolByName(name, userId, args)`, qui **résout l'opérateur** depuis le
+  `userId` (`getOperatorById`) et le dépose dans `authInfo.extra` (chaque outil n'opère que sur
+  ses ressources ; compte non-opérateur → résultat isError). Gardé par `lib/mcp-internal-auth.ts`
+  (`MCP_INTERNAL_KEY` partagée, court-circuitée en preview). Exposé sur `app/internal/tools/`.
 - `app/connexion/page.tsx` : redirige vers `${AUTH_URL}/sign-in?redirect=...` (no-op en preview).
 
 Modèle multi-tenant (ADR-0002) : un **opérateur** (table `operators`, `id` = user.id auth,
@@ -95,6 +96,7 @@ Les secrets viennent du coffre `ressources` de l'atelier (`/lab-secret`, scope `
 déchiffrés et injectés par `deploy.sh` :
 
 - `AUTH_URL` — facultatif, défaut `https://auth.contentos.ch`.
+- `MCP_INTERNAL_KEY` — clé interne partagée (scope **global**) gardant `/internal/tools` (passerelle MCP) ; court-circuitée en preview.
 
 Plus de `ADMIN_USER_IDS` : être opérateur = avoir une ligne `operators` (provisionnée en
 tandem avec `accountType='operator'` côté auth). Pour octroyer le rôle à un user :
@@ -110,9 +112,8 @@ poser la contrainte `NOT NULL`.
 
 ## Vérifier (preview / dev)
 
-En preview, `isPreview` court-circuite la session : tout requérant est auto-loggé comme
 `PREVIEW_USER_ID = 'preview-user'`, **opérateur démo**. En prod, l'accès à `/admin` redirige
 vers `${AUTH_URL}/sign-in?redirect=...` ; le SSO renvoie ici avec le cookie cross-subdomain.
-Admin scopé sous `app/admin/*` (dont `app/admin/audience/`) ; MCP sous
-`app/api/[transport]/route.ts`. **Le rendu public** (espaces, reader, `/o/<handle>`) se vérifie
+Admin scopé sous `app/admin/*` (dont `app/admin/audience/`) ; endpoint interne des tools sous
+`app/internal/tools/`. **Le rendu public** (espaces, reader, `/o/<handle>`) se vérifie
 sur `docs` (`docs.contentos.ch` / `docs-<branche>.preview.contentos.ch`), qui lit cette base.

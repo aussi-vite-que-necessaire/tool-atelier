@@ -4,8 +4,9 @@ Centre des médias de la suite de contenu : **génération/édition d'image** (G
 HTML→image** (Chromium partagé), **templates visuels** (Handlebars + variables typées + marque),
 **styles de génération**, **chartes graphiques**, **construction de PDF** (agrégation d'images) et
 **upload** d'image/PDF/vidéo. Le tout stocké sur R2 + métadonnées Postgres, isolé par utilisateur,
-et exposé par **trois interfaces** — un serveur **MCP** (connecteur claude.ai), une **API `/v1`**
-service-to-service, et un **front-end d'admin** (derrière le SSO). Prod : `https://media.contentos.ch`.
+et exposé par **trois interfaces** — un **endpoint de tools interne** (`/internal/tools`, consommé
+par la passerelle MCP centrale `mcp.contentos.ch`), une **API `/v1`** service-to-service, et un
+**front-end d'admin** (derrière le SSO). Prod : `https://media.contentos.ch`.
 
 **Conceptions** : `docs/superpowers/specs/2026-05-27-media-import-design.md` (socle v1) et
 `docs/superpowers/specs/2026-05-27-media-migration-contentos-design.md` (centre des médias).
@@ -20,10 +21,11 @@ Le skill `creer-un-visuel` (mode d'emploi du service media — générer, édite
 
 - **Next.js 16** en sortie `standalone` → image Docker slim, écoute `:8080`.
 - **Drizzle ORM** (Postgres) : schéma `src/db/schema.ts`, client paresseux `src/db/index.ts`.
-- Sessions web et OAuth/OIDC du MCP délégués à **`auth.contentos.ch`** (cookie cross-subdomain
-  `.contentos.ch`) — `src/lib/session.ts` lit la session via fetch HTTP, `src/lib/mcp/auth.ts`
-  valide les bearer MCP via `${AUTH_URL}/api/auth/mcp/get-session`. `src/middleware.ts` filtre
-  l'accès aux pages d'admin sur présence du cookie (le SSO revalide ensuite).
+- Sessions web déléguées à **`auth.contentos.ch`** (cookie cross-subdomain `.contentos.ch`) —
+  `src/lib/session.ts` lit la session via fetch HTTP. `src/middleware.ts` filtre l'accès aux
+  pages d'admin sur présence du cookie (le SSO revalide ensuite). L'authentification MCP (OAuth)
+  est centralisée à la passerelle `mcp.contentos.ch` ; media n'expose que des endpoints internes
+  protégés par service-key (`/internal`, `/v1`).
 - **Tailwind 4**.
 - **Handlebars** (compilation des templates) + **pdf-lib** (construction de PDF).
 
@@ -45,8 +47,11 @@ Faire évoluer le schéma : éditer `src/db/schema.ts` → `npm run db:generate`
 
 ## Interfaces
 
-- **MCP** `/api/mcp` (via `mcp-handler` + `@modelcontextprotocol/sdk`, outils dans `src/lib/mcp/tools/`).
-  Chaque outil reçoit `userId` extrait du bearer via `userIdFrom(extra)` (cf. `src/lib/mcp/auth.ts`).
+- **Endpoint de tools interne** `/internal/tools` (clé interne partagée `MCP_INTERNAL_KEY`, scope
+  global ; court-circuitée en preview) : `GET /internal/tools` renvoie les schémas JSON des tools,
+  `POST /internal/tools/:name` exécute un tool avec `{ userId, args }`. Les tools sont déclarés en `ToolDef` dans `src/lib/mcp/tools/`
+  et agrégés par `src/lib/mcp/registry.ts` ; chacun reçoit le `userId` transmis par la passerelle.
+  La passerelle `mcp.contentos.ch` consomme ce contrat et fédère ces tools sous des noms préfixés.
   - Médias : `generate_image` (+ `style_id`), `edit_image`, `render_html`, `render_template`,
     `create_pdf`, `list_images`, `get_image`, `delete_image`.
   - Styles : `list_visual_styles`, `create_visual_style`, `update_visual_style`, `delete_visual_style`.
@@ -68,7 +73,8 @@ Le rendu de template substitue les variables côté serveur (Handlebars + contex
 
 - `AUTH_URL` — URL du provider d'auth de la suite (défaut `https://auth.contentos.ch`).
 - `GEMINI_API_KEY` — clé Gemini.
-- `MEDIA_ENGINE_SERVICE_KEY` — Bearer pour l'API `/v1`.
+- `MEDIA_ENGINE_SERVICE_KEY` — Bearer de l'API `/v1` (service-to-service, ex. cast).
+- `MCP_INTERNAL_KEY` — clé interne partagée (scope global) gardant `/internal/tools` (passerelle MCP).
 - Identifiants S3 R2 : `R2_S3_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL`.
 
 Auto-injectés (ne pas gérer à la main) : `APP_URL`, `DATABASE_URL`, `BROWSER_URL`.
