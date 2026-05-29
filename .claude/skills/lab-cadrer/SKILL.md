@@ -30,7 +30,9 @@ explicite du design en fin de cadrage.
    l'humain à cette étape sauf pour signaler un blocage.
 2. **Clarifying questions, une à la fois.** Utiliser `AskUserQuestion` (multiple
    choice préféré, ouvert si nécessaire). Comprendre : but, contraintes, succès,
-   trade-offs.
+   trade-offs. **Si un brief a déjà été donné en amont (via `/start` : projet +
+   intention), pars de là — ne re-demande pas l'objectif général, drille
+   directement les détails restants.** Sinon, commence par cerner le but.
 3. **Présenter le design en un bloc.** Sections : architecture, composants, flux
    de données, gestion d'erreur, tests. Échelle à la taille du sujet (quelques
    phrases pour un petit changement, jusqu'à 200-300 mots par section pour un gros).
