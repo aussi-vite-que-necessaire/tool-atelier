@@ -47,7 +47,7 @@ Au déploiement, `deploy.sh` :
 
 Preview = base vide + seed, droppée au teardown. Exemples : `projects/hello/` (rien), `projects/counter/` (db).
 
-**Dev local.** La même déclaration `lab.json` alimente le dev sur ta machine : `scripts/dev-db.sh up <projet>` monte un Postgres (et Redis si déclaré) local **partagé** par l'atelier, crée la base `<projet>_dev`, joue `migrate` puis `seed`, et écrit le `.env.local` du projet (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL=http://localhost:3000`). Calque le modèle du Postgres central de la prod, côté local. `reset <projet>` repart de zéro, `down` arrête les conteneurs (données conservées), `nuke` efface tout.
+**Dev (agents & local).** La même déclaration `lab.json` alimente l'environnement de dev — pensé d'abord pour les **agents en session cloud** (conteneur isolé, sans daemon Docker). `scripts/dev-db.sh up <projet>` monte Postgres (et Redis si déclaré) en **natif** (serveur installé via apt si absent, cluster Debian démarré ; pas de Docker), crée `<projet>_dev` **et** `<projet>_test`, joue `migrate` puis `seed`, et écrit le `.env.local` du projet (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL=http://localhost:3000`) — pour que `npm run dev` **et** les tests qui touchent la base démarrent du premier coup. Calque le modèle du Postgres central de la prod. Idempotent (à relancer si le conteneur a été recyclé). `reset <projet>` repart de zéro, `down` arrête les services (données conservées), `nuke <projet>` drop les bases du projet. `/lab-implémenter` lance ce `up` avant la première tâche.
 
 ## Secrets — `/lab-secret`
 
