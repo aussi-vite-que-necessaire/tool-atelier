@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# lab-ssh : exécute une commande sur le serveur lab, en autonomie.
+#
+# La clé SSH dédiée de l'agent est récupérée (chiffrée) depuis le store de secrets
+# (scope sysadmin, clé LAB_SSH_KEY_B64), déchiffrée en mémoire, écrite dans un
+# fichier temporaire le temps de la connexion, puis effacée.
+#
+# Transport : SSH direct sur le port 22 par défaut. Quand le client `wstunnel` est
+# présent et que le secret sysadmin/WSTUNNEL_PATH existe, la connexion passe par un
+# tunnel WebSocket sur 443 (wss://ops.contentos.ch) — voie utilisable là où le port
+# 22 sortant est fermé. Le serveur ne route le tunnel que vers son propre sshd
+# (host.docker.internal:22) et n'accepte que le bon path secret.
+#
+# Usage : bin/lab-ssh <commande à exécuter sur lab>
+# Pré-requis : LAB_SECRETS_KEY dans l'env (déverrouille le store).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+HOST_IP="178.105.243.250"
+
+KEY="$("$ROOT/bin/lab-secret" get sysadmin LAB_SSH_KEY_B64)"
+if [ -z "$KEY" ]; then
+  echo "lab-ssh : LAB_SECRETS_KEY manquant ou clé absente" >&2
+  exit 1
+fi
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+printf '%s' "$KEY" | base64 -d > "$tmp"
+chmod 600 "$tmp"
+
+opts=( -i "$tmp"
+  -o IdentitiesOnly=yes
+  -o StrictHostKeyChecking=accept-new
+  -o ConnectTimeout=10 )
+
+# Tunnel WebSocket si le client wstunnel et le secret de path sont disponibles ;
+# sinon SSH direct sur le port 22.
+wspath=""
+command -v wstunnel >/dev/null 2>&1 && \
+  wspath="$("$ROOT/bin/lab-secret" get sysadmin WSTUNNEL_PATH 2>/dev/null || true)"
+
+if [ -n "$wspath" ]; then
+  opts+=( -o "ProxyCommand=wstunnel client --log-lvl=off -L stdio://%h:%p --http-upgrade-path-prefix $wspath wss://ops.contentos.ch:443" )
+  target="root@host.docker.internal"
+else
+  target="root@$HOST_IP"
+fi
+
+ssh "${opts[@]}" "$target" "$@"

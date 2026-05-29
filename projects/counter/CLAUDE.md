@@ -10,3 +10,4 @@ référence pour tout projet qui a besoin d'une base.
   https://counter-<branche>.preview.contentos.ch (base isolée, vide + seed, détruite au teardown).
 - **Forme** : `server.js` incrémente et renvoie le compteur ; `db.js` (pool), `migrate.js`,
   `seed.js`. `DATABASE_URL` est **auto-fourni** (pas à gérer).
+- **Logs** : `lab-ssh "docker logs counter-<env>-app-1"`.

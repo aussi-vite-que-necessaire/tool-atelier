@@ -7,4 +7,5 @@ Sert de **template** (copie ce dossier pour démarrer un nouveau projet).
   https://hello-<branche>.preview.contentos.ch. Le build se fait sur la CI ; suivre avec `gh run watch`.
 - **Forme** : `server.js` (app), `Dockerfile` (image, buildée sur la CI), `compose.yml`
   (service `app` sur le réseau Docker `lab`, écoute 8080, exposé par Caddy via l'alias `${UPSTREAM}`).
+- **Logs sur lab** : `lab-ssh "docker logs hello-<env>-app-1"`.
 - Pas de base de données (chemin minimal). Pour ajouter Postgres/Redis : voir plan 2b.
