@@ -4,7 +4,6 @@ import {
   listPublications,
   updatePublication,
 } from '../repositories/publications';
-import { upsertSettings } from '../repositories/settings';
 import { createVoice, listVoices } from '../repositories/voice';
 import { createWritingTemplate, listWritingTemplates } from '../repositories/writing-templates';
 import {
@@ -27,7 +26,6 @@ const SAMPLE_POSTS = [
 ];
 
 async function seedUserDefaultsIdempotent(userId: string): Promise<void> {
-  await upsertSettings(userId);
   if ((await listVoices(userId)).length === 0) {
     await createVoice(userId, { name: DEFAULT_VOICE_NAME, content: DEFAULT_VOICE_CONTENT });
   }

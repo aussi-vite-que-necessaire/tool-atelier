@@ -1,7 +1,6 @@
 // Contenu seed par défaut pour les nouveaux users.
 // Copié verbatim du repo v1 (content-os) au moment du portage Spec 3.
 
-import { upsertSettings } from '../repositories/settings';
 import { createVoice, listVoices } from '../repositories/voice';
 import { createWritingTemplate, listWritingTemplates } from '../repositories/writing-templates';
 
@@ -46,7 +45,6 @@ Squelette :
 };
 
 export async function seedUserDefaults(userId: string): Promise<void> {
-  await upsertSettings(userId);
   if ((await listVoices(userId)).length === 0) {
     await createVoice(userId, { name: DEFAULT_VOICE_NAME, content: DEFAULT_VOICE_CONTENT });
   }

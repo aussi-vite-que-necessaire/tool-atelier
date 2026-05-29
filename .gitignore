@@ -4,3 +4,7 @@ node_modules/
 .claude/worktrees/
 .superpowers/
 tools/apercu/.browser-ready
+
+# Redis dump (dev artifact)
+dump.rdb
+dump.rdb.*
