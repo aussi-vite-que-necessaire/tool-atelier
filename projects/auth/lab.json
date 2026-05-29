@@ -1,7 +1,0 @@
-{
-  "description": "Identity provider central de la suite contentos — SSO partagé entre media, cast, ressources… (BetterAuth, session cross-subdomain).",
-  "db": true,
-  "migrate": "node scripts/migrate.mjs",
-  "seed": "node scripts/seed.mjs",
-  "email": true
-}

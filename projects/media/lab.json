@@ -1,1 +1,0 @@
-{ "description": "media (media.contentos.ch) — génération/édition d'image (Gemini), rendu HTML→image (Chromium partagé), API MCP + /v1.", "db": true, "browser": true, "migrate": "node scripts/migrate.mjs", "seed": "node scripts/seed.mjs", "dashboard": { "label": "media", "tagline": "Génération et édition de visuels", "order": 10 } }

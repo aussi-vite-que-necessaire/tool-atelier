@@ -1,7 +1,0 @@
-{
-  "description": "Plateforme de lead magnets (ressources.contentos.ch).",
-  "db": true,
-  "migrate": "node scripts/migrate.mjs",
-  "seed": "node --import tsx db/seed.ts",
-  "dashboard": { "label": "ressources", "tagline": "Lead magnets et ressources téléchargeables", "order": 20 }
-}

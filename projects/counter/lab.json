@@ -1,1 +1,0 @@
-{ "description": "Projet témoin avec base : compteur de visites persistant (Postgres).", "db": true, "migrate": "npm run migrate", "seed": "npm run seed" }
