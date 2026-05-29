@@ -1,14 +1,13 @@
 import { z } from "zod";
 
-// Env typé, lecture paresseuse (ne parse pas au build). MEDIA_* = backend pilote.
+// Env typé, lecture paresseuse (ne parse pas au build).
 const envSchema = z.object({
   APP_URL: z.string().url(),
   AUTH_URL: z.string().url().default("https://auth.contentos.ch"),
   APP_ENV: z.string().optional(),
-  // URL interne du backend media sur le réseau lab (injectée par deploy.sh).
-  MEDIA_INTERNAL_URL: z.string().url(),
-  // Service-key partagée avec media (= MEDIA_ENGINE_SERVICE_KEY côté media).
-  MEDIA_SERVICE_KEY: z.string().min(1),
+  // Clé interne partagée présentée aux backends (scope global). Vide en preview :
+  // les endpoints /internal des backends court-circuitent la vérif en preview.
+  MCP_INTERNAL_KEY: z.string().default(""),
 });
 
 type Env = z.infer<typeof envSchema>;

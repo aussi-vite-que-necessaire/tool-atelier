@@ -11,18 +11,20 @@ internes et **relaie** les appels en préfixant les noms (`media_generate_image`
 - `src/lib/mcp/gateway.ts` — handlers bas-niveau `tools/list` (agrégation + namespacing +
   dégradation si un backend est down) et `tools/call` (dé-préfixe + route).
 - `src/lib/backends.ts` — registre **statique** des backends (`getBackends()`, lecture paresseuse
-  d'env) ; `src/lib/backend-client.ts` parle leur contrat interne.
+  d'env). L'URL de chaque backend est **dérivée** de `APP_URL` (swap du sous-domaine `mcp` →
+  `media`/`cast`/`ressources`) : la passerelle parle aux backends du **même environnement**
+  (preview de la même branche, ou prod). `src/lib/backend-client.ts` parle leur contrat interne.
 - `src/lib/mcp/auth.ts` — `verifyMcpToken` (valide le bearer via auth.contentos.ch ; court-circuit
   preview). `.well-known/*` — découverte OAuth (délègue à auth.contentos.ch).
 
 ## Backends
 
 Un backend expose `GET /internal/tools` (schémas JSON) et `POST /internal/tools/:name`
-(`{ userId, args }`), protégés par une service-key. La passerelle transmet le `userId` résolu ;
-le backend applique son propre scoping. Variables : `MEDIA_INTERNAL_URL`, `MEDIA_SERVICE_KEY`
-(= `MEDIA_ENGINE_SERVICE_KEY` côté media). Ajouter un tool dans un backend ne nécessite pas de
-redéployer la passerelle (catalogue récupéré au runtime) ; ajouter un nouveau backend = éditer
-`src/lib/backends.ts`.
+(`{ userId, args }`), gardés par une **clé interne partagée** `MCP_INTERNAL_KEY` (scope global)
+— sauf en preview, où la vérif est court-circuitée (federation sans secret). La passerelle
+transmet le `userId` résolu ; le backend applique son propre scoping (et, pour `ressources`,
+résout l'opérateur). Ajouter un tool dans un backend ne nécessite pas de redéployer la passerelle
+(catalogue récupéré au runtime) ; ajouter un backend = éditer `src/lib/backends.ts`.
 
 ## Dev / déploiement
 
