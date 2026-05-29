@@ -1,4 +1,3 @@
-/* @generated — synchronisé depuis packages/ui par bin/ui-sync. Ne pas éditer ici : modifier packages/ui puis relancer la synchro. */
 import { Input as InputPrimitive } from '@base-ui/react/input';
 import type * as React from 'react';
 

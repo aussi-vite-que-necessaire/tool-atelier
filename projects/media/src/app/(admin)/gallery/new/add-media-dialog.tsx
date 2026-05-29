@@ -9,6 +9,8 @@ import { Composer, type PickerImage } from "./composer";
 import { TemplateTab, type TemplateOption } from "./template-tab";
 import type { FormImage } from "./template-vars-form";
 import { TABS, type Tab } from "./tabs";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const TAB_LABELS: Record<Tab, string> = {
   upload: "Uploader un fichier",
@@ -52,35 +54,33 @@ export function AddMediaDialog({
         type="button"
         aria-label="Fermer"
         onClick={() => router.push("/gallery")}
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/40 supports-backdrop-filter:backdrop-blur-xs"
       />
 
       {/* Panneau near-fullscreen */}
-      <div className="relative m-auto flex h-[92vh] w-[95vw] max-w-5xl flex-col rounded-lg bg-white shadow-xl">
+      <div className="relative m-auto flex h-[92vh] w-[95vw] max-w-5xl flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground ring-1 ring-foreground/10">
         {/* En-tête : onglets + fermeture */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div className="flex flex-wrap gap-1">
             {TABS.map((t) => (
-              <Link
+              <Button
                 key={t}
-                href={`/gallery/new?tab=${t}`}
-                className={`rounded px-3 py-1.5 text-sm ${
-                  t === tab
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-600 hover:bg-gray-100"
-                }`}
+                variant={t === tab ? "secondary" : "ghost"}
+                size="sm"
+                render={<Link href={`/gallery/new?tab=${t}`} />}
               >
                 {TAB_LABELS[t]}
-              </Link>
+              </Button>
             ))}
           </div>
-          <Link
-            href="/gallery"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             aria-label="Fermer"
-            className="rounded px-2 py-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            render={<Link href="/gallery" />}
           >
             ✕
-          </Link>
+          </Button>
         </div>
 
         {/* Contenu de l'onglet actif */}
@@ -92,18 +92,16 @@ export function AddMediaDialog({
                 name="file"
                 accept="image/png,image/jpeg,image/webp,application/pdf,video/mp4"
                 required
-                className="block text-sm text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border file:border-gray-300 file:text-sm file:bg-white file:text-gray-700 hover:file:bg-gray-50"
+                className={cn(
+                  "block text-sm text-muted-foreground",
+                  "file:mr-3 file:rounded-lg file:border file:border-input file:bg-background file:px-3 file:py-1 file:text-sm file:text-foreground hover:file:bg-muted",
+                )}
               />
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 Types acceptés : PNG, JPEG, WebP (≤ 10 Mo), PDF (≤ 100 Mo), MP4 (≤ 100 Mo via l&apos;UI).
                 Pour les vidéos jusqu&apos;à 500 Mo, utiliser l&apos;API <code>/v1/upload</code>.
               </p>
-              <button
-                type="submit"
-                className="rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
-              >
-                Uploader
-              </button>
+              <Button type="submit">Uploader</Button>
             </form>
           )}
 

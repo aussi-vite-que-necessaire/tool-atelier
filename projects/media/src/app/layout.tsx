@@ -1,9 +1,21 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
-  title: "Flagship",
-  description: "Next.js + Drizzle + BetterAuth + Tailwind",
+  title: "media — contentos",
+  description: "Centre des médias de la suite contentos.",
 };
 
 export default function RootLayout({
@@ -12,9 +24,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
-      <body className="min-h-screen bg-white text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
-        {children}
+    <html
+      lang="fr"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-screen bg-background font-sans text-foreground">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

@@ -13,6 +13,9 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Sidebar,
   SidebarFooter,
@@ -30,6 +33,7 @@ const sections = [
   { id: 'couleurs', label: 'Couleurs' },
   { id: 'titres', label: 'Titres' },
   { id: 'boutons', label: 'Boutons' },
+  { id: 'formulaires', label: 'Formulaires' },
   { id: 'modale', label: 'Modale oui/non' },
   { id: 'sidebar', label: 'Sidebar' },
 ] as const;
@@ -211,6 +215,29 @@ function ButtonsSection() {
   );
 }
 
+function FormsSection() {
+  return (
+    <div className="grid max-w-md gap-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="sg-name">Nom</Label>
+        <Input id="sg-name" placeholder="Jean Dupont" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="sg-email">Email</Label>
+        <Input id="sg-email" type="email" placeholder="jean@exemple.ch" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="sg-msg">Message</Label>
+        <Textarea id="sg-msg" rows={3} placeholder="Ton message…" />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="sg-disabled">Champ désactivé</Label>
+        <Input id="sg-disabled" disabled defaultValue="Non éditable" />
+      </div>
+    </div>
+  );
+}
+
 function ModalSection() {
   const [last, setLast] = useState<string | null>(null);
   return (
@@ -324,6 +351,9 @@ export function Styleguide() {
           </Section>
           <Section id="boutons" title="Boutons" description="Variantes, tailles, icônes et états du composant Button.">
             <ButtonsSection />
+          </Section>
+          <Section id="formulaires" title="Formulaires" description="Champs de saisie : Input, Textarea, Label — états par défaut, focus, désactivé.">
+            <FormsSection />
           </Section>
           <Section id="modale" title="Modale oui/non" description="ConfirmDialog : confirmation d'action, variante neutre ou destructive.">
             <ModalSection />

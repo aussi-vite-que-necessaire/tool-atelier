@@ -4,6 +4,8 @@ import Link from "next/link";
 import { listMediaRecords } from "@/lib/media/repository";
 import type { MediaKind } from "@/lib/media/types";
 import { requireUserId } from "@/lib/session";
+import { Button } from "@/components/ui/button";
+import { Heading } from "@/components/ui/typography";
 import { GalleryGrid } from "./gallery-grid";
 
 const KINDS: MediaKind[] = ["image", "video", "pdf", "render"];
@@ -22,47 +24,36 @@ export default async function GalleryPage({
   const items = await listMediaRecords(userId, { kind, limit: 100 });
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       {/* En-tête */}
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">
+        <Heading level={2}>
           Galerie{" "}
-          <span className="text-sm font-normal text-gray-500">
+          <span className="text-base font-normal text-muted-foreground">
             ({items.length} élément{items.length !== 1 ? "s" : ""})
           </span>
-        </h1>
-        <Link
-          href="/gallery/new"
-          className="rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700"
-        >
-          + Ajouter à la galerie
-        </Link>
+        </Heading>
+        <Button render={<Link href="/gallery/new" />}>+ Ajouter à la galerie</Button>
       </div>
 
       {/* Filtres par kind */}
       <div className="flex flex-wrap gap-2">
-        <Link
-          href="/gallery"
-          className={`rounded px-3 py-1 text-sm border ${
-            !kind
-              ? "bg-gray-800 text-white border-gray-800"
-              : "border-gray-300 text-gray-600 hover:bg-gray-50"
-          }`}
+        <Button
+          variant={!kind ? "default" : "outline"}
+          size="sm"
+          render={<Link href="/gallery" />}
         >
           Tous
-        </Link>
+        </Button>
         {KINDS.map((k) => (
-          <Link
+          <Button
             key={k}
-            href={`/gallery?kind=${k}`}
-            className={`rounded px-3 py-1 text-sm border ${
-              kind === k
-                ? "bg-gray-800 text-white border-gray-800"
-                : "border-gray-300 text-gray-600 hover:bg-gray-50"
-            }`}
+            variant={kind === k ? "default" : "outline"}
+            size="sm"
+            render={<Link href={`/gallery?kind=${k}`} />}
           >
             {k}
-          </Link>
+          </Button>
         ))}
       </div>
 
