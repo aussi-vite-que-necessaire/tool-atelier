@@ -32,6 +32,17 @@ install_wstunnel() {
 }
 install_wstunnel
 
+# Plugin superpowers (workflow de dev de feature). Le conteneur cloud part d'un
+# clone vierge : déclarer le plugin dans .claude/settings.json l'ACTIVE mais ne
+# le TÉLÉCHARGE pas (l'install passe normalement par un dialogue de confiance,
+# absent en cloud). On l'installe donc explicitement ici. Non-interactif
+# (stdin /dev/null) et idempotent.
+if command -v claude >/dev/null 2>&1; then
+  echo "→ plugin superpowers"
+  claude plugin marketplace add anthropics/claude-plugins-official </dev/null >/dev/null 2>&1 || true
+  claude plugin install superpowers@claude-plugins-official </dev/null >/dev/null 2>&1 || true
+fi
+
 for dir in "$ROOT"/projects/*/; do
   [ -f "$dir/package.json" ] || continue
   echo "→ deps: $(basename "$dir")"
