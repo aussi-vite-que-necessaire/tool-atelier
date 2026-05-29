@@ -12,6 +12,9 @@ par `/lab-planifier`, dispatche un sub-agent par tâche, exécute la double revu
 
 ## Contrat
 
+- **Environnement d'abord** : pour un projet avec base, lancer
+  `scripts/dev-db.sh up <projet>` avant la première tâche (sinon les tests et
+  `npm run dev` échouent faute de `DATABASE_URL`).
 - Pas de questions à l'humain. Ambiguïté inter-agent (sub-agent → controller) :
   résolue par le controller via le choix le plus simple, notée dans le rapport
   de fin retourné à `/lab-ship`.
@@ -53,6 +56,12 @@ digraph lab_impl {
 
 ## Déroulé
 
+0. **Monter l'environnement de données** (si le projet déclare `db`/`redis` dans
+   `lab.json`) : depuis la racine de l'atelier, `scripts/dev-db.sh up <projet>`.
+   Démarre Postgres (et Redis) en natif, crée `<projet>_dev` (+ `<projet>_test`),
+   joue migrate + seed, installe les deps si besoin, et écrit `.env.local` — pour
+   que les tests qui touchent la base et `npm run dev` passent. Idempotent : à
+   relancer si l'environnement a été recyclé.
 1. **Lire le plan** (dernier fichier dans `docs/plans/` ou path fourni).
 2. **Pour chaque tâche du plan** :
    - **Dispatch implementer sub-agent**. Tool `Agent`, `subagent_type:

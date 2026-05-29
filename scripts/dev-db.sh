@@ -116,8 +116,13 @@ cmd_up() {
   write_env_local "$dir" "$dburl" "$redisurl" "$prefix"
 
   # Migrations puis seed, joués depuis le projet contre <projet>_dev (comme une preview).
-  # Nécessite les deps du projet installées (npm install / cloud-setup.sh).
-  if [ "$db" = "true" ]; then
+  # migrate/seed ont besoin des deps du projet : on les installe si absentes (en session
+  # cloud, cloud-setup.sh le fait au boot, mais on rend `up` autonome).
+  if [ "$db" = "true" ] && { [ -n "$migrate" ] || [ -n "$seed" ]; }; then
+    if [ -f "$dir/package.json" ] && [ ! -d "$dir/node_modules" ]; then
+      echo "→ installation des deps de $proj (node_modules absent)…"
+      ( cd "$dir" && { [ -f package-lock.json ] && npm ci || npm install; } >/dev/null )
+    fi
     export DATABASE_URL="$dburl"
     [ -n "$migrate" ] && ( cd "$dir" && sh -c "$migrate" )
     [ -n "$seed" ]    && ( cd "$dir" && sh -c "$seed" )
