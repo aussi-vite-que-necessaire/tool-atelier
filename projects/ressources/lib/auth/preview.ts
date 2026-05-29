@@ -1,8 +1,3 @@
-// Identité de test utilisée pour l'auto-login en preview.
-export const PREVIEW_USER_EMAIL = "preview@ressources.local"
-// ID stable du preview user.
-export const PREVIEW_USER_ID = "preview-user"
-
 // Preview = environnement déployé non-prod (APP_ENV = slug de branche).
 // En prod APP_ENV vaut 'prod' ; en local il est absent. APP_ENV est le seul
 // discriminant fiable : NODE_ENV vaut 'production' en preview comme en prod.

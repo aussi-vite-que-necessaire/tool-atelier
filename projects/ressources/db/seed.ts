@@ -1,13 +1,22 @@
 import { and, eq, inArray } from "drizzle-orm"
 import { db } from "./index"
-import { resources, pages, modules, resourceAccess, operators } from "./schema"
-import { PREVIEW_USER_ID } from "../lib/auth/preview"
+import {
+  resources,
+  pages,
+  modules,
+  resourceAccess,
+  operators,
+  audienceMembers,
+  subscriptions,
+} from "./schema"
+import { PREVIEW_OP_1_ID, PREVIEW_OP_2_ID, PREVIEW_AUD_3_ID } from "../lib/auth/preview"
+
+// Seed preview uniquement (jamais prod). Deux opérateurs (user1/user2) avec
+// chacun SES ressources (test d'isolation), + un abonné audience (user3) inscrit
+// au contenu des deux. Les ids correspondent aux users seedés côté auth.
 
 type Mod = { type: string; content: Record<string, unknown> }
-
-// Opérateur de démo en preview : le preview-user (auto-loggé, operator par
-// défaut) possède toutes les ressources seedées. Son espace : /o/demo.
-const DEMO_OPERATOR = { id: PREVIEW_USER_ID, handle: "demo", name: "Démo Contentos" }
+type ResourceRow = typeof resources.$inferSelect
 
 async function addPage(
   resourceId: string,
@@ -29,22 +38,25 @@ async function addPage(
   return page
 }
 
-async function createResource(meta: {
-  slug: string
-  title: string
-  description: string
-  coverImageUrl?: string | null
-  visibility?: "public" | "private"
-  published?: boolean
-  featured?: boolean
-}) {
+async function createResource(
+  operatorId: string,
+  meta: {
+    slug: string
+    title: string
+    description: string
+    coverImageUrl?: string | null
+    visibility?: "public" | "private"
+    published?: boolean
+    featured?: boolean
+  },
+): Promise<ResourceRow> {
   await db
     .delete(resources)
-    .where(and(eq(resources.operatorId, DEMO_OPERATOR.id), eq(resources.slug, meta.slug)))
+    .where(and(eq(resources.operatorId, operatorId), eq(resources.slug, meta.slug)))
   const [r] = await db
     .insert(resources)
     .values({
-      operatorId: DEMO_OPERATOR.id,
+      operatorId,
       slug: meta.slug,
       title: meta.title,
       description: meta.description,
@@ -59,37 +71,18 @@ async function createResource(meta: {
 
 const img = (seed: string, w = 1200, h = 700) => `https://picsum.photos/seed/${seed}/${w}/${h}`
 
-async function seed() {
-  // L'opérateur démo doit exister avant les ressources (FK operator_id).
-  await db
-    .insert(operators)
-    .values(DEMO_OPERATOR)
-    .onConflictDoUpdate({ target: operators.id, set: { handle: DEMO_OPERATOR.handle, name: DEMO_OPERATOR.name } })
+// ───────── Opérateur 1 (user1) : catalogue complet (showcase des blocs) ─────────
+async function seedOperator1(operatorId: string): Promise<ResourceRow[]> {
+  const created: ResourceRow[] = []
 
-  await db
-    .delete(resources)
-    .where(
-      and(
-        eq(resources.operatorId, DEMO_OPERATOR.id),
-        inArray(resources.slug, [
-          "showcase",
-          "guide-ia",
-          "atelier-prive",
-          "automatiser-n8n",
-          "deployer-coolify",
-          "manifeste",
-        ]),
-      ),
-    )
-
-  // ───────────────────────── Showcase : tous les blocs ─────────────────────────
-  const showcase = await createResource({
+  const showcase = await createResource(operatorId, {
     slug: "showcase",
     title: "Le guide des composants",
     description: "Tous les types de blocs disponibles, illustrés un par un.",
     coverImageUrl: img("showcase-cover", 1200, 630),
     featured: true,
   })
+  created.push(showcase)
 
   const scRoot = await addPage(showcase.id, null, "", "Introduction", 0, [
     {
@@ -117,21 +110,16 @@ async function seed() {
     },
   ])
 
-  // — Page : blocs de texte —
   await addPage(showcase.id, scRoot.id, "blocs-texte", "Blocs de texte", 0, [
     {
       type: "markdown",
       content: {
-        md: "## Markdown riche\n\nLe bloc **markdown** gère titres, listes, liens, `code inline`, citations et tableaux.\n\n### Une liste\n\n1. Premier point structurant\n2. Deuxième point, avec un [lien](https://avqn.ch)\n3. Troisième point\n\n> Une citation en markdown reste sobre et lisible.\n\n| Concept | Définition | Exemple |\n| --- | --- | --- |\n| LLM | Modèle de langage | GPT, Claude |\n| RAG | Génération augmentée | Recherche + LLM |\n| Agent | Boucle outillée | Claude Code |",
+        md: "## Markdown riche\n\nLe bloc **markdown** gère titres, listes, liens, `code inline`, citations et tableaux.\n\n### Une liste\n\n1. Premier point structurant\n2. Deuxième point, avec un [lien](https://avqn.ch)\n3. Troisième point\n\n> Une citation en markdown reste sobre et lisible.",
       },
     },
     {
       type: "callout",
       content: { variant: "success", md: "**Astuce.** Commence toujours par définir l'objectif avant d'écrire le prompt." },
-    },
-    {
-      type: "callout",
-      content: { variant: "warn", md: "**Attention.** Ne colle jamais de secret (clé API, token) dans un prompt partagé." },
     },
     {
       type: "quote",
@@ -142,35 +130,11 @@ async function seed() {
         url: "https://avqn.ch",
       },
     },
-    {
-      type: "accordion",
-      content: {
-        title: "Pourquoi un accordéon ?",
-        md: "Pour replier un détail optionnel sans alourdir la page. Idéal pour une FAQ ou une note avancée.",
-        open: false,
-      },
-    },
-    {
-      type: "comparison",
-      content: {
-        columns: [
-          { title: "Avant l'IA", md: "- Tâches manuelles\n- Copier-coller\n- Lent à itérer" },
-          { title: "Avec un agent", md: "- Boucles automatisées\n- Contexte réutilisé\n- Itération rapide" },
-        ],
-      },
-    },
   ])
 
-  // — Page : blocs média —
   await addPage(showcase.id, scRoot.id, "blocs-media", "Blocs média", 1, [
-    {
-      type: "markdown",
-      content: { md: "## Médias\n\nImage, galerie, vidéo, intégration et fichier téléchargeable." },
-    },
-    {
-      type: "image",
-      content: { url: img("schema-ia"), alt: "Schéma", caption: "Une image avec légende, encadrée." },
-    },
+    { type: "markdown", content: { md: "## Médias\n\nImage, galerie, vidéo, intégration et fichier téléchargeable." } },
+    { type: "image", content: { url: img("schema-ia"), alt: "Schéma", caption: "Une image avec légende, encadrée." } },
     {
       type: "gallery",
       content: {
@@ -181,151 +145,69 @@ async function seed() {
         ],
       },
     },
-    {
-      type: "video",
-      content: { url: "https://www.w3schools.com/html/mov_bbb.mp4", caption: "Une vidéo auto-hébergée." },
-    },
-    {
-      type: "embed",
-      content: { url: "https://www.youtube.com/embed/dQw4w9WgXcQ" },
-    },
-    {
-      type: "file",
-      content: { url: "https://example.com/workflow.json", label: "Workflow n8n prêt à importer", filename: "workflow.json", size: 20480 },
-    },
   ])
 
-  // — Page : blocs riches —
   await addPage(showcase.id, scRoot.id, "blocs-riches", "Blocs riches", 2, [
-    {
-      type: "markdown",
-      content: { md: "## Code & prompts\n\nDes blocs pensés pour les développeurs et les prompteurs." },
-    },
+    { type: "markdown", content: { md: "## Code & prompts\n\nDes blocs pensés pour les développeurs et les prompteurs." } },
     {
       type: "code",
       content: {
         language: "typescript",
         filename: "agent.ts",
-        code: "import { runAgent } from \"./core\"\n\nexport async function main() {\n  const result = await runAgent({\n    goal: \"Résumer le rapport trimestriel\",\n    tools: [\"search\", \"read\", \"write\"],\n  })\n  console.log(result.summary)\n}",
-      },
-    },
-    {
-      type: "code",
-      content: {
-        language: "bash",
-        code: "# Déployer en une commande\nnpm run build && npm run deploy --env=prod",
+        code: 'import { runAgent } from "./core"\n\nexport async function main() {\n  const result = await runAgent({ goal: "Résumer le rapport" })\n  console.log(result.summary)\n}',
       },
     },
     {
       type: "prompt",
       content: {
         title: "Prompt — synthèse d'article",
-        prompt: "Tu es un éditeur exigeant. Résume l'article ci-dessous en 5 points clés, puis propose un titre accrocheur de moins de 60 caractères.\n\nArticle :\n\"\"\"\n{{texte}}\n\"\"\"",
+        prompt: "Tu es un éditeur exigeant. Résume l'article en 5 points clés, puis propose un titre de moins de 60 caractères.",
       },
     },
-    {
-      type: "cta",
-      content: { label: "Réserver un appel", url: "https://avqn.ch", variant: "primary" },
-    },
-    {
-      type: "cta",
-      content: { label: "Voir la documentation", url: "https://avqn.ch", variant: "secondary" },
-    },
+    { type: "cta", content: { label: "Réserver un appel", url: "https://avqn.ch", variant: "primary" } },
   ])
 
-  // ───────────────────────── Guide IA (2e ressource featured) ─────────────────────────
-  const guide = await createResource({
+  const guide = await createResource(operatorId, {
     slug: "guide-ia",
     title: "Guide IA appliquée",
     description: "Comprendre les modèles, écrire de bons prompts, automatiser.",
     coverImageUrl: img("guide-ia-cover", 1200, 630),
     featured: true,
   })
+  created.push(guide)
   const gRoot = await addPage(guide.id, null, "", "Introduction", 0, [
     {
       type: "markdown",
       content: {
-        md: "## Contexte\n\nCe guide approfondit les bases de l'IA appliquée au quotidien.\n\n## Objectifs\n\n- Comprendre les modèles de langage\n- Écrire des prompts spécifiques et contextualisés\n- Automatiser des tâches répétitives",
+        md: "## Contexte\n\nCe guide approfondit les bases de l'IA appliquée au quotidien.\n\n## Objectifs\n\n- Comprendre les modèles de langage\n- Écrire des prompts spécifiques\n- Automatiser des tâches répétitives",
       },
-    },
-    {
-      type: "callout",
-      content: { variant: "success", md: "Définis clairement ton objectif **avant** de prompter." },
     },
   ])
   await addPage(guide.id, gRoot.id, "prompting", "Prompting", 0, [
-    {
-      type: "markdown",
-      content: { md: "## Prompting\n\nUn bon prompt est **spécifique**, **contextualisé** et **vérifiable**." },
-    },
-    {
-      type: "prompt",
-      content: { prompt: "Agis comme un expert. Donne-moi 3 angles d'attaque pour : {{sujet}}." },
-    },
-  ])
-  await addPage(guide.id, gRoot.id, "automatisation", "Automatisation", 1, [
-    { type: "markdown", content: { md: "## Automatisation\n\nRelie tes outils et laisse l'agent faire le travail répétitif." } },
-  ])
-  // Fixture mise en page : page SANS titre de section dans une ressource
-  // multi-pages → colonne de gauche affichée, colonne de droite masquée.
-  await addPage(guide.id, gRoot.id, "pour-aller-plus-loin", "Pour aller plus loin", 2, [
-    {
-      type: "markdown",
-      content: {
-        md: "Tu as parcouru l'essentiel. La suite se joue dans la pratique : choisis une tâche réelle, écris le prompt, mesure le résultat, recommence. C'est en itérant que les automatisations deviennent fiables.",
-      },
-    },
-    { type: "cta", content: { label: "Réserver un appel", url: "https://avqn.ch", variant: "primary" } },
+    { type: "markdown", content: { md: "## Prompting\n\nUn bon prompt est **spécifique**, **contextualisé** et **vérifiable**." } },
+    { type: "prompt", content: { prompt: "Agis comme un expert. Donne-moi 3 angles d'attaque pour : {{sujet}}." } },
   ])
 
-  // ───────────────────────── Deux ressources pour garnir la grille ─────────────────────────
-  const n8n = await createResource({
-    slug: "automatiser-n8n",
-    title: "Automatiser avec n8n",
-    description: "Des workflows no-code pour connecter tes outils.",
-    coverImageUrl: img("n8n-cover", 1200, 630),
-    featured: true,
-  })
-  await addPage(n8n.id, null, "", "Démarrer", 0, [
-    { type: "markdown", content: { md: "## n8n\n\nUn orchestrateur visuel pour automatiser sans coder." } },
-  ])
-
-  const coolify = await createResource({
-    slug: "deployer-coolify",
-    title: "Déployer avec Coolify",
-    description: "Héberger ses apps sur son propre serveur, sereinement.",
-    featured: true,
-  })
-  await addPage(coolify.id, null, "", "Mise en route", 0, [
-    { type: "markdown", content: { md: "## Coolify\n\nUn PaaS auto-hébergé, alternative simple à Vercel." } },
-  ])
-
-  // ───────── Fixture mise en page : page unique SANS titre de section ─────────
-  // Une seule page + aucun titre → les deux rails sont masqués et le contenu
-  // passe en largeur de lecture centrée (« mode article »).
-  const manifeste = await createResource({
+  const manifeste = await createResource(operatorId, {
     slug: "manifeste",
     title: "Manifeste",
     description: "Une page unique, sans sommaire : juste le texte.",
     coverImageUrl: img("manifeste-cover", 1200, 630),
     featured: false,
   })
+  created.push(manifeste)
   await addPage(manifeste.id, null, "", "Manifeste", 0, [
     {
       type: "markdown",
       content: {
-        md: "Construire vite ne veut pas dire construire à la légère. Chaque outil qu'on s'épargne d'écrire est du temps rendu à ce qui compte vraiment : comprendre le problème, soigner la finition, livrer.\n\nUne ressource n'a pas toujours besoin d'un sommaire ni d'une arborescence. Parfois, une seule page qui se lit d'une traite suffit — et c'est exactement ce que cette mise en page veut servir : du texte, centré, sans distraction.",
+        md: "Construire vite ne veut pas dire construire à la légère. Chaque outil qu'on s'épargne d'écrire est du temps rendu à ce qui compte vraiment : comprendre le problème, soigner la finition, livrer.",
       },
     },
-    {
-      type: "quote",
-      content: { text: "Aussi vite que nécessaire, pas plus.", author: "AVQN", url: "https://avqn.ch" },
-    },
-    { type: "cta", content: { label: "Découvrir la bibliothèque", url: "/bibliotheque", variant: "primary" } },
+    { type: "quote", content: { text: "Aussi vite que nécessaire, pas plus.", author: "AVQN", url: "https://avqn.ch" } },
   ])
 
-  // ───────────────────────── Ressource privée (gate) ─────────────────────────
-  const priv = await createResource({
+  // Ressource privée (gate) — accès accordé par email plus bas (audience user3).
+  const priv = await createResource(operatorId, {
     slug: "atelier-prive",
     title: "Atelier privé",
     description: "Ressource réservée aux participants de l'atelier.",
@@ -333,19 +215,137 @@ async function seed() {
     visibility: "private",
     featured: false,
   })
+  created.push(priv)
   await addPage(priv.id, null, "", "Brief client", 0, [
-    { type: "markdown", content: { md: "## Brief\n\nContenu réservé au client." } },
+    { type: "markdown", content: { md: "## Brief\n\nContenu réservé aux participants." } },
   ])
-  await db.insert(resourceAccess).values({ resourceId: priv.id, email: "client@exemple.com" })
 
-  console.log("Seed OK :")
-  console.log("  public  → /r/showcase  /r/guide-ia  /r/automatiser-n8n  /r/deployer-coolify  /r/manifeste")
-  console.log("  privé   → /r/atelier-prive (client@exemple.com)")
-  console.log("  mise en page :")
-  console.log("    2 rails  → /r/showcase")
-  console.log("    gauche   → /r/guide-ia/pour-aller-plus-loin")
-  console.log("    droite   → /r/automatiser-n8n")
-  console.log("    aucun    → /r/manifeste")
+  return created
+}
+
+// ───────── Opérateur 2 (user2) : catalogue distinct (test d'isolation) ─────────
+async function seedOperator2(operatorId: string): Promise<ResourceRow[]> {
+  const created: ResourceRow[] = []
+
+  const atelier = await createResource(operatorId, {
+    slug: "atelier-no-code",
+    title: "Atelier no-code",
+    description: "Monter ses automatisations sans écrire de code.",
+    coverImageUrl: img("op2-atelier-cover", 1200, 630),
+    featured: true,
+  })
+  created.push(atelier)
+  const aRoot = await addPage(atelier.id, null, "", "Bienvenue", 0, [
+    { type: "markdown", content: { md: "## Atelier no-code de user2\n\nUn parcours pour relier ses outils sans coder." } },
+    { type: "callout", content: { variant: "info", md: "Ce contenu appartient à **user2** — il ne doit jamais apparaître chez user1." } },
+  ])
+  await addPage(atelier.id, aRoot.id, "outils", "Les outils", 0, [
+    { type: "markdown", content: { md: "## Outils\n\nn8n, Zapier, Make : choisir selon le besoin." } },
+  ])
+
+  const gratuites = await createResource(operatorId, {
+    slug: "ressources-gratuites",
+    title: "Ressources gratuites",
+    description: "Une sélection de templates et checklists offerts.",
+    coverImageUrl: img("op2-gratuites-cover", 1200, 630),
+    featured: true,
+  })
+  created.push(gratuites)
+  await addPage(gratuites.id, null, "", "À télécharger", 0, [
+    { type: "markdown", content: { md: "## Gratuit\n\nTemplates Notion, checklists, prompts prêts à l'emploi." } },
+    { type: "cta", content: { label: "Tout récupérer", url: "https://avqn.ch", variant: "primary" } },
+  ])
+
+  const coaching = await createResource(operatorId, {
+    slug: "coaching-prive",
+    title: "Coaching privé",
+    description: "Espace réservé aux clients du coaching de user2.",
+    coverImageUrl: img("op2-coaching-cover", 1200, 630),
+    visibility: "private",
+    featured: false,
+  })
+  created.push(coaching)
+  await addPage(coaching.id, null, "", "Programme", 0, [
+    { type: "markdown", content: { md: "## Programme\n\nContenu réservé aux clients de user2." } },
+  ])
+
+  return created
+}
+
+async function seed() {
+  if (process.env.APP_ENV === "prod") {
+    console.log("seed: APP_ENV=prod → pas de données de démo (refusé).")
+    process.exit(0)
+  }
+
+  // Les opérateurs doivent exister avant leurs ressources (FK operator_id).
+  const OPS = [
+    { id: PREVIEW_OP_1_ID, handle: "user1", name: "User 1 (preview)" },
+    { id: PREVIEW_OP_2_ID, handle: "user2", name: "User 2 (preview)" },
+  ]
+  for (const op of OPS) {
+    await db
+      .insert(operators)
+      .values(op)
+      .onConflictDoUpdate({ target: operators.id, set: { handle: op.handle, name: op.name } })
+  }
+
+  // Nettoyage des ressources seedées (idempotence) pour chaque opérateur.
+  await db
+    .delete(resources)
+    .where(
+      and(
+        eq(resources.operatorId, PREVIEW_OP_1_ID),
+        inArray(resources.slug, ["showcase", "guide-ia", "manifeste", "atelier-prive"]),
+      ),
+    )
+  await db
+    .delete(resources)
+    .where(
+      and(
+        eq(resources.operatorId, PREVIEW_OP_2_ID),
+        inArray(resources.slug, ["atelier-no-code", "ressources-gratuites", "coaching-prive"]),
+      ),
+    )
+
+  const op1Resources = await seedOperator1(PREVIEW_OP_1_ID)
+  const op2Resources = await seedOperator2(PREVIEW_OP_2_ID)
+
+  // ───────── Audience : user3 abonné aux deux opérateurs ─────────
+  for (const opId of [PREVIEW_OP_1_ID, PREVIEW_OP_2_ID]) {
+    await db
+      .insert(audienceMembers)
+      .values({ operatorId: opId, userId: PREVIEW_AUD_3_ID })
+      .onConflictDoNothing()
+  }
+
+  // Abonnements à quelques ressources publiques des deux opérateurs.
+  const subscribable = [
+    op1Resources.find((r) => r.slug === "showcase"),
+    op1Resources.find((r) => r.slug === "guide-ia"),
+    op2Resources.find((r) => r.slug === "atelier-no-code"),
+    op2Resources.find((r) => r.slug === "ressources-gratuites"),
+  ].filter((r): r is ResourceRow => !!r)
+  for (const r of subscribable) {
+    await db
+      .insert(subscriptions)
+      .values({ userId: PREVIEW_AUD_3_ID, resourceId: r.id })
+      .onConflictDoNothing()
+  }
+
+  // Accès par email à une ressource privée d'op1 (test du gate par email).
+  const priv = op1Resources.find((r) => r.slug === "atelier-prive")
+  if (priv) {
+    await db
+      .insert(resourceAccess)
+      .values({ resourceId: priv.id, email: "user3@avqn.ch" })
+      .onConflictDoNothing()
+  }
+
+  console.log("Seed OK (preview) :")
+  console.log(`  user1 → /o/user1 : ${op1Resources.map((r) => r.slug).join(", ")}`)
+  console.log(`  user2 → /o/user2 : ${op2Resources.map((r) => r.slug).join(", ")}`)
+  console.log(`  user3 (audience) → abonné à ${subscribable.length} ressources + accès atelier-prive`)
   process.exit(0)
 }
 

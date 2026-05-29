@@ -9,11 +9,6 @@ export function isPreviewEnv(appEnv: string | undefined): boolean {
 
 export const isPreview = isPreviewEnv(process.env.APP_ENV);
 
-// ID stable du preview user. Sert de userId par défaut pour toutes les requêtes
-// en preview (UI admin, MCP), pour que les données preview restent isolées et
-// reproductibles.
-export const PREVIEW_USER_ID = "preview-user";
-
 // Identités de preview (convention partagée avec auth + autres clients).
 export const PREVIEW_OP_1_ID = "preview-op-1";
 export const PREVIEW_OP_2_ID = "preview-op-2";
