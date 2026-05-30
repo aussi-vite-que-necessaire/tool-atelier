@@ -46,6 +46,15 @@ jobs:
           if [ "$ref" = "main" ]; then e=integration; t="sha-${GITHUB_SHA:0:12}"; else
             e="$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
             t="$e"
+            # Slugs des paliers réservés : un nom de branche ne peut pas en prendre l'identité.
+            # `integration` n'est atteint que par main ; `prod` que par la promotion explicite
+            # (promote.yml) ; `main` est un palier, pas une preview jetable. Sans cette garde, une
+            # branche `prod` pousserait `:prod` au build (artefact non validé) et lancerait
+            # deploy.sh sur le vrai env prod — la promotion serait court-circuitée.
+            case "$e" in
+              prod|integration|main)
+                echo "::error::slug d'env réservé '$e' (branche '$ref') — prod/integration/main ne se déploient que par main→intégration et la promotion explicite"; exit 1 ;;
+            esac
           fi
           [ -n "$e" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
           echo "env=$e" >> "$GITHUB_OUTPUT"
