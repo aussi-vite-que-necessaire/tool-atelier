@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Phasmo·Dex — Le bestiaire (à peine) sérieux de Phasmophobia</title>
+<meta name="description" content="Les 27 entités de Phasmophobia, présentées une par une avec un emoji, un poil d'humour et un max de frissons." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%91%BB</text></svg>" />
+<style>
+  :root {
+    --bg: #07060e;
+    --bg-2: #0c0a17;
+    --ecto: #54ffb4;       /* ectoplasme */
+    --violet: #b794ff;     /* spectre */
+    --blood: #ff4d6d;      /* danger */
+    --acid: #c9ff4d;       /* lueur malsaine */
+    --ink: #ece8ff;
+    --muted: #8a86a8;
+    --card: rgba(20, 16, 38, 0.62);
+    --stroke: rgba(183, 148, 255, 0.16);
+    --glow: 0 0 28px rgba(84, 255, 180, 0.28);
+    --font: "Space Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font);
+    background:
+      radial-gradient(1200px 700px at 80% -10%, rgba(183,148,255,0.12), transparent 60%),
+      radial-gradient(900px 600px at 0% 30%, rgba(84,255,180,0.07), transparent 55%),
+      linear-gradient(180deg, var(--bg-2), var(--bg) 40%);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* grain / vignette */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    background:
+      radial-gradient(120% 120% at 50% 0%, transparent 55%, rgba(0,0,0,0.55) 100%);
+    mix-blend-mode: multiply;
+  }
+
+  /* ---------- fog ---------- */
+  .fog {
+    position: fixed;
+    inset: -20% -20% auto -20%;
+    height: 70vh;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+    filter: blur(20px);
+  }
+  .fog span {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(84,255,180,0.18), transparent 70%);
+    animation: drift linear infinite;
+  }
+  .fog span:nth-child(1){ width:520px;height:520px; left:-5%; top:-10%; animation-duration: 38s; }
+  .fog span:nth-child(2){ width:420px;height:420px; left:55%; top:5%; background: radial-gradient(circle, rgba(183,148,255,0.16), transparent 70%); animation-duration: 52s; }
+  .fog span:nth-child(3){ width:360px;height:360px; left:25%; top:20%; background: radial-gradient(circle, rgba(255,77,109,0.10), transparent 70%); animation-duration: 64s; }
+  @keyframes drift {
+    0%   { transform: translate3d(0,0,0) scale(1); }
+    50%  { transform: translate3d(8vw,4vh,0) scale(1.12); }
+    100% { transform: translate3d(0,0,0) scale(1); }
+  }
+
+  /* floating particles */
+  .spark {
+    position: fixed;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--ecto);
+    box-shadow: 0 0 10px var(--ecto);
+    opacity: 0.0;
+    z-index: 1;
+    pointer-events: none;
+    animation: rise linear infinite;
+  }
+  @keyframes rise {
+    0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+    10%  { opacity: 0.8; }
+    90%  { opacity: 0.7; }
+    100% { transform: translateY(-105vh) scale(1.1); opacity: 0; }
+  }
+
+  /* ---------- nav ---------- */
+  header.nav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px clamp(16px, 4vw, 48px);
+    backdrop-filter: blur(12px);
+    background: linear-gradient(180deg, rgba(7,6,14,0.85), rgba(7,6,14,0.35));
+    border-bottom: 1px solid var(--stroke);
+  }
+  .brand {
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: 0.14em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .brand .dot { color: var(--ecto); animation: blink 3.2s infinite; }
+  @keyframes blink { 0%,92%,100%{opacity:1} 94%{opacity:.2} 96%{opacity:1} 97%{opacity:.3} }
+  .search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--stroke);
+    border-radius: 999px;
+    padding: 8px 14px;
+    min-width: 0;
+    flex: 1 1 140px;
+    max-width: 320px;
+  }
+  .search input {
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    width: 100%;
+  }
+  .search input::placeholder { color: var(--muted); }
+  .count {
+    font-size: 0.8rem;
+    color: var(--muted);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .count b { color: var(--ecto); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: clamp(70px, 14vh, 150px) 20px clamp(40px, 7vh, 80px);
+  }
+  .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.42em;
+    font-size: 0.72rem;
+    color: var(--violet);
+    margin-bottom: 22px;
+    padding-left: 0.42em;
+  }
+  .hero h1 {
+    font-size: clamp(2.8rem, 11vw, 7.5rem);
+    line-height: 0.92;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(180deg, #fff, var(--ecto) 60%, var(--violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 60px rgba(84,255,180,0.25);
+    animation: flicker 6s infinite;
+  }
+  @keyframes flicker {
+    0%,100%{ opacity:1 } 41%{opacity:1} 42%{opacity:.55} 43%{opacity:1}
+    45%{opacity:.3} 46%{opacity:1} 77%{opacity:1} 78%{opacity:.6} 79%{opacity:1}
+  }
+  .hero p.lead {
+    max-width: 620px;
+    margin: 26px auto 0;
+    color: var(--muted);
+    font-size: clamp(1rem, 2.4vw, 1.18rem);
+    line-height: 1.6;
+  }
+  .hero .scrolldown {
+    margin-top: 46px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    animation: bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(8px)} }
+
+  /* ---------- grid ---------- */
+  main {
+    position: relative;
+    z-index: 2;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 clamp(16px, 4vw, 48px) 90px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+  }
+
+  .card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--stroke);
+    border-radius: 18px;
+    padding: 26px 24px 24px;
+    overflow: hidden;
+    backdrop-filter: blur(6px);
+    transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .35s, box-shadow .35s, opacity .6s, translate .6s;
+    opacity: 0;
+    translate: 0 28px;
+  }
+  .card.in { opacity: 1; translate: 0 0; }
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(420px 200px at var(--mx,50%) var(--my,0%), rgba(84,255,180,0.16), transparent 60%);
+    opacity: 0;
+    transition: opacity .35s;
+    pointer-events: none;
+  }
+  .card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(84,255,180,0.5);
+    box-shadow: var(--glow), 0 18px 40px rgba(0,0,0,0.5);
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card .num {
+    position: absolute;
+    top: 16px; right: 18px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.1em;
+  }
+  .card .emoji {
+    font-size: 3.2rem;
+    line-height: 1;
+    display: block;
+    filter: drop-shadow(0 0 14px rgba(84,255,180,0.35));
+    animation: hover 5s ease-in-out infinite;
+  }
+  .card:nth-child(2n) .emoji { animation-delay: -1.5s; }
+  .card:nth-child(3n) .emoji { animation-delay: -3s; }
+  @keyframes hover { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-7px) rotate(2deg)} }
+
+  .card h2 {
+    margin-top: 16px;
+    font-size: 1.4rem;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .card h2 .new {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--acid);
+    padding: 3px 7px;
+    border-radius: 6px;
+    box-shadow: 0 0 14px rgba(201,255,77,0.5);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 8px rgba(201,255,77,0.4)} 50%{box-shadow:0 0 18px rgba(201,255,77,0.8)} }
+  .card .tag {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--violet);
+    background: rgba(183,148,255,0.1);
+    border: 1px solid rgba(183,148,255,0.25);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .card .desc {
+    margin-top: 14px;
+    color: #cdc8ec;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .card .weak {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--stroke);
+    font-size: 0.84rem;
+    color: var(--muted);
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .card .weak b { color: var(--blood); font-weight: 600; white-space: nowrap; }
+
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--muted);
+    padding: 60px 0;
+    font-size: 1.1rem;
+  }
+
+  /* section title */
+  .sec-head {
+    text-align: center;
+    margin: 10px 0 34px;
+  }
+  .sec-head h3 {
+    font-size: 0.78rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--ecto);
+    font-weight: 600;
+  }
+  .sec-head .rule {
+    width: 60px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--ecto), transparent);
+    margin: 14px auto 0;
+  }
+
+  footer {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 50px 20px 70px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    border-top: 1px solid var(--stroke);
+  }
+  footer a { color: var(--violet); text-decoration: none; }
+  footer a:hover { color: var(--ecto); }
+  footer .disclaimer { font-size: 0.72rem; opacity: 0.7; margin-top: 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="fog" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <header class="nav">
+    <div class="brand">PHASMO<span class="dot">·</span>DEX</div>
+    <label class="search">
+      <span aria-hidden="true">🔎</span>
+      <input id="q" type="search" placeholder="Chercher une entité…" autocomplete="off" aria-label="Chercher une entité" />
+    </label>
+    <div class="count"><b id="shown">27</b> / 27 entités</div>
+  </header>
+
+  <section class="hero">
+    <div class="kicker">Bestiaire paranormal · maj. Winter's Jest</div>
+    <h1>27 façons<br />de mourir poliment</h1>
+    <p class="lead">
+      Le guide (à peine) sérieux des entités de <strong>Phasmophobia</strong>.
+      Un emoji, une fiche, et juste assez d'humour pour oublier qu'elles veulent toutes ta peau.
+      Approche-toi. Elles adorent ça.
+    </p>
+    <div class="scrolldown">↓ ça grouille en dessous ↓</div>
+  </section>
+
+  <main>
+    <div class="sec-head">
+      <h3>Le casting de l'au-delà</h3>
+      <div class="rule"></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <footer>
+    Fait avec ☕, 🧂 et une santé mentale en chute libre.<br />
+    Roster vérifié pour la mise à jour <strong>Winter's Jest v0.15.1.0</strong> (déc. 2025) — 27 entités.<br />
+    <span class="disclaimer">
+      Projet fan, humoristique et non officiel. <em>Phasmophobia</em> est une marque de Kinetic Games.
+      Aucun fantôme n'a été maltraité (ils ont commencé les premiers).
+    </span>
+  </footer>
+
+  <script>
+    const GHOSTS = [
+      { emoji:"👻", name:"Spirit", tag:"Le fantôme générique", desc:"Le « hello world » de l'au-delà : aucune capacité spéciale, juste l'envie de te faire sursauter. Le stagiaire de l'équipe spectrale.", weak:"Faiblesse", weakv:"Smudgé, il boude 180 s au lieu de 90." },
+      { emoji:"🌫️", name:"Wraith", tag:"Aérien et snob", desc:"Flotte en permanence, donc aucune empreinte dans le sel : « marcher dans le sel ? J'ai des principes. » Peut carrément se téléporter sur toi.", weak:"Indice", weakv:"Le sel reste immaculé après son passage." },
+      { emoji:"📸", name:"Phantom", tag:"Allergique au flash", desc:"Prends-le en photo et il disparaît, vexé comme une star surprise sans filtre. Le fixer trop longtemps grignote ta santé mentale.", weak:"Faiblesse", weakv:"Une photo le fait s'évaporer net." },
+      { emoji:"🌪️", name:"Poltergeist", tag:"DJ du chaos", desc:"Balance tous les objets de la pièce d'un seul coup, comme un déménagement qui tourne mal. Ne range jamais rien.", weak:"Faiblesse", weakv:"Inutile dans une pièce vide : rien à lancer." },
+      { emoji:"😱", name:"Banshee", tag:"Ex toxique", desc:"Choisit UNE victime et la harcèle jusqu'au bout, ignorant les autres. Possessive, jalouse, increvable.", weak:"Indice", weakv:"Hurle dans le micro parabolique." },
+      { emoji:"🧞", name:"Jinn", tag:"Carbure au 220V", desc:"Sprinteur tant que le courant passe ; il franchit les distances à toute vitesse pour fondre sur toi.", weak:"Faiblesse", weakv:"Coupe le disjoncteur : il devient inoffensif." },
+      { emoji:"🌑", name:"Mare", tag:"Reine de la nuit", desc:"Adore le noir total et déteste qu'on allume. Plus c'est sombre, plus elle est dangereuse — et caractérielle.", weak:"Faiblesse", weakv:"Garde les lumières allumées, elle déteste." },
+      { emoji:"🏃‍♂️💨", name:"Revenant", tag:"Du 0 au 100 km/h", desc:"Lent comme une mémé… jusqu'à ce qu'il te repère : sprint olympique instantané. Pas de demi-mesure.", weak:"Astuce", weakv:"Cache-toi : il redevient escargot." },
+      { emoji:"🫥", name:"Shade", tag:"Introverti maladif", desc:"Timide à l'extrême : ne fait absolument rien tant que tu es dans les parages. Le fantôme qui annule ses plans.", weak:"Astuce", weakv:"Laisse-le seul pour qu'il ose enfin." },
+      { emoji:"😈", name:"Demon", tag:"Le tryhard", desc:"Attaque tôt, souvent, et sans la moindre raison. Aucune patience, zéro chill : il vit pour la chasse.", weak:"Indice", weakv:"Chasse bien plus fréquemment que les autres." },
+      { emoji:"🚪", name:"Yurei", tag:"Ado en crise", desc:"Claque les portes et aspire ton moral rien qu'en partageant la même pièce. Soupire fort, en gros.", weak:"Astuce", weakv:"Enferme-le : tu réduis ses sorties de mental." },
+      { emoji:"👹", name:"Oni", tag:"Exhibitionniste", desc:"Adore le public : plus tu es présent, plus il s'agite et se montre, bien net. Une diva en quête de likes.", weak:"Indice", weakv:"Très visible et très actif quand tu es là." },
+      { emoji:"🗣️", name:"Yokai", tag:"Déteste les bavards", desc:"Entend tout : parle près de lui et tu signes ton arrêt de mort. Le fantôme qui réclame le silence en bibliothèque.", weak:"Astuce", weakv:"Ferme-la pendant la chasse." },
+      { emoji:"🥶", name:"Hantu", tag:"Gèle pour mieux courir", desc:"Plus il fait froid, plus il fonce. Couper le chauffage ? Très mauvaise idée. Adore les pièces glaciales.", weak:"Astuce", weakv:"La chaleur le ralentit nettement." },
+      { emoji:"📹", name:"Goryo", tag:"Star de la webcam", desc:"Ne se montre que sur la caméra, et seulement si personne n'est dans la pièce. Timide en vrai, cabotin à distance.", weak:"Astuce", weakv:"Filme la pièce et quitte-la pour le voir." },
+      { emoji:"🤫", name:"Myling", tag:"ASMR de l'horreur", desc:"Marche en chaussettes (pas un bruit de pas) mais n'arrête jamais de murmurer en mode paranormal. Bavard discret.", weak:"Indice", weakv:"Émet des sons paranormaux très fréquents." },
+      { emoji:"🕯️", name:"Onryo", tag:"Rancunier des bougies", desc:"Souffle une flamme près de lui et il pète littéralement un câble. Déteste qu'on éteigne l'ambiance.", weak:"Astuce", weakv:"Garde les flammes allumées pour calmer le jeu." },
+      { emoji:"👯", name:"The Twins", tag:"Deux pour le prix d'un", desc:"Interagissent parfois en même temps à deux endroits différents. Un duo synchronisé, façon chorégraphie maléfique.", weak:"Indice", weakv:"Deux interactions quasi simultanées, loin l'une de l'autre." },
+      { emoji:"⚡", name:"Raiju", tag:"Geek hyperactif", desc:"Carbure à l'électronique : plus tu as de gadgets allumés autour de lui, plus il accélère. Perturbe tout le matériel.", weak:"Astuce", weakv:"Éloigne-toi de tes appareils pour le ralentir." },
+      { emoji:"🖐️", name:"Obake", tag:"Mutant maladroit", desc:"Laisse parfois des empreintes à SIX doigts (compte bien). Se trahit tout seul avec ses mains improbables.", weak:"Indice", weakv:"Empreinte à six doigts = c'est lui." },
+      { emoji:"🎭", name:"The Mimic", tag:"L'imitateur", desc:"Copie le comportement des autres fantômes pour t'embrouiller. Un caméléon spectral redoutable… mais distrait.", weak:"Indice", weakv:"Laisse toujours des orbes : son tic qui le balance." },
+      { emoji:"🩸", name:"Moroi", tag:"Carbure à l'angoisse", desc:"Plus ta santé mentale chute, plus il devient costaud. Il se nourrit littéralement de ta panique. Charmant.", weak:"Astuce", weakv:"L'encens le calme ; garde le moral haut." },
+      { emoji:"👁️", name:"Deogen", tag:"Le stalker", desc:"Sait toujours exactement où tu es : impossible de te cacher. Te traque sans relâche, soupir compris.", weak:"Astuce", weakv:"Lent au contact : distance-toi et cours." },
+      { emoji:"⏳", name:"Thaye", tag:"Prend sa retraite en direct", desc:"Démarre en furie puis vieillit et se ramollit au fil du temps. Le seul fantôme qui s'améliore… en t'ignorant.", weak:"Astuce", weakv:"Fais durer : il faiblit avec l'âge." },
+      { emoji:"🌗", name:"Obambo", isNew:true, tag:"Bipolaire imprévisible", desc:"Alterne calme plat et rage soudaine sans la moindre logique. Tu ne sais jamais sur quel pied (dé)danser.", weak:"Indice", weakv:"Comportement en dents de scie, ultra instable." },
+      { emoji:"🛡️", name:"Gallu", isNew:true, tag:"Anti-protection", desc:"Sors un crucifix ou de l'équipement de protection et il entre en rage. Déteste qu'on triche en se défendant.", weak:"Astuce", weakv:"L'équipement de protection l'enrage : range-le au mauvais moment." },
+      { emoji:"💪", name:"Dayan", isNew:true, tag:"Pompe à mouvement", desc:"Gagne en puissance dès que ça bouge autour d'elle. Reste tranquille… ou cours, mais discrètement.", weak:"Astuce", weakv:"Le mouvement la renforce : bouge le moins possible." },
+    ];
+
+    const grid = document.getElementById("grid");
+    const q = document.getElementById("q");
+    const shown = document.getElementById("shown");
+
+    function render(list) {
+      grid.innerHTML = "";
+      if (!list.length) {
+        grid.innerHTML = '<div class="empty">👻 Personne à ce nom… ou alors il est juste invisible.</div>';
+        shown.textContent = 0;
+        return;
+      }
+      list.forEach((g, i) => {
+        const idx = GHOSTS.indexOf(g) + 1;
+        const el = document.createElement("article");
+        el.className = "card";
+        el.innerHTML = `
+          <span class="num">${String(idx).padStart(2,"0")}</span>
+          <span class="emoji">${g.emoji}</span>
+          <h2>${g.name}${g.isNew ? '<span class="new">Nouveau</span>' : ''}</h2>
+          <span class="tag">${g.tag}</span>
+          <p class="desc">${g.desc}</p>
+          <p class="weak"><b>${g.weak} :</b> <span>${g.weakv}</span></p>
+        `;
+        // pointer glow tracking
+        el.addEventListener("pointermove", e => {
+          const r = el.getBoundingClientRect();
+          el.style.setProperty("--mx", ((e.clientX - r.left) / r.width * 100) + "%");
+          el.style.setProperty("--my", ((e.clientY - r.top) / r.height * 100) + "%");
+        });
+        grid.appendChild(el);
+      });
+      shown.textContent = list.length;
+      observeCards();
+    }
+
+    let io;
+    function observeCards() {
+      if (io) io.disconnect();
+      io = new IntersectionObserver((entries) => {
+        entries.forEach((en, i) => {
+          if (en.isIntersecting) {
+            en.target.style.transitionDelay = (Math.min(i, 6) * 50) + "ms";
+            en.target.classList.add("in");
+            io.unobserve(en.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      document.querySelectorAll(".card").forEach(c => io.observe(c));
+    }
+
+    q.addEventListener("input", () => {
+      const term = q.value.trim().toLowerCase();
+      const filtered = GHOSTS.filter(g =>
+        g.name.toLowerCase().includes(term) ||
+        g.tag.toLowerCase().includes(term) ||
+        g.desc.toLowerCase().includes(term)
+      );
+      render(filtered);
+    });
+
+    render(GHOSTS);
+
+    // floating sparks
+    const sparkCount = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 18;
+    for (let i = 0; i < sparkCount; i++) {
+      const s = document.createElement("div");
+      s.className = "spark";
+      s.style.left = Math.random() * 100 + "vw";
+      s.style.bottom = "-10px";
+      s.style.animationDuration = (10 + Math.random() * 14) + "s";
+      s.style.animationDelay = (-Math.random() * 20) + "s";
+      const hue = Math.random();
+      s.style.background = hue > 0.6 ? "#b794ff" : (hue > 0.3 ? "#54ffb4" : "#ff4d6d");
+      s.style.boxShadow = "0 0 10px currentColor";
+      s.style.color = s.style.background;
+      document.body.appendChild(s);
+    }
+  </script>
+</body>
+</html>
