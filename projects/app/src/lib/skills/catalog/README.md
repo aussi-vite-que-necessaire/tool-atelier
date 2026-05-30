@@ -8,10 +8,11 @@ Source de vérité des skills agentiques de la suite AVQN. Chaque dossier contie
 
 | Skill | Tool | Rôle |
 |---|---|---|
-| [`suite-avqn`](./suite-avqn/) | — (méta) | Orchestrateur des workflows croisés sur la suite. |
-| [`creer-une-ressource`](./creer-une-ressource/) | `ressources` | Concevoir et publier une ressource / lead magnet AVQN. |
-| [`content-os-redaction`](./content-os-redaction/) | `contentos` | Cerveau éditorial — écrire et relire dans la voix de Manu, avec son visuel. |
-| [`creer-un-visuel`](./creer-un-visuel/) | `media` | Mode d'emploi du service media — image, template, PDF. |
+| [`contentos`](./contentos/) | `contentos` | Workflow unique de rédaction piloté par l'agent — brainstorm → format/voix → fond → voix → cosmétique → post. |
+
+> Les anciens skills (`suite-avqn`, `creer-une-ressource`, `content-os-redaction`,
+> `creer-un-visuel`) ont été retirés au profit du skill unifié `contentos`. Leur contenu
+> reste accessible dans l'historique git.
 
 ## Versionner
 

@@ -5,14 +5,11 @@ import { getSkill, getSkillDir, listSkills } from '@/lib/skills/catalog';
 // Le catalogue lit les skills depuis le dossier embarqué (src/lib/skills/catalog).
 // Aucune base, aucune env : c'est de la lecture de fichiers versionnés.
 describe('catalogue skills', () => {
-  it('liste les 4 skills de la suite, triés par tool puis nom', async () => {
+  it('liste le skill unifié contentos de la suite', async () => {
     const skills = await listSkills();
     const names = skills.map((s) => s.name);
-    expect(names).toContain('content-os-redaction');
-    expect(names).toContain('creer-un-visuel');
-    expect(names).toContain('creer-une-ressource');
-    expect(names).toContain('suite-avqn');
-    // suite (meta) en tête de l'ordre stable.
+    expect(names).toContain('contentos');
+    // skill de suite, en tête de l'ordre stable.
     expect(skills[0]?.tool).toBe('suite');
   });
 
@@ -26,7 +23,7 @@ describe('catalogue skills', () => {
   });
 
   it('getSkill renvoie le manifeste pour un nom valide, null sinon', async () => {
-    expect((await getSkill('suite-avqn'))?.name).toBe('suite-avqn');
+    expect((await getSkill('contentos'))?.name).toBe('contentos');
     expect(await getSkill('inconnu-xyz')).toBeNull();
     // rejette les noms hors charte (anti path-traversal)
     expect(await getSkill('../secret')).toBeNull();
@@ -34,7 +31,7 @@ describe('catalogue skills', () => {
   });
 
   it('getSkillDir pointe sous le catalogue', () => {
-    expect(getSkillDir('suite-avqn').endsWith('catalog/suite-avqn')).toBe(true);
+    expect(getSkillDir('contentos').endsWith('catalog/contentos')).toBe(true);
   });
 });
 
@@ -43,7 +40,7 @@ describe('catalogue skills', () => {
 // chemins attendus dans le central directory.
 describe('archive zip des skills', () => {
   it('produit un zip qui commence par la signature PK et contient SKILL.md', async () => {
-    const buf = await skillArchive('suite-avqn');
+    const buf = await skillArchive('contentos');
     expect(buf).not.toBeNull();
     const bytes = buf!;
     // Signature local file header.
@@ -53,8 +50,8 @@ describe('archive zip des skills', () => {
     expect(bytes[3]).toBe(0x04);
     // Le nom du fichier d'entrée apparaît en clair (stored, pas compressé).
     const text = Buffer.from(bytes).toString('latin1');
-    expect(text).toContain('suite-avqn/SKILL.md');
-    expect(text).toContain('suite-avqn/manifest.json');
+    expect(text).toContain('contentos/SKILL.md');
+    expect(text).toContain('contentos/manifest.json');
   });
 
   it('renvoie null pour un skill inconnu', async () => {

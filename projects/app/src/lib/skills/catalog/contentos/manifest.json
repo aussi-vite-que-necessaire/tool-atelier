@@ -1,0 +1,9 @@
+{
+  "name": "contentos",
+  "tool": "suite",
+  "version": 1,
+  "tagline": "Produire un contenu de A à Z avec Contentos, piloté par l'agent.",
+  "description": "Mode d'emploi unique de la suite Contentos pour l'agent : brainstorm de l'idée, choix plateforme/format/voix, plan, rédaction du fond, réécriture dans la voix, cosmétique, puis post prêt à publier. Toute l'intelligence est côté agent ; Contentos stocke l'état et l'expose via MCP.",
+  "requires_mcp": ["contentos"],
+  "latest_changes": "Squelette initial du skill unifié contentos."
+}
