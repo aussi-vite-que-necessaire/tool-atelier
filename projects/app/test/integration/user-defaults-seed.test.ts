@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
+import { listPublicationFormats } from '@/lib/db/repositories/publication-formats';
 import { listVoices } from '@/lib/db/repositories/voice';
-import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
 import {
+  DEFAULT_PUBLICATION_FORMAT,
   DEFAULT_VOICE_CONTENT,
-  DEFAULT_WRITING_TEMPLATE,
   seedUserDefaults,
 } from '@/lib/db/seeds/user-defaults';
 
@@ -11,7 +11,7 @@ import {
 async function makeUser(_id: string, _email: string) {}
 
 describe('seedUserDefaults', () => {
-  test('crée voice + writing_template par défaut', async () => {
+  test('crée voice + publication_format par défaut', async () => {
     await makeUser('u1', 'a@test.com');
     await seedUserDefaults('u1');
 
@@ -19,9 +19,9 @@ describe('seedUserDefaults', () => {
     expect(voices).toHaveLength(1);
     expect(voices[0]?.content).toBe(DEFAULT_VOICE_CONTENT);
 
-    const templates = await listWritingTemplates('u1');
-    expect(templates).toHaveLength(1);
-    expect(templates[0]?.name).toBe(DEFAULT_WRITING_TEMPLATE.name);
+    const formats = await listPublicationFormats('u1');
+    expect(formats).toHaveLength(1);
+    expect(formats[0]?.name).toBe(DEFAULT_PUBLICATION_FORMAT.name);
   });
 
   test('idempotent : deuxième appel ne duplique pas', async () => {
@@ -29,8 +29,8 @@ describe('seedUserDefaults', () => {
     await seedUserDefaults('u1');
     await seedUserDefaults('u1');
 
-    const templates = await listWritingTemplates('u1');
-    expect(templates).toHaveLength(1);
+    const formats = await listPublicationFormats('u1');
+    expect(formats).toHaveLength(1);
     const voices = await listVoices('u1');
     expect(voices).toHaveLength(1);
   });

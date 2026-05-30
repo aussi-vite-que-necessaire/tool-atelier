@@ -4,12 +4,15 @@ import {
   listPublications,
   updatePublication,
 } from '../repositories/publications';
-import { createVoice, listVoices } from '../repositories/voice';
-import { createWritingTemplate, listWritingTemplates } from '../repositories/writing-templates';
 import {
+  createPublicationFormat,
+  listPublicationFormats,
+} from '../repositories/publication-formats';
+import { createVoice, listVoices } from '../repositories/voice';
+import {
+  DEFAULT_PUBLICATION_FORMAT,
   DEFAULT_VOICE_CONTENT,
   DEFAULT_VOICE_NAME,
-  DEFAULT_WRITING_TEMPLATE,
 } from './user-defaults';
 
 const SAMPLE_POSTS = [
@@ -29,9 +32,9 @@ async function seedUserDefaultsIdempotent(userId: string): Promise<void> {
   if ((await listVoices(userId)).length === 0) {
     await createVoice(userId, { name: DEFAULT_VOICE_NAME, content: DEFAULT_VOICE_CONTENT });
   }
-  const templates = await listWritingTemplates(userId);
-  if (!templates.some((t) => t.name === DEFAULT_WRITING_TEMPLATE.name)) {
-    await createWritingTemplate(userId, DEFAULT_WRITING_TEMPLATE);
+  const formats = await listPublicationFormats(userId);
+  if (!formats.some((t) => t.name === DEFAULT_PUBLICATION_FORMAT.name)) {
+    await createPublicationFormat(userId, DEFAULT_PUBLICATION_FORMAT);
   }
 }
 

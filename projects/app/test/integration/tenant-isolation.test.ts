@@ -21,12 +21,12 @@ import {
   updateVoice,
 } from '@/lib/db/repositories/voice';
 import {
-  createWritingTemplate,
-  deleteWritingTemplate,
-  getWritingTemplate,
-  listWritingTemplates,
-  updateWritingTemplate,
-} from '@/lib/db/repositories/writing-templates';
+  createPublicationFormat,
+  deletePublicationFormat,
+  getPublicationFormat,
+  listPublicationFormats,
+  updatePublicationFormat,
+} from '@/lib/db/repositories/publication-formats';
 import { createTestUser } from './helpers/seed';
 import { runTenantIsolationSuite } from './helpers/tenant-isolation-harness';
 
@@ -82,24 +82,25 @@ runTenantIsolationSuite('publications', {
   delete: deletePublication,
 });
 
-runTenantIsolationSuite('writing_templates', {
+runTenantIsolationSuite('publication_formats', {
   seed: (uid) =>
-    createWritingTemplate(uid, {
+    createPublicationFormat(uid, {
       name: 'Sample',
       platform: 'linkedin',
       structure: 'X',
+      visualIntent: null,
       writingRules: null,
     }) as Promise<{ id: string; name: string }>,
   rowId: (r) => r.id,
-  reload: (uid, id) => getWritingTemplate(uid, id),
+  reload: (uid, id) => getPublicationFormat(uid, id),
   updatePatch: { name: 'hacked' },
   updateAssertions: (row) => {
     expect(row.name).toBe('Sample');
   },
-  get: getWritingTemplate,
-  list: listWritingTemplates,
-  update: updateWritingTemplate,
-  delete: deleteWritingTemplate,
+  get: getPublicationFormat,
+  list: listPublicationFormats,
+  update: updatePublicationFormat,
+  delete: deletePublicationFormat,
 });
 
 describe('posts: isolation par user', () => {
