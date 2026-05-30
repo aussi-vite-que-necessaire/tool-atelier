@@ -7,11 +7,17 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Skills — Contentos' };
 
 // Étiquette lisible par domaine — reprend les sections de la suite.
-const TOOL_LABEL: Record<string, string> = {
+const DOMAIN_LABEL: Record<string, string> = {
   suite: 'Suite',
   cast: 'Cast',
   media: 'Media',
   ressources: 'Ressources',
+};
+
+// Type de skill : un workflow orchestre plusieurs étapes ; un atomique fait une chose.
+const KIND_LABEL: Record<string, string> = {
+  workflow: 'Workflow',
+  atomic: 'Atomique',
 };
 
 function SkillCard({ skill, index }: { skill: SkillManifest; index: number }) {
@@ -24,8 +30,11 @@ function SkillCard({ skill, index }: { skill: SkillManifest; index: number }) {
               {skill.name}
             </code>
             <span className="font-mono text-muted-foreground text-xs">v{skill.version}</span>
+            <Badge variant={skill.kind === 'workflow' ? 'default' : 'secondary'}>
+              {KIND_LABEL[skill.kind] ?? skill.kind}
+            </Badge>
             <Badge variant="outline" className="font-mono">
-              {TOOL_LABEL[skill.tool] ?? skill.tool}
+              {DOMAIN_LABEL[skill.domain] ?? skill.domain}
             </Badge>
           </div>
 
