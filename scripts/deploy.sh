@@ -214,12 +214,14 @@ if [ "$DB" = "true" ] || [ "$DB" = "shared" ]; then
     if [ "$PROVISION" != "none" ] \
        && $PG -tAc "SELECT 1 FROM pg_database WHERE datname='$SRC'" | grep -q 1 \
        && [ "$($PG -d "$SRC" -tAc 'SELECT count(*) FROM "user"' 2>/dev/null || echo 0)" != "0" ]; then
-      # Clone de la prod (même serveur → interne, instantané). Restauré en --no-owner puis
-      # réassigné à `app` pour que les migrations DDL passent en rôle app.
+      # Clone de la prod (même serveur → interne, instantané). Restauré EN TANT QUE `app`
+      # (--no-owner) → tous les objets (schémas drizzle/public, tables) appartiennent à `app`,
+      # pour que les migrations DDL passent ensuite en rôle app (REASSIGN OWNED BY postgres est
+      # interdit : objets « required by the database system »).
       docker exec lab-platform-postgres-1 dropdb -U postgres --if-exists "$DBNAME"
       docker exec lab-platform-postgres-1 createdb -U postgres -O app "$DBNAME"
-      docker exec lab-platform-postgres-1 sh -c "pg_dump -U postgres --no-owner '$SRC' | psql -U postgres -q -d '$DBNAME'"
-      $PG -d "$DBNAME" -c "REASSIGN OWNED BY postgres TO app" >/dev/null 2>&1 || true
+      docker exec -e PGPASSWORD="$APP_DB_PASSWORD" lab-platform-postgres-1 sh -c \
+        "pg_dump -U postgres --no-owner '$SRC' | psql -U app -h 127.0.0.1 -q -d '$DBNAME'"
       CLONED=1
       echo "✓ base $DBNAME clonée depuis $SRC ($PROVISION)"
     else
