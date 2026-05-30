@@ -12,6 +12,15 @@ acquire_deploy_lock() {
     || { echo "::error::verrou deploy non acquis après ${DEPLOY_LOCK_TIMEOUT:-600}s" >&2; exit 1; }
 }
 
+# Nom de base <proj>_<env> — DOIT rester identique à db_name() de deploy.sh (tronque à 52+hash
+# au-delà de 63 car.), sinon un teardown viserait le mauvais nom et orphelinerait la base d'une
+# branche au slug long.
+db_name() {
+  local name; name="${1}_$(printf '%s' "$2" | tr '-' '_')"
+  if [ "${#name}" -le 63 ]; then printf '%s' "$name"
+  else printf '%s_%s' "$(printf '%s' "$name" | cut -c1-52)" "$(printf '%s' "$name" | cksum | cut -d' ' -f1)"; fi
+}
+
 # Sourcé (tests) : on s'arrête après les définitions de fonctions, sans exécuter le teardown.
 (return 0 2>/dev/null) && return 0
 
@@ -43,7 +52,7 @@ docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile || t
 
 # Drop la base preview (jamais prod : garde déjà posée plus haut). --force termine les connexions
 # résiduelles (conteneur pas encore tout à fait arrêté) au lieu de laisser une base orpheline.
-DBNAME="${PROJ}_$(printf '%s' "$ENV" | tr '-' '_')"
+DBNAME="$(db_name "$PROJ" "$ENV")"
 docker exec lab-platform-postgres-1 dropdb -U postgres --force --if-exists "${DBNAME}" || true
 
 rm -rf "$APPDIR"
