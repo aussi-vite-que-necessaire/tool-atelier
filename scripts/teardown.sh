@@ -47,6 +47,12 @@ fi
 for img in "${IMAGES[@]}"; do
   [ -n "$img" ] && docker image rm -f "$img" >/dev/null 2>&1 || true
 done
+# Filet : retire aussi toute image taguée au slug d'env. Couvre le cas où un rollback a fait pointer
+# .env sur des IDs d'images (le tag de branche serait alors resté en place, orphelin). Le slug d'env
+# est unique à la branche (jamais prod/integration ici) → ne touche pas d'autres déploiements.
+for img in $(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E ":${ENV}\$" || true); do
+  docker image rm -f "$img" >/dev/null 2>&1 || true
+done
 rm -f "/opt/lab/platform/sites/${PROJ}-${ENV}.caddy"
 docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile || true
 
