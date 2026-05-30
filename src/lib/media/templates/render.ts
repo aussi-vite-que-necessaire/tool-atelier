@@ -31,7 +31,8 @@ export async function renderTemplate(
     userId,
     bytes,
     mimeType,
-    kind: 'render',
+    // Un rendu de template est une image ; sa provenance vit dans `source`.
+    kind: 'image',
     prompt: null,
     parent_id: null,
     source: 'template_render',
