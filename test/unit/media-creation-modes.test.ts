@@ -12,11 +12,11 @@ describe('CREATION_MODES', () => {
   });
 
   it('points each mode at its destination', () => {
-    const byId = Object.fromEntries(CREATION_MODES.map((m) => [m.id, m]));
-    expect(byId.generate.href).toBe('/media/gallery/generate');
-    expect(byId.import.href).toBe('/media/gallery/import');
-    expect(byId.template.href).toBe('/media/templates');
-    expect(byId.assemble.href).toBe('/media/gallery/assemble');
+    const hrefOf = (id: string) => CREATION_MODES.find((m) => m.id === id)?.href;
+    expect(hrefOf('generate')).toBe('/media/gallery/generate');
+    expect(hrefOf('import')).toBe('/media/gallery/import');
+    expect(hrefOf('template')).toBe('/media/templates');
+    expect(hrefOf('assemble')).toBe('/media/gallery/assemble');
   });
 
   it('flags only the AI generation mode as requiring Gemini', () => {
