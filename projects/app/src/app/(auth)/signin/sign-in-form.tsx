@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { safeRedirect } from '@/lib/auth/redirect';
 import { signIn } from '@/lib/auth-client';
 
 export function SignInForm({ preview }: { preview: boolean }) {
@@ -15,14 +16,6 @@ export function SignInForm({ preview }: { preview: boolean }) {
       <SignInFormInner preview={preview} />
     </Suspense>
   );
-}
-
-// Redirection interne uniquement (chemin relatif, même origine). À défaut de
-// cible, on entre dans la suite par la section cast.
-function safeRedirect(raw: string | null): string {
-  if (!raw) return '/cast';
-  if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
-  return '/cast';
 }
 
 function SignInFormInner({ preview }: { preview: boolean }) {
@@ -113,6 +106,18 @@ function SignInFormInner({ preview }: { preview: boolean }) {
         </form>
 
         {error && <p className="text-center text-sm text-destructive">{error}</p>}
+
+        <p className="text-center text-sm text-muted-foreground">
+          Pas encore de compte ?{' '}
+          <Link
+            href={
+              redirectParam ? `/signup?redirect=${encodeURIComponent(redirectParam)}` : '/signup'
+            }
+            className="underline underline-offset-4 hover:text-foreground"
+          >
+            Créer un compte
+          </Link>
+        </p>
       </CardContent>
     </Card>
   );

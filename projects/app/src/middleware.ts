@@ -30,6 +30,6 @@ export const config = {
     // Zone protégée = tout sauf routes système/auth et vitrines publiques (landing
     // à la racine, styleguide, espace public docs). `$` exempte la racine exacte
     // sans toucher /cast. `docs` reste public (lecture des lead magnets publiés).
-    '/((?!$|styleguide|docs|healthz|signin|preview-login|preview-logout|oauth|api/auth|internal|api/preview-login|api/__test__|_next|favicon).*)',
+    '/((?!$|styleguide|docs|healthz|signin|signup|preview-login|preview-logout|oauth|api/auth|internal|api/preview-login|api/__test__|_next|favicon).*)',
   ],
 };

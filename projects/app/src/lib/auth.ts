@@ -20,6 +20,8 @@ export const auth = betterAuth({
   ],
   emailAndPassword: {
     enabled: true,
+    // Inscription self-serve : la création de compte ouvre la session dans la foulée.
+    autoSignIn: true,
     async sendResetPassword({ user, url }) {
       await sendEmail({
         to: user.email,
