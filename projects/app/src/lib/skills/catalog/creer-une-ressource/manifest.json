@@ -1,9 +1,0 @@
-{
-  "name": "creer-une-ressource",
-  "tool": "ressources",
-  "version": 1,
-  "tagline": "De l'idée brute à la ressource publiée — en 4 phases guidées.",
-  "description": "Guide la conception d'une ressource AVQN (lead magnet / cours) via le MCP avqn_res : raffinage du thème, plan validé, création des pages et modules, cover, relecture.",
-  "requires_mcp": ["avqn_res"],
-  "latest_changes": "Première version centralisée dans le hub."
-}

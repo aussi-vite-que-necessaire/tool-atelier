@@ -2,12 +2,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createVoice, listVoices, updateVoice } from '@/lib/db/repositories/voice';
 import {
-  createWritingTemplate,
-  listWritingTemplates,
-  updateWritingTemplate,
-} from '@/lib/db/repositories/writing-templates';
+  createPublicationFormat,
+  listPublicationFormats,
+  updatePublicationFormat,
+} from '@/lib/db/repositories/publication-formats';
+import { createVoice, listVoices, updateVoice } from '@/lib/db/repositories/voice';
 
 const DIR = join(process.cwd(), 'scripts', 'seed-redaction');
 const read = (f: string) => readFileSync(join(DIR, f), 'utf8');
@@ -21,15 +21,15 @@ export async function seedRedaction(userId: string): Promise<void> {
     await createVoice(userId, { name: 'Manu', content: read('voix-manu.md') });
   }
 
-  const templates = await listWritingTemplates(userId);
-  const existingTemplate = templates.find((t) => t.name === 'Post-thèse LinkedIn');
-  if (existingTemplate) {
-    await updateWritingTemplate(userId, existingTemplate.id, {
+  const formats = await listPublicationFormats(userId);
+  const existingFormat = formats.find((t) => t.name === 'Post-thèse LinkedIn');
+  if (existingFormat) {
+    await updatePublicationFormat(userId, existingFormat.id, {
       structure: read('post-these-structure.md'),
       writingRules: read('post-these-rules.md'),
     });
   } else {
-    await createWritingTemplate(userId, {
+    await createPublicationFormat(userId, {
       name: 'Post-thèse LinkedIn',
       platform: 'linkedin',
       structure: read('post-these-structure.md'),

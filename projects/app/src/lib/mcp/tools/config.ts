@@ -1,86 +1,90 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
-  createWritingTemplate,
-  deleteWritingTemplate,
-  listWritingTemplates,
-  updateWritingTemplate,
-} from '@/lib/db/repositories/writing-templates';
+  createPublicationFormat,
+  deletePublicationFormat,
+  listPublicationFormats,
+  updatePublicationFormat,
+} from '@/lib/db/repositories/publication-formats';
 import { handle } from '../register';
 
 export const configImpl = {
-  listWritingTemplates: (userId: string) => listWritingTemplates(userId),
-  createWritingTemplate: (
+  listPublicationFormats: (userId: string) => listPublicationFormats(userId),
+  createPublicationFormat: (
     userId: string,
     input: {
       name: string;
       platform: string;
       structure: string;
+      visualIntent?: string;
       writingRules?: string;
     },
-  ) => createWritingTemplate(userId, input),
-  updateWritingTemplate: (
+  ) => createPublicationFormat(userId, input),
+  updatePublicationFormat: (
     userId: string,
     input: {
       id: string;
       name?: string;
       platform?: string;
       structure?: string;
+      visualIntent?: string;
       writingRules?: string;
     },
-  ) => updateWritingTemplate(userId, input.id, input),
-  deleteWritingTemplate: async (userId: string, input: { id: string }) => {
-    await deleteWritingTemplate(userId, input.id);
+  ) => updatePublicationFormat(userId, input.id, input),
+  deletePublicationFormat: async (userId: string, input: { id: string }) => {
+    await deletePublicationFormat(userId, input.id);
     return { deleted: input.id };
   },
 };
 
 export function registerConfigTools(server: McpServer): void {
   server.registerTool(
-    'list_writing_templates',
+    'list_publication_formats',
     {
-      title: 'Lister les templates d’écriture',
-      description: 'Templates d’écriture.',
+      title: 'Lister les formats de publication',
+      description: 'Formats de publication du compte (structure, intention visuelle, cosmétique).',
       inputSchema: {},
     },
-    (_i, extra) => handle(extra, (u) => configImpl.listWritingTemplates(u)),
+    (_i, extra) => handle(extra, (u) => configImpl.listPublicationFormats(u)),
   );
   server.registerTool(
-    'create_writing_template',
+    'create_publication_format',
     {
-      title: 'Créer un template d’écriture',
-      description: 'Crée un template d’écriture.',
+      title: 'Créer un format de publication',
+      description: 'Crée un format de publication.',
       inputSchema: {
         name: z.string(),
         platform: z.string(),
         structure: z.string(),
+        visualIntent: z.string().optional(),
         writingRules: z.string().optional(),
       },
     },
-    (input, extra) => handle(extra, (u) => configImpl.createWritingTemplate(u, input)),
+    (input, extra) => handle(extra, (u) => configImpl.createPublicationFormat(u, input)),
   );
   server.registerTool(
-    'update_writing_template',
+    'update_publication_format',
     {
-      title: 'Modifier un template d’écriture',
-      description: 'Met à jour un template d’écriture.',
+      title: 'Modifier un format de publication',
+      description: 'Met à jour un format de publication.',
       inputSchema: {
         id: z.string(),
         name: z.string().optional(),
         platform: z.string().optional(),
         structure: z.string().optional(),
+        visualIntent: z.string().optional(),
         writingRules: z.string().optional(),
       },
     },
-    (input, extra) => handle(extra, (u) => configImpl.updateWritingTemplate(u, input)),
+    (input, extra) => handle(extra, (u) => configImpl.updatePublicationFormat(u, input)),
   );
   server.registerTool(
-    'delete_writing_template',
+    'delete_publication_format',
     {
-      title: 'Supprimer un template d’écriture',
-      description: 'Supprime un template d’écriture.',
+      title: 'Supprimer un format de publication',
+      description: 'Supprime un format de publication.',
       inputSchema: { id: z.string() },
     },
-    (input, extra) => handle(extra, (u) => configImpl.deleteWritingTemplate(u, input)),
+    (input, extra) => handle(extra, (u) => configImpl.deletePublicationFormat(u, input)),
   );
 }

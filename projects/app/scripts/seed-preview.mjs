@@ -3,7 +3,7 @@
 // PAS les sources TS (src/), donc on ne peut pas réutiliser seedDev ici.
 // Crée, pour CHAQUE opérateur de preview (preview-op-1, preview-op-2) :
 // - son compte auth (tables user + account, mot de passe email/password connu) ;
-// - ses données cast : 1 voix, 1 template d'écriture, 2 posts d'exemple.
+// - ses données cast : 1 voix, 1 format de publication, 2 posts d'exemple.
 // L'auto-login de preview (/preview-login) ouvre une vraie session pour ces
 // comptes. Idempotent (ids déterministes + ON CONFLICT DO NOTHING).
 import pg from 'pg';
@@ -77,7 +77,7 @@ async function seedForUser(client, userId, label) {
   );
 
   await client.query(
-    `INSERT INTO writing_templates (id, user_id, name, platform, structure, created_at, updated_at)
+    `INSERT INTO publication_formats (id, user_id, name, platform, structure, created_at, updated_at)
      VALUES ($1, $2, 'Post LinkedIn standard', 'linkedin', $3, now(), now())
      ON CONFLICT (id) DO NOTHING`,
     [`seed-tpl-${userId}`, userId, TEMPLATE_STRUCTURE],
@@ -95,7 +95,7 @@ async function seedForUser(client, userId, label) {
     );
     posts += res.rowCount ?? 0;
   }
-  console.log(`seed[${userId}]: voix + template assurés, ${posts} posts insérés`);
+  console.log(`seed[${userId}]: voix + format assurés, ${posts} posts insérés`);
 }
 
 const pool = new pg.Pool({ connectionString: url, max: 1 });

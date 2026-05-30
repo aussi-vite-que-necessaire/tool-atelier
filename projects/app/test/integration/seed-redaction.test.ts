@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
+import { listPublicationFormats } from '@/lib/db/repositories/publication-formats';
 import { createVoice, listVoices } from '@/lib/db/repositories/voice';
-import { listWritingTemplates } from '@/lib/db/repositories/writing-templates';
 import { seedRedaction } from '../../scripts/seed-redaction';
 import { createTestUser } from './helpers/seed';
 
@@ -13,8 +13,8 @@ describe('seed-redaction', () => {
     const voices = await listVoices(userId);
     expect(voices.filter((v) => v.name === 'Manu')).toHaveLength(1);
 
-    const templates = await listWritingTemplates(userId);
-    expect(templates.filter((t) => t.name === 'Post-thèse LinkedIn')).toHaveLength(1);
+    const formats = await listPublicationFormats(userId);
+    expect(formats.filter((t) => t.name === 'Post-thèse LinkedIn')).toHaveLength(1);
 
     const voice = voices.find((v) => v.name === 'Manu');
     expect(voice?.content).toContain('contraste mesuré');

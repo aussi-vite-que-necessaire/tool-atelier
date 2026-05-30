@@ -6,7 +6,10 @@ import { cn } from '@/lib/utils';
 
 // Sous-navigation locale de l'espace Compte. Un onglet aujourd'hui (Connexions) ;
 // d'autres viendront (Profil, …). Règle d'activité par startsWith.
-const ACCOUNT_LINKS = [{ href: '/account/connections', label: 'Connexions' }];
+const ACCOUNT_LINKS = [
+  { href: '/account/voices', label: 'Voix' },
+  { href: '/account/connections', label: 'Connexions' },
+];
 
 export function AccountNav() {
   const pathname = usePathname() ?? '';

@@ -11,7 +11,7 @@ const CAST_LINKS = [
   { href: '/cast', label: 'Accueil', exact: true },
   { href: '/cast/posts', label: 'Posts' },
   { href: '/cast/calendar', label: 'Calendrier' },
-  { href: '/cast/settings/voice', label: 'Réglages', group: '/cast/settings' },
+  { href: '/cast/settings/formats', label: 'Réglages', group: '/cast/settings' },
 ];
 
 export function CastNav() {

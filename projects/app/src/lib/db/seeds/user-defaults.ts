@@ -1,8 +1,11 @@
 // Contenu seed par défaut pour les nouveaux users.
 // Copié verbatim du repo v1 (content-os) au moment du portage Spec 3.
 
+import {
+  createPublicationFormat,
+  listPublicationFormats,
+} from '../repositories/publication-formats';
 import { createVoice, listVoices } from '../repositories/voice';
-import { createWritingTemplate, listWritingTemplates } from '../repositories/writing-templates';
 
 export const DEFAULT_VOICE_NAME = 'Voix principale';
 
@@ -32,7 +35,7 @@ Inviolables, peu importe le format ou le template.
 - **Pas de répétitions** : ne pas répéter les mots-clés saillants entre corps et closure.
 `;
 
-export const DEFAULT_WRITING_TEMPLATE = {
+export const DEFAULT_PUBLICATION_FORMAT = {
   name: 'Post LinkedIn standard',
   platform: 'linkedin',
   structure: `Format : post LinkedIn de 800 à 1500 caractères, idéalement autour de 1000.
@@ -41,6 +44,7 @@ Squelette :
 - HOOK : 1 à 2 phrases d'accroche, factuelles ou tranchées. Doivent pouvoir se lire seules.
 - CORPS : 2 à 4 idées qui se déroulent. Aération avec retours à la ligne. Pas de paragraphes denses.
 - CLOSURE : 1 phrase qui ouvre, propose une suite de pensée, ou tranche. Ne récapitule pas le hook.`,
+  visualIntent: null as string | null,
   writingRules: null as string | null,
 };
 
@@ -48,8 +52,8 @@ export async function seedUserDefaults(userId: string): Promise<void> {
   if ((await listVoices(userId)).length === 0) {
     await createVoice(userId, { name: DEFAULT_VOICE_NAME, content: DEFAULT_VOICE_CONTENT });
   }
-  const templates = await listWritingTemplates(userId);
-  if (!templates.some((t) => t.name === DEFAULT_WRITING_TEMPLATE.name)) {
-    await createWritingTemplate(userId, DEFAULT_WRITING_TEMPLATE);
+  const formats = await listPublicationFormats(userId);
+  if (!formats.some((t) => t.name === DEFAULT_PUBLICATION_FORMAT.name)) {
+    await createPublicationFormat(userId, DEFAULT_PUBLICATION_FORMAT);
   }
 }
