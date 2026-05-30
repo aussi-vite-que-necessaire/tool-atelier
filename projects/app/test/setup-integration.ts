@@ -1,6 +1,6 @@
 import { beforeEach } from 'vitest';
 import { db } from '@/lib/db/client';
-import { posts, publications, socialAccounts, voice, writingTemplates } from '@/lib/db/schema';
+import { posts, publicationFormats, publications, socialAccounts, voice } from '@/lib/db/schema';
 
 // Reset complet de la DB avant chaque test integration/worker pour isolation.
 // L'ordre respecte les FK : on supprime les tables référençantes avant les référencées.
@@ -8,7 +8,7 @@ import { posts, publications, socialAccounts, voice, writingTemplates } from '@/
 beforeEach(async () => {
   await db.delete(publications);
   await db.delete(posts);
-  await db.delete(writingTemplates);
+  await db.delete(publicationFormats);
   await db.delete(voice);
   await db.delete(socialAccounts);
 });
