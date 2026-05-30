@@ -30,7 +30,10 @@ describe('publication_formats repository', () => {
   });
 
   test('visualIntent est persisté quand fourni', async () => {
-    const t = await createPublicationFormat('u1', { ...SAMPLE, visualIntent: 'carrousel 5-7 slides' });
+    const t = await createPublicationFormat('u1', {
+      ...SAMPLE,
+      visualIntent: 'carrousel 5-7 slides',
+    });
     const found = await getPublicationFormat('u1', t!.id);
     expect(found?.visualIntent).toBe('carrousel 5-7 slides');
   });

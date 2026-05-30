@@ -1,13 +1,13 @@
 import { createPost, listPosts } from '../repositories/posts';
 import {
+  createPublicationFormat,
+  listPublicationFormats,
+} from '../repositories/publication-formats';
+import {
   createPublication,
   listPublications,
   updatePublication,
 } from '../repositories/publications';
-import {
-  createPublicationFormat,
-  listPublicationFormats,
-} from '../repositories/publication-formats';
 import { createVoice, listVoices } from '../repositories/voice';
 import {
   DEFAULT_PUBLICATION_FORMAT,
