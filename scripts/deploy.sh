@@ -63,6 +63,56 @@ compute_caddy_hosts() {
   fi
 }
 
+# Hash scrypt BetterAuth du mot de passe 'password' (même que scripts/seed-preview.mjs) — le scrub
+# le pose sur l'opérateur cloné pour le rendre connectable via /preview-login.
+PREVIEW_PASSWORD_HASH='0123456789abcdef0123456789abcdef:f7c278f7f739ad5077f0a82b9a3d67831a7d1b05bc7b8e41fd9d55eb65c87a3f51cefaa870eda509939a162697e744990e3143cfc78ed746f2f981bb61c569e2'
+
+# Mode de provisioning des données par env (fonction pure) : prod = aucun ; integration = clone
+# complet de la prod (gardé par basic-auth) ; toute autre branche = clone scrubbé (anonymisé).
+provision_mode() {
+  case "$1" in
+    prod) echo "none" ;;
+    integration) echo "clone-full" ;;
+    *) echo "clone-scrub" ;;
+  esac
+}
+
+# Nom de base <proj>_<env> (env-underscored), borné à 63 car. (limite d'identifiant Postgres) :
+# au-delà on tronque à 52 et on suffixe par un hash cksum déterministe (≤10 chiffres → ≤63),
+# évitant les collisions muettes.
+db_name() {
+  local name; name="${1}_$(printf '%s' "$2" | tr '-' '_')"
+  if [ "${#name}" -le 63 ]; then printf '%s' "$name"
+  else printf '%s_%s' "$(printf '%s' "$name" | cut -c1-52)" "$(printf '%s' "$name" | cksum | cut -d' ' -f1)"; fi
+}
+
+# SQL de scrub d'un clone de prod (previews par-branche) : neutralise les tokens sociaux, vide les
+# sessions, anonymise les emails, et donne au 1er opérateur l'identité preview connue
+# (op@contentos.test / mot de passe 'password') pour que /preview-login fonctionne.
+scrub_sql() {
+  cat <<SQL
+UPDATE social_accounts SET access_token = 'scrubbed', expires_at = now() - interval '1 day';
+DELETE FROM session;
+UPDATE "user" SET email = 'op+' || id || '@contentos.test', name = 'Opérateur ' || left(id, 6);
+UPDATE "user" SET email = 'op@contentos.test', name = 'Opérateur 1'
+  WHERE id = (SELECT id FROM "user" WHERE role = 'operator' ORDER BY created_at, id LIMIT 1);
+UPDATE account SET password = '${PREVIEW_PASSWORD_HASH}'
+  WHERE provider_id = 'credential'
+    AND user_id = (SELECT id FROM "user" WHERE email = 'op@contentos.test');
+SQL
+}
+
+# Contenu d'un fichier de site Caddy (fonction pure). basic = "user hash" non vide → route protégée
+# (clone complet de la prod en integration : jamais public).
+caddy_site() {
+  local hosts="$1" upstream="$2" basic="${3:-}"
+  if [ -n "$basic" ]; then
+    printf '%s {\n\tbasic_auth {\n\t\t%s\n\t}\n\treverse_proxy %s:8080\n}\n' "$hosts" "$basic" "$upstream"
+  else
+    printf '%s {\n\treverse_proxy %s:8080\n}\n' "$hosts" "$upstream"
+  fi
+}
+
 # Sourcé (tests) : on s'arrête après les définitions de fonctions, sans exécuter le deploy.
 (return 0 2>/dev/null) && return 0
 
@@ -139,23 +189,49 @@ fi
 PRIMARY_HOST="$(compute_primary_host "$PROJ" "$ENV" "$APEX")"
 HOSTS_CADDY="$(compute_caddy_hosts "$PROJ" "$ENV" "$APEX")"
 
-# Postgres central : DATABASE_URL injecté.
-#   db:true            → base propre <projet>_<env> (créée si absente, migrée/seedée par ce projet).
-#   db:{shared:"X"}    → réutilise la base X_<env> d'un autre projet (backend partagé). Ne crée
-#                        RIEN et ne migre/seed pas : le projet propriétaire (X) gère son schéma.
+# Mode de provisioning + base cible. Initialisés même si db:false (set -u).
+PROVISION="$(provision_mode "$ENV")"; CLONED=0; DBNAME=""
+
+# Postgres central : DATABASE_URL injecté (rôle applicatif `app`, jamais superuser).
+#   db:true            → base <projet>_<env>. Hors prod : clonée depuis la prod (complète en
+#                        integration, scrubbée en preview par-branche) si la prod porte des données,
+#                        sinon créée vide + seed. En prod : créée si absente, jamais clonée.
+#   db:{shared:"X"}    → réutilise la base X_<env> d'un autre projet (backend partagé).
 if [ "$DB" = "true" ] || [ "$DB" = "shared" ]; then
   # shellcheck disable=SC1091
-  . /opt/lab/platform/.env   # LAB_POSTGRES_PASSWORD
+  . /opt/lab/platform/.env   # LAB_POSTGRES_PASSWORD, LAB_APP_DB_PASSWORD
+  APP_DB_PASSWORD="${LAB_APP_DB_PASSWORD:-$LAB_POSTGRES_PASSWORD}"
+  PG="docker exec lab-platform-postgres-1 psql -U postgres"
+  # Rôle applicatif least-privilege (l'app ne se connecte jamais en superuser).
+  $PG -tAc "SELECT 1 FROM pg_roles WHERE rolname='app'" | grep -q 1 \
+    || $PG -c "CREATE ROLE app LOGIN PASSWORD '$APP_DB_PASSWORD'" >/dev/null
   if [ "$DB" = "shared" ]; then
     [ -n "$DB_SHARED_FROM" ] || { echo "::error::db.shared vide dans lab.json"; exit 1; }
-    DBNAME="${DB_SHARED_FROM}_$(printf '%s' "$ENV" | tr '-' '_')"
+    DBNAME="$(db_name "$DB_SHARED_FROM" "$ENV")"
   else
-    DBNAME="${PROJ}_$(printf '%s' "$ENV" | tr '-' '_')"
-    docker exec lab-platform-postgres-1 psql -U postgres -tAc \
-      "SELECT 1 FROM pg_database WHERE datname='${DBNAME}'" | grep -q 1 \
-      || docker exec lab-platform-postgres-1 createdb -U postgres "${DBNAME}"
+    DBNAME="$(db_name "$PROJ" "$ENV")"
+    SRC="$(db_name "$PROJ" prod)"
+    if [ "$PROVISION" != "none" ] \
+       && $PG -tAc "SELECT 1 FROM pg_database WHERE datname='$SRC'" | grep -q 1 \
+       && [ "$($PG -d "$SRC" -tAc 'SELECT count(*) FROM "user"' 2>/dev/null || echo 0)" != "0" ]; then
+      # Clone de la prod (même serveur → interne, instantané). Restauré EN TANT QUE `app`
+      # (--no-owner) → tous les objets (schémas drizzle/public, tables) appartiennent à `app`,
+      # pour que les migrations DDL passent ensuite en rôle app (REASSIGN OWNED BY postgres est
+      # interdit : objets « required by the database system »).
+      docker exec lab-platform-postgres-1 dropdb -U postgres --if-exists "$DBNAME"
+      docker exec lab-platform-postgres-1 createdb -U postgres -O app "$DBNAME"
+      docker exec -e PGPASSWORD="$APP_DB_PASSWORD" lab-platform-postgres-1 sh -c \
+        "pg_dump -U postgres --no-owner '$SRC' | psql -U app -h 127.0.0.1 -q -d '$DBNAME'"
+      CLONED=1
+      echo "✓ base $DBNAME clonée depuis $SRC ($PROVISION)"
+    else
+      $PG -tAc "SELECT 1 FROM pg_database WHERE datname='$DBNAME'" | grep -q 1 \
+        || docker exec lab-platform-postgres-1 createdb -U postgres -O app "$DBNAME"
+    fi
+    # L'app possède sa base (requis pour les migrations DDL en rôle app). Idempotent.
+    $PG -c "ALTER DATABASE \"$DBNAME\" OWNER TO app" >/dev/null 2>&1 || true
   fi
-  printf 'DATABASE_URL=postgres://postgres:%s@postgres:5432/%s\n' "$LAB_POSTGRES_PASSWORD" "$DBNAME" >> "$APPDIR/.env"
+  printf 'DATABASE_URL=postgres://app:%s@postgres:5432/%s\n' "$APP_DB_PASSWORD" "$DBNAME" >> "$APPDIR/.env"
 fi
 
 # Redis central : URL + préfixe de namespace
@@ -201,12 +277,23 @@ fi
 # L'auth in-app (BetterAuth) utilise cette origine ; pas d'AUTH_URL séparé.
 printf 'APP_URL=https://%s\n' "$PRIMARY_HOST" >> "$APPDIR/.env"
 
-# Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab.
-# En multi-image, le rôle `web` porte drizzle + scripts (cf. Dockerfile target `web`).
+# Hors prod : neutralise la publication LinkedIn réelle. Les tokens (clonés depuis la prod en
+# integration) restent présents mais inertes — aucune publication ne part vers le vrai LinkedIn.
+if [ "$ENV" != "prod" ]; then
+  printf 'CONTENT_OS_LINKEDIN_STUB=1\n' >> "$APPDIR/.env"
+fi
+
+# Migrations (toujours) — conteneur one-shot. Sur un clone, applique les migrations plus récentes
+# que la prod ; sur une base vide, monte le schéma complet.
 if [ -n "$MIGRATE" ]; then
   docker run --rm --network lab --env-file "$APPDIR/.env" "$MIGRATE_IMAGE" sh -c "$MIGRATE"
 fi
-if [ -n "$SEED" ] && [ "$ENV" != "prod" ]; then
+# Données : clone de prod → scrub (branches) ou rien (integration = clone complet) ; sinon seed
+# synthétique (bootstrap, prod vide/absente, hors prod).
+if [ "$PROVISION" = "clone-scrub" ] && [ "$CLONED" = "1" ]; then
+  scrub_sql | docker exec -i lab-platform-postgres-1 psql -U postgres -q -d "$DBNAME"
+  echo "✓ clone scrubbé ($DBNAME)"
+elif [ "$CLONED" != "1" ] && [ -n "$SEED" ] && [ "$ENV" != "prod" ]; then
   docker run --rm --network lab --env-file "$APPDIR/.env" "$MIGRATE_IMAGE" sh -c "$SEED"
 fi
 
@@ -215,11 +302,14 @@ fi
 docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" up -d --force-recreate
 
 mkdir -p /opt/lab/platform/sites
-cat > "/opt/lab/platform/sites/${PROJ}-${ENV}.caddy" <<EOF
-${HOSTS_CADDY} {
-	reverse_proxy ${UPSTREAM}:8080
-}
-EOF
+# Integration = clone complet de la prod → route protégée par basic-auth (jamais publique).
+BASIC=""
+if [ "$ENV" = "integration" ]; then
+  # shellcheck disable=SC1091
+  [ -f /opt/lab/platform/.env ] && . /opt/lab/platform/.env
+  BASIC="${LAB_INTEGRATION_BASICAUTH:-}"
+fi
+caddy_site "$HOSTS_CADDY" "$UPSTREAM" "$BASIC" > "/opt/lab/platform/sites/${PROJ}-${ENV}.caddy"
 docker exec lab-platform-caddy-1 caddy validate --config /etc/caddy/Caddyfile
 docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile
 
