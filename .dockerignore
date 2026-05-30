@@ -1,0 +1,34 @@
+# Le contexte de build Docker est la racine du dépôt (mono-app). On exclut tout ce qui
+# n'est pas nécessaire à `next build` / au runtime de l'image — en particulier la plomberie
+# de l'atelier et les secrets, qui ne doivent JAMAIS entrer dans une couche d'image.
+
+# build / deps / vcs
+node_modules
+.next
+.git
+*.log
+
+# env & artefacts de test
+.env
+.env.*
+test-results
+playwright-report
+test
+
+# plomberie atelier (hors image)
+secrets
+bin
+tools
+.github
+.claude
+.superpowers
+docs
+
+# scripts d'atelier (le build n'a besoin que de scripts/migrate.mjs + seed-preview.mjs)
+scripts/deploy.sh
+scripts/teardown.sh
+scripts/dev-db.sh
+scripts/cloud-setup.sh
+scripts/sync-shared.sh
+scripts/setup-lab-tunnel.sh
+scripts/compose-project.mjs

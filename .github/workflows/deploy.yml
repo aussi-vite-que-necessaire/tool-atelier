@@ -9,11 +9,10 @@ permissions:
   packages: write
 
 concurrency:
-  # event_name dans la clé : un event `delete` (github.ref = refs/heads/main) ne
-  # partage plus le groupe d'un push prod, sinon le teardown se fait annuler.
+  # event_name dans la clé : un event `delete` (github.ref = refs/heads/main) ne partage plus
+  # le groupe d'un push prod, sinon le teardown se fait annuler.
   group: deploy-${{ github.event_name }}-${{ github.ref }}
-  # Annule un run de preview précédent quand on repousse la même branche ; jamais
-  # sur main (on n'interrompt pas un deploy prod ni un teardown).
+  # Annule un run de preview précédent quand on repousse la même branche ; jamais sur main.
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
@@ -21,76 +20,30 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
-      projects: ${{ steps.changed.outputs.projects }}
-      node_projects: ${{ steps.changed.outputs.node_projects }}
       env: ${{ steps.env.outputs.env }}
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - id: changed
-        run: |
-          before='${{ github.event.before }}'
-          if [ -n "$before" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then
-            base="$before"
-          else
-            # nouvelle branche (before=000…) : diffe depuis le tronc, pas la racine,
-            # pour ne (re)déployer que le(s) projet(s) réellement touché(s) par la branche
-            base="$(git merge-base origin/main HEAD 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)"
-          fi
-          changed="$(git diff --name-only "$base" '${{ github.sha }}')"
-          # Plomberie de déploiement (scripts/deploy.sh, workflow CI) → redéploie tous les projets
-          # qui ont un Dockerfile (le pipeline les concerne tous).
-          if printf '%s\n' "$changed" | grep -qE '^(scripts/deploy\.sh|\.github/workflows/deploy\.yml)$'; then
-            projects="$(ls -1 projects/ \
-              | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
-              | jq -R . | jq -cs .)"
-            echo "plomberie modifiée → redéploie tous les projets"
-          else
-            projects="$(printf '%s\n' "$changed" | awk -F/ '$1=="projects" && NF>2 {print $2}' | sort -u \
-              | while read -r d; do [ -f "projects/$d/Dockerfile" ] && printf '%s\n' "$d"; done \
-              | jq -R . | jq -cs .)"
-          fi
-          echo "projects=$projects" >> "$GITHUB_OUTPUT"
-          echo "projets changés: $projects"
-          # Sous-ensemble testable côté Node : exige package.json + package-lock.json (sinon
-          # `npm ci` ou `setup-node@cache:npm` échouent). Les projets non-Node (ex. `hello/`
-          # = simple server.js) ou sans lockfile (`counter/`) restent buildés et déployés,
-          # mais ne passent pas par le job `test`.
-          node_projects="$(printf '%s\n' "$projects" | jq -r '.[]' \
-            | while read -r d; do
-                [ -f "projects/$d/package.json" ] && [ -f "projects/$d/package-lock.json" ] && printf '%s\n' "$d"
-              done \
-            | jq -R . | jq -cs .)"
-          echo "node_projects=$node_projects" >> "$GITHUB_OUTPUT"
-          echo "projets testés (Node): $node_projects"
       - id: env
         run: |
           ref='${{ github.ref_name }}'
-          # main = palier d'INTÉGRATION (toute la suite assemblée sur *.preview.contentos.ch).
-          # prod n'est plus un envoi auto au merge : c'est une promotion explicite d'artefact
-          # (cf. .github/workflows/promote.yml). Les autres branches → preview par-branche.
+          # main = palier d'INTÉGRATION (suite assemblée sur app.preview.contentos.ch). prod n'est
+          # pas un envoi auto : c'est une promotion explicite d'artefact (cf. promote.yml). Les
+          # autres branches → preview par-branche.
           if [ "$ref" = "main" ]; then e=integration; else
             e="$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
           fi
           [ -n "$e" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
           echo "env=$e" >> "$GITHUB_OUTPUT"
 
-  # Build + push de l'image. Tourne EN PARALLÈLE du job `test` : le deploy ne fait
-  # que pull cette image, il ne rebuild jamais.
-  #
-  # Cache buildx GHA actif : les couches `npm ci` et `next build` sont réutilisées
-  # entre builds chauds (scope par projet+rôle pour éviter l'éviction croisée).
-  # Multi-image : si `lab.json` déclare `images: [<role>, ...]`, build une image
-  # par target et push `atelier-<projet>-<role>:<env>`. Sinon, image unique
-  # `atelier-<projet>:<env>` (pas de --target, comportement historique).
+  # Build + push des deux images (web + worker), EN PARALLÈLE du job `test`. Le deploy ne fait
+  # que pull ces images, il ne rebuild jamais. Cache buildx GHA scopé par target (web/worker)
+  # pour réutiliser les couches `npm ci` / `next build` entre builds chauds. Contexte = racine.
   build:
     needs: detect
-    if: needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        project: ${{ fromJson(needs.detect.outputs.projects) }}
+        target: [web, worker]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -99,52 +52,26 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build + push (mono-image ou multi-target selon lab.json)
+      - name: Build + push (target ${{ matrix.target }})
         env:
-          PROJ: ${{ matrix.project }}
+          TGT: ${{ matrix.target }}
           ENV_TAG: ${{ needs.detect.outputs.env }}
           OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
-          # Liste des targets : depuis lab.json (.images), ou [""] = mono-image.
-          if [ -f "projects/$PROJ/lab.json" ]; then
-            TARGETS="$(jq -r '(.images // [""]) | .[]' "projects/$PROJ/lab.json")"
-          else
-            TARGETS=""
-          fi
-          [ -n "$TARGETS" ] || TARGETS=""
-          # `read` boucle même si TARGETS est vide → simulé par echo "" si besoin.
-          printf '%s\n' "$TARGETS" | while IFS= read -r tgt; do
-            if [ -z "$tgt" ]; then
-              IMG="ghcr.io/$OWNER/atelier-$PROJ:$ENV_TAG"
-              SCOPE="$PROJ"
-              TARGET_FLAG=""
-            else
-              IMG="ghcr.io/$OWNER/atelier-$PROJ-$tgt:$ENV_TAG"
-              SCOPE="$PROJ-$tgt"
-              TARGET_FLAG="--target=$tgt"
-            fi
-            echo "::group::build $IMG"
-            # shellcheck disable=SC2086
-            docker buildx build $TARGET_FLAG \
-              --cache-from "type=gha,scope=$SCOPE" \
-              --cache-to   "type=gha,mode=max,scope=$SCOPE" \
-              --tag "$IMG" --push "projects/$PROJ"
-            echo "::endgroup::"
-          done
+          IMG="ghcr.io/$OWNER/atelier-app-$TGT:$ENV_TAG"
+          echo "::group::build $IMG"
+          docker buildx build --target="$TGT" \
+            --cache-from "type=gha,scope=app-$TGT" \
+            --cache-to   "type=gha,mode=max,scope=app-$TGT" \
+            --tag "$IMG" --push .
+          echo "::endgroup::"
 
-  # Gate de tests (host) : unit + integration + worker + smoke e2e. Tourne en
-  # parallèle du build ; le build host ici sert uniquement au smoke e2e.
-  # Ne tourne que pour les projets Node (package.json + package-lock.json). Les autres
-  # (ex. `hello/` server.js pur) sont buildés et déployés sans passer par ce gate.
+  # Gate de tests (host) : unit + integration + worker, puis build de validation. Tourne en
+  # parallèle du build des images.
   test:
     needs: detect
-    if: needs.detect.outputs.node_projects != '' && needs.detect.outputs.node_projects != '[]'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        project: ${{ fromJson(needs.detect.outputs.node_projects) }}
     services:
       postgres:
         image: postgres:17
@@ -161,98 +88,52 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 5s
           --health-timeout 5s --health-retries 10
-    defaults:
-      run:
-        working-directory: projects/${{ matrix.project }}
     env:
       APP_URL: http://localhost:3000
       REDIS_URL: redis://localhost:6379
       BETTER_AUTH_SECRET: ci-placeholder-secret-ci-placeholder
-      DATABASE_URL: postgres://app:app@localhost:5432/${{ matrix.project }}_test
+      DATABASE_URL: postgres://app:app@localhost:5432/app_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: projects/${{ matrix.project }}/package-lock.json
+          cache-dependency-path: package-lock.json
       - name: Install deps
         run: npm ci
-      - name: Prepare test DB (si lab.json déclare db)
-        run: |
-          if [ -f lab.json ] && [ "$(jq -r '.db // false' lab.json)" = "true" ]; then
-            npm run db:test:prepare
-          else
-            echo "pas de db déclarée — skip"
-          fi
+      - name: Prepare test DB
+        run: npm run db:test:prepare
       - name: Unit + integration + worker
-        run: npm test --if-present
+        run: npm test
       - name: Cache .next/cache
         uses: actions/cache@v4
         with:
-          path: projects/${{ matrix.project }}/.next/cache
-          key: next-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles(format('projects/{0}/package-lock.json', matrix.project)) }}-${{ github.sha }}
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
           restore-keys: |
-            next-${{ runner.os }}-${{ matrix.project }}-${{ hashFiles(format('projects/{0}/package-lock.json', matrix.project)) }}-
-      - name: Build (requis pour le smoke e2e)
-        run: npm run build --if-present
-      - name: Cache navigateurs Playwright
-        if: hashFiles(format('projects/{0}/playwright.config.ts', matrix.project)) != ''
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles(format('projects/{0}/package-lock.json', matrix.project)) }}
-      - name: Smoke e2e (si playwright configuré)
-        run: |
-          if [ -f playwright.config.ts ]; then
-            npx playwright install --with-deps chromium
-            npm run test:e2e
-          else
-            echo "pas d'e2e — skip"
-          fi
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - name: Build (validation)
+        run: npm run build
 
-  # Deploy = pull (l'image est déjà construite par le job `build` et testée par
-  # `test` si Node). Aucun build ici → ~45s.
+  # Deploy = pull (les images sont déjà construites par `build` et validées par `test`).
   deploy:
     needs: [detect, build, test]
-    # `test` peut être skippé (aucun projet Node testable) ; on autorise alors le deploy.
-    # `!cancelled()` en tête est requis : sans une fonction de statut, GitHub propage le
-    # skip d'un job `needs` (ici `test` quand aucun projet Node n'a changé) au job dépendant,
-    # même quand la condition l'autorise — ce qui empêchait tout push non-Node de déployer.
     if: |
       !cancelled()
-      && needs.detect.outputs.projects != '' && needs.detect.outputs.projects != '[]'
       && needs.build.result == 'success'
-      && (needs.test.result == 'success' || needs.test.result == 'skipped')
+      && needs.test.result == 'success'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      # Serializé : un seul deploy à la fois pour éviter la concurrence sur le daemon
-      # Docker du lab (plusieurs `docker pull` simultanés font échouer le containerd
-      # lease — « lease does not exist: not found »).
-      max-parallel: 1
-      matrix:
-        project: ${{ fromJson(needs.detect.outputs.projects) }}
     env:
-      PROJ: ${{ matrix.project }}
       ENV: ${{ needs.detect.outputs.env }}
       OWNER: ${{ github.repository_owner }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compute IMAGES (mono ou multi-rôles)
+      - name: Compute IMAGES (web + worker)
         id: images
         run: |
           set -euo pipefail
-          IMAGES_PARAM=""
-          if [ -f "projects/$PROJ/lab.json" ] && [ "$(jq -r '.images // [] | length' "projects/$PROJ/lab.json")" -gt 0 ]; then
-            # Format multi : "web=ghcr.io/...,worker=ghcr.io/..."
-            IMAGES_PARAM="$(jq -r --arg owner "$OWNER" --arg proj "$PROJ" --arg env "$ENV" \
-              '.images | map("\(.)=ghcr.io/\($owner)/atelier-\($proj)-\(.):\($env)") | join(",")' \
-              "projects/$PROJ/lab.json")"
-          else
-            # Format mono (historique)
-            IMAGES_PARAM="ghcr.io/$OWNER/atelier-$PROJ:$ENV"
-          fi
+          IMAGES_PARAM="web=ghcr.io/$OWNER/atelier-app-web:$ENV,worker=ghcr.io/$OWNER/atelier-app-worker:$ENV"
           echo "param=$IMAGES_PARAM" >> "$GITHUB_OUTPUT"
           echo "IMAGES=$IMAGES_PARAM"
       - name: Deploy to lab
@@ -267,51 +148,37 @@ jobs:
           ssh-keyscan -H "$LAB_HOST" >> ~/.ssh/known_hosts 2>/dev/null
           SSH="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes root@$LAB_HOST"
           SCP="scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
-          $SSH "mkdir -p /opt/lab/apps/${PROJ}-${ENV}"
+          $SSH "mkdir -p /opt/lab/apps/app-${ENV}"
           $SCP scripts/deploy.sh "root@$LAB_HOST:/opt/lab/deploy.sh"
-          $SCP "projects/${PROJ}/compose.yml" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/compose.yml"
-          if [ -f "projects/${PROJ}/lab.json" ]; then
-            $SCP "projects/${PROJ}/lab.json" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/lab.json"
-          else
-            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/lab.json"
-          fi
-          # Secrets chiffrés (age) que le projet consomme : global + projet (déjà chiffrés).
-          # deploy.sh les déchiffre sur lab avec /opt/lab/secrets-key. sysadmin jamais copié.
+          $SCP compose.yml "root@$LAB_HOST:/opt/lab/apps/app-${ENV}/compose.yml"
+          $SCP lab.json "root@$LAB_HOST:/opt/lab/apps/app-${ENV}/lab.json"
+          # Secrets chiffrés (age) consommés par l'app : global + app (déjà chiffrés). deploy.sh
+          # les déchiffre sur lab avec /opt/lab/secrets-key. sysadmin n'est jamais copié.
           if [ -f secrets/global.env.age ]; then
-            $SCP secrets/global.env.age "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/global.env.age"
-          else
-            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/global.env.age"
+            $SCP secrets/global.env.age "root@$LAB_HOST:/opt/lab/apps/app-${ENV}/global.env.age"
           fi
-          if [ -f "secrets/projects/${PROJ}.env.age" ]; then
-            $SCP "secrets/projects/${PROJ}.env.age" "root@$LAB_HOST:/opt/lab/apps/${PROJ}-${ENV}/${PROJ}.env.age"
-          else
-            $SSH "rm -f /opt/lab/apps/${PROJ}-${ENV}/${PROJ}.env.age"
+          if [ -f secrets/projects/app.env.age ]; then
+            $SCP secrets/projects/app.env.age "root@$LAB_HOST:/opt/lab/apps/app-${ENV}/app.env.age"
           fi
-          $SSH "bash /opt/lab/deploy.sh '$PROJ' '$ENV' '$IMAGES'"
+          $SSH "bash /opt/lab/deploy.sh 'app' '$ENV' '$IMAGES'"
       - name: Résumé
         run: |
-          if [ "$ENV" = "prod" ]; then
-            if [ "$PROJ" = "www" ]; then host="contentos.ch"; else host="${PROJ}.contentos.ch"; fi
-          elif [ "$ENV" = "integration" ]; then
-            host="${PROJ}.preview.contentos.ch"
-          else
-            host="${PROJ}-${ENV}.preview.contentos.ch"
-          fi
-          echo "🚀 **${PROJ}** (\`${ENV}\`) déployé → https://${host}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ENV" = "integration" ]; then host="app.preview.contentos.ch"; else host="app-${ENV}.preview.contentos.ch"; fi
+          echo "🚀 **app** (\`${ENV}\`) déployé → https://${host}" >> "$GITHUB_STEP_SUMMARY"
 
   teardown:
     if: github.event_name == 'delete' && github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Teardown previews de la branche
+      - name: Teardown de la preview de la branche
         env:
           LAB_SSH_KEY: ${{ secrets.LAB_SSH_KEY }}
           LAB_HOST: ${{ secrets.LAB_HOST }}
           REF: ${{ github.event.ref }}
         run: |
           env="$(printf '%s' "$REF" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
-          [ "$env" = "main" ] && { echo "jamais de teardown sur main"; exit 0; }
+          { [ "$env" = "main" ] || [ "$env" = "integration" ] || [ "$env" = "prod" ]; } && { echo "jamais de teardown sur $env"; exit 0; }
           install -m700 -d ~/.ssh
           printf '%s\n' "$LAB_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
@@ -319,4 +186,4 @@ jobs:
           SSH="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes root@$LAB_HOST"
           SCP="scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes"
           $SCP scripts/teardown.sh "root@$LAB_HOST:/opt/lab/teardown.sh"
-          $SSH "for d in /opt/lab/apps/*-$env; do [ -d \"\$d\" ] || continue; p=\"\$(basename \"\$d\")\"; p=\"\${p%-$env}\"; bash /opt/lab/teardown.sh \"\$p\" \"$env\"; done"
+          $SSH "[ -d /opt/lab/apps/app-$env ] && bash /opt/lab/teardown.sh app '$env' || echo 'pas de preview app-$env'"

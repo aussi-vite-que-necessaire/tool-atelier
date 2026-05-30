@@ -39,36 +39,28 @@ acquire_deploy_lock() {
 }
 
 # Host public primaire selon l'env (fonction pure, testable) :
-#   prod        → <projet>.contentos.ch (cas www → apex contentos.ch)
+#   prod        → <projet>.contentos.ch (apex:true → contentos.ch)
 #   integration → <projet>.preview.contentos.ch (noms propres, suite assemblée sur le palier)
 #   <branche>   → <projet>-<branche>.preview.contentos.ch (preview par-branche, suffixe conservé)
 compute_primary_host() {
-  local proj="$1" env="$2"
+  local proj="$1" env="$2" apex="${3:-false}"
   if [ "$env" = "prod" ]; then
-    if [ "$proj" = "www" ]; then echo "contentos.ch"; else echo "${proj}.contentos.ch"; fi
+    if [ "$apex" = "true" ]; then echo "contentos.ch"; else echo "${proj}.contentos.ch"; fi
   elif [ "$env" = "integration" ]; then
     echo "${proj}.preview.contentos.ch"
   else
     echo "${proj}-${env}.preview.contentos.ch"
   fi
 }
-# Liste Caddy (séparée par virgule) : www en prod sert apex + www, sinon = host primaire.
+# Liste Caddy (séparée par virgule) : apex en prod sert contentos.ch + www.contentos.ch,
+# sinon = host primaire.
 compute_caddy_hosts() {
-  local proj="$1" env="$2"
-  if [ "$env" = "prod" ] && [ "$proj" = "www" ]; then
+  local proj="$1" env="$2" apex="${3:-false}"
+  if [ "$env" = "prod" ] && [ "$apex" = "true" ]; then
     echo "contentos.ch, www.contentos.ch"
   else
-    compute_primary_host "$proj" "$env"
+    compute_primary_host "$proj" "$env" "$apex"
   fi
-}
-# AUTH_URL injecté hors prod : integration → auth.preview (nom propre) ; branche →
-# auth-<branche>.preview (auth de la branche, où sont seedés user1/2/3) ; prod → vide
-# (le défaut applicatif / le secret s'applique).
-compute_auth_url() {
-  local env="$1"
-  if [ "$env" = "prod" ]; then echo ""
-  elif [ "$env" = "integration" ]; then echo "https://auth.preview.contentos.ch"
-  else echo "https://auth-${env}.preview.contentos.ch"; fi
 }
 
 # Sourcé (tests) : on s'arrête après les définitions de fonctions, sans exécuter le deploy.
@@ -79,11 +71,6 @@ PROJ="$1"; ENV="$2"; IMAGES="$3"
 acquire_deploy_lock
 APPDIR="/opt/lab/apps/${PROJ}-${ENV}"
 UPSTREAM="${PROJ}-${ENV}"
-# Hosts publics (cf. fonctions pures ci-dessus) : prod sous *.contentos.ch (www = apex + www),
-# integration sous <projet>.preview.contentos.ch (noms propres), preview par-branche suffixée.
-# PRIMARY_HOST = identité publique (APP_URL, logs) ; HOSTS_CADDY = liste virgule pour la route.
-PRIMARY_HOST="$(compute_primary_host "$PROJ" "$ENV")"
-HOSTS_CADDY="$(compute_caddy_hosts "$PROJ" "$ENV")"
 
 # jq requis pour lire lab.json — auto-install si absent (serveur fraîchement provisionné)
 command -v jq >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq jq; }
@@ -134,7 +121,7 @@ umask 077
 
 # Besoins déclarés par le projet (lab.json absent => projet sans base ni redis)
 # .db accepte : true (base propre <projet>_<env>) | {"shared":"X"} (réutilise la base de X) | false.
-DB=false; DB_SHARED_FROM=""; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""
+DB=false; DB_SHARED_FROM=""; REDIS=false; EMAIL=false; BROWSER=false; MIGRATE=""; SEED=""; APEX=false
 if [ -f "$APPDIR/lab.json" ]; then
   DB="$(jq -r 'if (.db|type)=="object" then "shared" elif (.db // false) then "true" else "false" end' "$APPDIR/lab.json")"
   DB_SHARED_FROM="$(jq -r '(.db | objects | .shared) // empty' "$APPDIR/lab.json")"
@@ -143,7 +130,14 @@ if [ -f "$APPDIR/lab.json" ]; then
   BROWSER="$(jq -r '.browser // false' "$APPDIR/lab.json")"
   MIGRATE="$(jq -r '.migrate // empty' "$APPDIR/lab.json")"
   SEED="$(jq -r '.seed // empty' "$APPDIR/lab.json")"
+  APEX="$(jq -r '.apex // false' "$APPDIR/lab.json")"
 fi
+
+# Hosts publics (cf. fonctions pures ci-dessus) : prod sous *.contentos.ch (apex → contentos.ch
+# + www.contentos.ch), integration sous <projet>.preview.contentos.ch (noms propres), preview
+# par-branche suffixée. PRIMARY_HOST = identité publique (APP_URL, logs) ; HOSTS_CADDY = route.
+PRIMARY_HOST="$(compute_primary_host "$PROJ" "$ENV" "$APEX")"
+HOSTS_CADDY="$(compute_caddy_hosts "$PROJ" "$ENV" "$APEX")"
 
 # Postgres central : DATABASE_URL injecté.
 #   db:true            → base propre <projet>_<env> (créée si absente, migrée/seedée par ce projet).
@@ -204,18 +198,8 @@ fi
 
 # Origine publique injectée dans APP_URL = host primaire du déploiement. Écrite APRÈS les
 # secrets pour être autoritative — en --env-file la dernière occurrence d'une clé gagne.
+# L'auth in-app (BetterAuth) utilise cette origine ; pas d'AUTH_URL séparé.
 printf 'APP_URL=https://%s\n' "$PRIMARY_HOST" >> "$APPDIR/.env"
-
-# AUTH_URL hors prod (cf. compute_auth_url) : en integration → auth.preview (nom propre, où la
-# suite assemblée partage le SSO) ; en preview par-branche → auth-<branche>.preview (là où sont
-# seedés user1/2/3). On RETIRE d'abord tout AUTH_URL hérité (certains projets en ont un dans leur
-# secret = valeur prod, qui sinon shadowe l'injection via env_file) puis on écrit la bonne valeur
-# → une seule, sans ambiguïté de précédence. En prod : vide, le secret/défaut applicatif s'applique.
-auth_url="$(compute_auth_url "$ENV")"
-if [ -n "$auth_url" ]; then
-  sed -i '/^AUTH_URL=/d' "$APPDIR/.env"
-  printf 'AUTH_URL=%s\n' "$auth_url" >> "$APPDIR/.env"
-fi
 
 # Migrations (toujours) puis seed (hors prod) — conteneur one-shot sur le réseau lab.
 # En multi-image, le rôle `web` porte drizzle + scripts (cf. Dockerfile target `web`).

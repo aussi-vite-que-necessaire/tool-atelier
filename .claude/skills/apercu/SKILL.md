@@ -15,12 +15,12 @@ coup d'œil. Voir son travail ne coûte presque rien et change tout sur la quali
 
 ## La boucle
 
-1. **Lance le serveur de dev en arrière-plan** dans le projet et attends qu'il réponde :
+1. **Lance le serveur de dev en arrière-plan** (à la racine) et attends qu'il réponde :
    ```bash
-   (cd projects/<projet> && npm run dev)   # via Bash run_in_background:true
+   npm run dev   # via Bash run_in_background:true
    ```
    Attends `http://localhost:3000` (poll : `curl -sf -o /dev/null http://localhost:3000`).
-   Si la base manque, `scripts/dev-db.sh up <projet>` d'abord.
+   Si la base manque, `scripts/dev-db.sh up` d'abord.
 2. **Capture** la (les) page(s) touchée(s), mobile **et** desktop :
    ```bash
    bin/apercu --route /            # page d'accueil

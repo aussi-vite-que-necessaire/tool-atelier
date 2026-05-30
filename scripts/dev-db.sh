@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Environnement de DONNÉES pour le DEV — pensé pour les agents qui codent sur un projet.
 #
-# deploy.sh provisionne <projet>_<env> sur le Postgres central (preview/prod). Ce script fait
-# l'équivalent côté dev : il monte les dépendances déclarées dans projects/<projet>/lab.json
-# (la *même* déclaration que la prod) puis écrit le .env.local pour que `npm run dev` et les
-# tests qui touchent la base démarrent du premier coup. Aucun cycle de déploiement.
+# deploy.sh provisionne app_<env> sur le Postgres central (preview/prod). Ce script fait
+# l'équivalent côté dev : il monte les dépendances déclarées dans lab.json (racine, la *même*
+# déclaration que la prod) puis écrit le .env pour que `npm run dev` et les tests qui touchent
+# la base démarrent du premier coup. Aucun cycle de déploiement.
 #
 # CIBLE : sessions cloud (conteneur isolé, root, PAS de daemon Docker). On utilise donc
 # PostgreSQL en NATIF (le serveur, pas Docker) : installé via apt si absent, lancé via le
@@ -13,14 +13,13 @@
 # y est installé ; sur une machine sans Postgres natif (ex. macOS sans paquet), installer
 # Postgres ou utiliser Docker reste à faire à la main — voir le bloc « Dev local » du CLAUDE.md.
 #
-# Modèle calqué sur la prod : UN cluster Postgres partagé par l'atelier, UNE base par projet
-# (<projet>_dev pour le dev, <projet>_test pour les tests).
+# Modèle calqué sur la prod : UN cluster Postgres, les bases app_dev (dev) et app_test (tests).
 #
-# Usage:
-#   scripts/dev-db.sh up <projet>      # monte les deps, crée <projet>_dev (+_test), migrate + seed, écrit .env.local
-#   scripts/dev-db.sh reset <projet>   # drop puis recrée <projet>_dev (repart de zéro)
-#   scripts/dev-db.sh down             # arrête les services partagés (Postgres + Redis ; données conservées)
-#   scripts/dev-db.sh nuke <projet>    # drop <projet>_dev et <projet>_test
+# Usage (le projet vaut `app` par défaut) :
+#   scripts/dev-db.sh up       # monte les deps, crée app_dev (+app_test), migrate + seed, écrit .env
+#   scripts/dev-db.sh reset    # drop puis recrée app_dev (repart de zéro)
+#   scripts/dev-db.sh down     # arrête les services partagés (Postgres + Redis ; données conservées)
+#   scripts/dev-db.sh nuke     # drop app_dev et app_test
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -92,18 +91,16 @@ write_env() {
   return 0   # sinon le dernier test (redisurl vide → 1) devient le code retour et `set -e` tue le script
 }
 
-proj_dir() {
-  local d="$ROOT/projects/$1"
-  [ -d "$d" ] || { echo "✗ projet inconnu: $1 (cherché $d)"; exit 1; }
-  printf '%s' "$d"
-}
+# Mono-app : l'app vit à la racine du dépôt. Le « projet » est toujours `app`
+# (bases app_dev / app_test, préfixe redis app:dev:), son dir est $ROOT.
+proj_dir() { printf '%s' "$ROOT"; }
 
 # URL applicative (rôle `app`) — celle qu'écrivent les `.env`/`.env.test` des projets et la CI.
 dburl_for() { printf 'postgres://%s:%s@%s:%s/%s' "$APP_USER" "$APP_PASSWORD" "$PG_HOST" "$PG_PORT" "$1"; }
 
 cmd_up() {
   need_jq
-  local proj="${1:?usage: dev-db.sh up <projet>}"
+  local proj="${1:-app}"
   local dir; dir="$(proj_dir "$proj")"
   local lab="$dir/lab.json"
   local db=false redis=false migrate="" seed="" db_shared_from=""
@@ -168,14 +165,14 @@ cmd_up() {
   if [ "$db" = "false" ] && [ "$redis" = "false" ]; then
     echo "ℹ $proj ne déclare ni db ni redis dans lab.json — .env minimal écrit."
   fi
-  echo "✓ dev prêt pour $proj — .env écrit. Lance : (cd projects/$proj && npm run dev)"
-  [ "$db" = "true" ] && echo "  tests : bases ${proj}_dev + ${proj}_test prêtes → (cd projects/$proj && npm test)"
+  echo "✓ dev prêt pour $proj — .env écrit. Lance : npm run dev"
+  [ "$db" = "true" ] && echo "  tests : bases ${proj}_dev + ${proj}_test prêtes → npm test"
   return 0
 }
 
 cmd_reset() {
   need_jq
-  local proj="${1:?usage: dev-db.sh reset <projet>}"
+  local proj="${1:-app}"
   proj_dir "$proj" >/dev/null
   ensure_pg
   drop_db "${proj}_dev"
@@ -190,7 +187,7 @@ cmd_down() {
 }
 
 cmd_nuke() {
-  local proj="${1:?usage: dev-db.sh nuke <projet>}"
+  local proj="${1:-app}"
   ensure_pg
   drop_db "${proj}_dev"
   drop_db "${proj}_test"

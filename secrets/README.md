@@ -7,10 +7,10 @@ Les secrets de l'atelier vivent ici, **chiffrés avec [age](https://age-encrypti
 ```
 secrets/
   recipients.txt        # clé publique age (en clair, non sensible) — destinataire du chiffrement
-  global.env.age        # secrets partagés par TOUS les projets
-  sysadmin.env.age      # secrets opérateur — JAMAIS injectés dans un projet
+  global.env.age        # secrets partagés (scope global)
+  sysadmin.env.age      # secrets opérateur — JAMAIS injectés dans l'app
   projects/
-    <projet>.env.age    # secrets d'un projet
+    app.env.age         # secrets de l'app
 ```
 
 ## Règles
@@ -34,4 +34,4 @@ bin/lab-secret list <scope>
 bin/lab-secret get <scope> NOM_DU_SECRET
 ```
 
-`scope` ∈ `global` | `sysadmin` | `<projet>`.
+`scope` ∈ `global` | `sysadmin` | `app`.

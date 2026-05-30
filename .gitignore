@@ -1,10 +1,40 @@
-.env
-.DS_Store
+# dependencies
 node_modules/
+.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+/build
+next-env.d.ts
+*.tsbuildinfo
+
+# testing
+/coverage
+/playwright-report
+/test-results
+
+# env
+.env
+.env.local
+.env*.local
+
+# atelier
 .claude/worktrees/
 .superpowers/
 tools/apercu/.browser-ready
 
-# Redis dump (dev artifact)
+# dev local filesystem storage (FilesystemStorage)
+.storage/
+
+# redis dump (dev artifact)
 dump.rdb
 dump.rdb.*
+
+# misc
+.DS_Store
+*.pem
+*.log
+npm-debug.log*
+.vercel

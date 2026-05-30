@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# cloud-setup.sh — prépare l'environnement cloud (monorepo) : installe le client
-# wstunnel (transport de secours pour lab-ssh quand le port 22 sortant est fermé)
-# puis les deps de chaque projet Node. Idempotent. À pointer depuis la config de
-# l'environnement cloud.
+# cloud-setup.sh — prépare l'environnement cloud : installe le client wstunnel
+# (transport de secours pour lab-ssh quand le port 22 sortant est fermé) puis les
+# deps de l'app. Idempotent. À pointer depuis la config de l'environnement cloud.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
@@ -46,9 +45,9 @@ if command -v claude >/dev/null 2>&1; then
   done
 fi
 
-for dir in "$ROOT"/projects/*/; do
-  [ -f "$dir/package.json" ] || continue
-  echo "→ deps: $(basename "$dir")"
-  ( cd "$dir" && { [ -f package-lock.json ] && npm ci || npm install; } )
-done
+# Deps de l'app (mono-app à la racine).
+if [ -f "$ROOT/package.json" ]; then
+  echo "→ deps app"
+  ( cd "$ROOT" && { [ -f package-lock.json ] && npm ci || npm install; } )
+fi
 echo "cloud-setup terminé"
