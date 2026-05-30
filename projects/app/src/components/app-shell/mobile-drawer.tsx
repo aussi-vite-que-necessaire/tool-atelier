@@ -63,6 +63,15 @@ export function MobileDrawer({ active }: { active: string | null }) {
               );
             })}
           </nav>
+          <div className="mt-4 border-t border-sidebar-border pt-4">
+            <Link
+              href="/account/connections"
+              onClick={() => setOpen(false)}
+              className="flex items-center rounded-xl px-3 py-2.5 font-medium transition-colors hover:bg-sidebar-accent/60"
+            >
+              Compte
+            </Link>
+          </div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

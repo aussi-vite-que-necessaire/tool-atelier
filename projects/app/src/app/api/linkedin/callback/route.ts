@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { ACCOUNT_CONNECTIONS_PATH } from '@/lib/account/routes';
 import { requireUserId } from '@/lib/auth/session';
 import { env } from '@/lib/env';
 import { connectFromCode } from '@/lib/linkedin/connect-core';
@@ -15,7 +16,7 @@ export async function GET(req: Request): Promise<Response> {
   const expected = jar.get('li_oauth_state')?.value;
   jar.delete('li_oauth_state');
 
-  const settings = new URL('/cast/settings/connections', env.APP_URL);
+  const settings = new URL(ACCOUNT_CONNECTIONS_PATH, env.APP_URL);
   if (!code || !state || !expected || state !== expected) {
     settings.searchParams.set('error', 'state');
     return NextResponse.redirect(settings);
