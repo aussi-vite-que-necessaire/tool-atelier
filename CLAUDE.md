@@ -90,13 +90,13 @@ L'app déclare ses besoins dans **`lab.json`** (à la racine) :
 `{ "description": "...", "apex": true, "db": true, "redis": true, "browser": true, "email": true, "migrate": "node scripts/migrate.mjs", "seed": "node scripts/seed-preview.mjs", "worker": "node worker-runner.mjs", "images": ["web", "worker"] }`
 
 Au déploiement, `deploy.sh` :
-- crée la base `app_<env>` (Postgres central) si `db: true`, injecte `DATABASE_URL`, lance `migrate` puis `seed` (hors prod) ;
+- provisionne la base `app_<env>` (Postgres central, rôle applicatif `app` least-privilege — jamais superuser) si `db: true`, injecte `DATABASE_URL`, lance `migrate` puis le provisioning des données (cf. plus bas) ;
 - `redis: true` → `REDIS_URL` + `REDIS_PREFIX` ;
 - `email: true` → `RESEND_API_KEY` + `EMAIL_FROM` (Resend, clé de plateforme) ;
 - `browser: true` → `BROWSER_URL` (Chromium partagé browserless sur le réseau `lab`) ;
 - injecte toujours **`APP_URL`** = origine publique du déploiement (`https://app-<branche>.preview.contentos.ch` en preview par-branche, `https://app.preview.contentos.ch` en intégration, `https://contentos.ch` en prod via `apex`).
 
-Preview par-branche = base vide + seed, droppée au teardown. Intégration = base `app_integration` + seed, **persistante** (pas de teardown).
+**Provisioning des données hors prod = clone de la prod.** À chaque déploiement, l'intégration (`app.preview.contentos.ch`) reçoit un **clone complet** de `app_prod` (données réelles ; route protégée par **basic-auth** Caddy — un clone réel n'est jamais public) ; une **preview par-branche** reçoit un **clone scrubbé** (emails anonymisés, tokens sociaux neutralisés, sessions vidées, 1er opérateur connectable via `/preview-login`). `CONTENT_OS_LINKEDIN_STUB=1` est forcé hors prod → aucune publication réelle ne part, même avec des tokens clonés. Si `app_prod` est vide/absente, fallback sur le seed synthétique (`scripts/seed-preview.mjs`). Les bases preview par-branche sont droppées au teardown ; la prod n'est ni clonée ni seedée.
 
 **Dev (agents & local).** La même déclaration `lab.json` alimente l'environnement de dev — pensé d'abord pour les **agents en session cloud** (conteneur isolé, sans daemon Docker). `scripts/dev-db.sh up` monte Postgres (et Redis) en **natif** (serveur installé via apt si absent, cluster Debian démarré ; pas de Docker), crée le rôle applicatif `app` (convention de l'atelier, identique à la CI) puis `app_dev` **et** `app_test`, joue `migrate`+`seed` sur la base dev et `db:test:prepare` sur la base test, et écrit le `.env` (`DATABASE_URL`/`REDIS_URL` en `localhost`, `APP_URL`, `BETTER_AUTH_SECRET` de dev). Résultat : `npm run dev` **et** `npm test` partent du premier coup. Calque le modèle de la prod. Idempotent. `reset` repart de zéro, `down` arrête les services (données conservées), `nuke` drop les bases. *(e2e Playwright = hors de ce périmètre : ils tournent en CI post-deploy contre la preview/intégration.)*
 
