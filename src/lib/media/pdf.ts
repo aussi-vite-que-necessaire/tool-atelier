@@ -77,7 +77,7 @@ export async function aggregatePdf(
   for (const id of imageIds) {
     const rec = await getMediaRecord(userId, id);
     if (!rec) throw new Error(`Image introuvable: ${id}`);
-    if (rec.kind !== 'image' && rec.kind !== 'render') {
+    if (rec.kind !== 'image') {
       throw new Error(`L'objet ${id} n'est pas une image`);
     }
     const got = await getImageBytes(rec.r2_key);

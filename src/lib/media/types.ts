@@ -1,4 +1,4 @@
-export type MediaKind = 'image' | 'video' | 'pdf' | 'render';
+export type MediaKind = 'image' | 'video' | 'pdf';
 export type MediaSource =
   | 'gemini_generate'
   | 'gemini_edit'

@@ -3,16 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Heading } from '@/components/ui/typography';
 import { requireUserId } from '@/lib/auth/session';
 import { isGeminiConfigured, isStorageConfigured } from '@/lib/media/config';
+import { GALLERY_FILTERS } from '@/lib/media/gallery-filters';
 import { listMediaRecords } from '@/lib/media/repository';
-import { listStyles } from '@/lib/media/styles';
 import type { MediaKind } from '@/lib/media/types';
-import { CreatePanel } from './create-panel';
+import { AddMediaLauncher } from './add-media-launcher';
 import { GalleryGrid } from './gallery-grid';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Galerie — Media' };
 
-const KINDS: MediaKind[] = ['image', 'video', 'pdf', 'render'];
+const KINDS: MediaKind[] = GALLERY_FILTERS.map((f) => f.kind);
 
 export default async function GalleryPage({
   searchParams,
@@ -26,10 +26,8 @@ export default async function GalleryPage({
     : undefined;
 
   const storage = isStorageConfigured();
-  const [items, styles] = await Promise.all([
-    storage ? listMediaRecords(userId, { kind, limit: 100 }) : Promise.resolve([]),
-    storage ? listStyles(userId) : Promise.resolve([]),
-  ]);
+  const geminiAvailable = storage && isGeminiConfigured();
+  const items = storage ? await listMediaRecords(userId, { kind, limit: 100 }) : [];
 
   return (
     <div className="space-y-8">
@@ -37,9 +35,10 @@ export default async function GalleryPage({
         <div className="space-y-1">
           <Heading level={1}>Galerie</Heading>
           <p className="text-muted-foreground text-sm">
-            Visuels générés, rendus, importés ou assemblés — prêts à attacher à un post.
+            Tes visuels — générés, rendus, importés ou assemblés —, prêts à attacher à un post.
           </p>
         </div>
+        {storage && <AddMediaLauncher geminiAvailable={geminiAvailable} />}
       </header>
 
       {!storage ? (
@@ -51,36 +50,32 @@ export default async function GalleryPage({
           </p>
         </div>
       ) : (
-        <>
-          <CreatePanel geminiAvailable={isGeminiConfigured()} styles={styles} />
-
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant={!kind ? 'secondary' : 'outline'}
+              size="sm"
+              render={<Link href="/media/gallery" />}
+            >
+              Tous
+            </Button>
+            {GALLERY_FILTERS.map((f) => (
               <Button
-                variant={!kind ? 'secondary' : 'outline'}
+                key={f.kind}
+                variant={kind === f.kind ? 'secondary' : 'outline'}
                 size="sm"
-                render={<Link href="/media/gallery" />}
+                render={<Link href={`/media/gallery?kind=${f.kind}`} />}
               >
-                Tous
+                {f.label}
               </Button>
-              {KINDS.map((k) => (
-                <Button
-                  key={k}
-                  variant={kind === k ? 'secondary' : 'outline'}
-                  size="sm"
-                  render={<Link href={`/media/gallery?kind=${k}`} />}
-                >
-                  {k}
-                </Button>
-              ))}
-              <span className="ml-auto text-muted-foreground text-sm">
-                {items.length} élément{items.length !== 1 ? 's' : ''}
-              </span>
-            </div>
+            ))}
+            <span className="ml-auto text-muted-foreground text-sm">
+              {items.length} élément{items.length !== 1 ? 's' : ''}
+            </span>
+          </div>
 
-            <GalleryGrid items={items} geminiAvailable={isGeminiConfigured()} />
-          </section>
-        </>
+          <GalleryGrid items={items} geminiAvailable={geminiAvailable} />
+        </section>
       )}
     </div>
   );

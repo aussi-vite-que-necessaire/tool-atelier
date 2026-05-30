@@ -162,7 +162,8 @@ export function registerMediaEngineTools(server: McpServer): void {
           userId,
           bytes,
           mimeType,
-          kind: 'render',
+          // Un rendu HTML est une image ; sa provenance vit dans `source`.
+          kind: 'image',
           prompt: null,
           parent_id: null,
           source: 'html_render',

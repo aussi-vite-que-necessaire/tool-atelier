@@ -232,6 +232,13 @@
       "when": 1780095370572,
       "tag": "0032_publication_formats",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1780166321212,
+      "tag": "0033_normalize_render_kind",
+      "breakpoints": true
     }
   ]
 }

@@ -29,7 +29,7 @@ export async function store(input: StoreInput): Promise<MediaRecord> {
   const dims =
     input.width && input.height
       ? { width: input.width, height: input.height }
-      : ((input.kind === 'image' || input.kind === 'render'
+      : ((input.kind === 'image'
           ? parseImageDimensions(input.bytes)
           : null) ?? { width: null, height: null });
 
