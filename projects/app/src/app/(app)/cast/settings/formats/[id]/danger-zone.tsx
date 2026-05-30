@@ -11,7 +11,7 @@ export function DangerZone({ deleteAction }: { deleteAction: () => Promise<void>
       <h3 className="text-lg font-semibold text-red-700">Zone dangereuse</h3>
       <p className="text-sm text-neutral-600">La suppression est définitive.</p>
       <Button type="button" variant="destructive" onClick={() => dialogRef.current?.showModal()}>
-        Supprimer ce template
+        Supprimer ce format
       </Button>
       <dialog ref={dialogRef} className="rounded-md p-6 shadow-xl backdrop:bg-black/40">
         <p className="mb-4 text-sm">Confirmer la suppression ?</p>

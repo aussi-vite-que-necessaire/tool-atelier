@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
-export type WritingTemplateActionState =
+export type FormatActionState =
   | { status: 'idle' }
   | { status: 'success' }
   | { status: 'error'; message: string; fieldErrors?: Record<string, string> };
@@ -17,6 +17,7 @@ type Initial = {
   name: string;
   platform: string;
   structure: string;
+  visualIntent: string | null;
   writingRules: string | null;
 };
 
@@ -24,6 +25,7 @@ const EMPTY_INITIAL: Initial = {
   name: '',
   platform: 'linkedin',
   structure: '',
+  visualIntent: null,
   writingRules: null,
 };
 
@@ -36,7 +38,7 @@ function SubmitButton({ mode }: { mode: 'create' | 'edit' }) {
   );
 }
 
-export function WritingTemplateForm({
+export function FormatForm({
   mode,
   initial,
   action,
@@ -44,14 +46,11 @@ export function WritingTemplateForm({
 }: {
   mode: 'create' | 'edit';
   initial?: Initial;
-  action: (
-    prev: WritingTemplateActionState,
-    formData: FormData,
-  ) => Promise<WritingTemplateActionState>;
+  action: (prev: FormatActionState, formData: FormData) => Promise<FormatActionState>;
   successMessage: string;
 }) {
   const values = initial ?? EMPTY_INITIAL;
-  const [state, formAction] = useActionState<WritingTemplateActionState, FormData>(action, {
+  const [state, formAction] = useActionState<FormatActionState, FormData>(action, {
     status: 'idle',
   });
 
@@ -86,19 +85,37 @@ export function WritingTemplateForm({
           defaultValue={values.structure}
           maxLength={5000}
           rows={10}
+          placeholder="Squelette du post : hook, paragraphes, listes, longueur cible…"
           className="font-mono text-sm"
         />
         {fieldErrors?.structure && <p className="text-sm text-red-600">{fieldErrors.structure}</p>}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="writingRules">Règles d'écriture (optionnel)</Label>
+        <Label htmlFor="visualIntent">Intention visuelle (optionnel)</Label>
+        <Textarea
+          id="visualIntent"
+          name="visualIntent"
+          defaultValue={values.visualIntent ?? ''}
+          maxLength={2000}
+          rows={4}
+          placeholder="Type / direction de visuel qui va avec ce format (ex. carrousel 5-7 slides, citation sur fond de marque). Pas une DA précise."
+          className="font-mono text-sm"
+        />
+        {fieldErrors?.visualIntent && (
+          <p className="text-sm text-red-600">{fieldErrors.visualIntent}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="writingRules">Règles d'écriture / cosmétique (optionnel)</Label>
         <Textarea
           id="writingRules"
           name="writingRules"
           defaultValue={values.writingRules ?? ''}
           maxLength={5000}
           rows={6}
+          placeholder="Cosmétique de finalisation : emojis, hashtags, puces, règles de mise en page…"
           className="font-mono text-sm"
         />
         {fieldErrors?.writingRules && (

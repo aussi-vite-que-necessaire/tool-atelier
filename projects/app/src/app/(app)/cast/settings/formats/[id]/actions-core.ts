@@ -1,24 +1,25 @@
 import { z } from 'zod';
 import {
-  deleteWritingTemplate,
-  getWritingTemplate,
-  updateWritingTemplate,
-} from '@/lib/db/repositories/writing-templates';
-import type { WritingTemplateActionState } from '../writing-template-form';
+  deletePublicationFormat,
+  getPublicationFormat,
+  updatePublicationFormat,
+} from '@/lib/db/repositories/publication-formats';
+import type { FormatActionState } from '../format-form';
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100),
   platform: z.enum(['linkedin']),
   structure: z.string().min(1).max(5000),
+  visualIntent: z.string().max(2000),
   writingRules: z.string().max(5000),
 });
 
-export async function updateWritingTemplateCore(
+export async function updatePublicationFormatCore(
   userId: string,
   id: string,
   formData: FormData,
-): Promise<WritingTemplateActionState> {
-  const existing = await getWritingTemplate(userId, id);
+): Promise<FormatActionState> {
+  const existing = await getPublicationFormat(userId, id);
   if (!existing) {
     return { status: 'error', message: 'not-found' };
   }
@@ -27,6 +28,7 @@ export async function updateWritingTemplateCore(
     name: String(formData.get('name') ?? ''),
     platform: String(formData.get('platform') ?? ''),
     structure: String(formData.get('structure') ?? ''),
+    visualIntent: String(formData.get('visualIntent') ?? ''),
     writingRules: String(formData.get('writingRules') ?? ''),
   };
 
@@ -40,24 +42,25 @@ export async function updateWritingTemplateCore(
     return { status: 'error', message: 'validation', fieldErrors };
   }
 
-  await updateWritingTemplate(userId, id, {
+  await updatePublicationFormat(userId, id, {
     name: parsed.data.name,
     platform: parsed.data.platform,
     structure: parsed.data.structure,
+    visualIntent: parsed.data.visualIntent === '' ? null : parsed.data.visualIntent,
     writingRules: parsed.data.writingRules === '' ? null : parsed.data.writingRules,
   });
 
   return { status: 'success' };
 }
 
-export async function deleteWritingTemplateCore(
+export async function deletePublicationFormatCore(
   userId: string,
   id: string,
-): Promise<WritingTemplateActionState> {
-  const existing = await getWritingTemplate(userId, id);
+): Promise<FormatActionState> {
+  const existing = await getPublicationFormat(userId, id);
   if (!existing) {
     return { status: 'error', message: 'not-found' };
   }
-  await deleteWritingTemplate(userId, id);
+  await deletePublicationFormat(userId, id);
   return { status: 'success' };
 }
