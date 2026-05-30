@@ -2,6 +2,15 @@ name: deploy
 on:
   push:
     branches: ["**"]
+    # Un push qui ne touche QUE la plomberie d'atelier (docs, skills, README…) ne reconstruit pas
+    # une image ni ne redéploie une preview : rien d'observable n'a changé côté app.
+    paths-ignore:
+      - "docs/**"
+      - ".claude/**"
+      - "CLAUDE.md"
+      - "README.md"
+      - "LICENSE"
+      - ".gitignore"
   delete: {}
 
 permissions:
@@ -142,6 +151,13 @@ jobs:
           LAB_HOST: ${{ secrets.LAB_HOST }}
           IMAGES: ${{ steps.images.outputs.param }}
         run: |
+          # Course push/delete : une suppression de branche déclenche un teardown dans un autre run.
+          # Si la branche a disparu pendant que ce deploy attendait/tournait, on s'abstient — sinon on
+          # recréerait une preview (conteneurs + base + route) pour une branche qui n'existe plus.
+          # Combiné au verrou flock de deploy.sh, ça garantit le bon état final quel que soit l'ordre.
+          if [ "$ENV" != "integration" ] && ! git ls-remote --exit-code --heads origin "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "branche ${GITHUB_REF_NAME} supprimée entre-temps — pas de déploiement"; exit 0
+          fi
           install -m700 -d ~/.ssh
           printf '%s\n' "$LAB_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519

@@ -86,14 +86,22 @@ db_name() {
   else printf '%s_%s' "$(printf '%s' "$name" | cut -c1-52)" "$(printf '%s' "$name" | cksum | cut -d' ' -f1)"; fi
 }
 
-# SQL de scrub d'un clone de prod (previews par-branche) : neutralise les tokens sociaux, vide les
-# sessions, anonymise les emails, et donne au 1er opérateur l'identité preview connue
-# (op@contentos.test / mot de passe 'password') pour que /preview-login fonctionne.
+# SQL de scrub d'un clone de prod (previews par-branche) : retire toute donnée réelle exploitable
+# (tokens sociaux, tokens OAuth d'auth, hashes de mots de passe, identités), vide les sessions et
+# jetons de vérification, et donne au 1er opérateur l'identité preview connue (op@contentos.test /
+# mot de passe 'password') pour que /preview-login fonctionne.
 scrub_sql() {
   cat <<SQL
-UPDATE social_accounts SET access_token = 'scrubbed', expires_at = now() - interval '1 day';
+-- Tokens de publication sociale neutralisés ; comptes anonymisés et expirés.
+UPDATE social_accounts SET access_token = 'scrubbed', external_id = 'scrubbed', display_name = 'Compte de démo', expires_at = now() - interval '1 day';
+-- Comptes d'auth : aucun token OAuth résiduel, aucun hash de mot de passe réel ne survit au clone.
+UPDATE account SET access_token = NULL, refresh_token = NULL, id_token = NULL, scope = NULL, password = NULL;
+-- Sessions et jetons de vérification : vidés.
 DELETE FROM session;
+DELETE FROM verification;
+-- Emails et noms anonymisés.
 UPDATE "user" SET email = 'op+' || id || '@contentos.test', name = 'Opérateur ' || left(id, 6);
+-- 1er opérateur = identité preview connue, connectable via /preview-login.
 UPDATE "user" SET email = 'op@contentos.test', name = 'Opérateur 1'
   WHERE id = (SELECT id FROM "user" WHERE role = 'operator' ORDER BY created_at, id LIMIT 1);
 UPDATE account SET password = '${PREVIEW_PASSWORD_HASH}'
@@ -218,10 +226,15 @@ if [ "$DB" = "true" ] || [ "$DB" = "shared" ]; then
       # (--no-owner) → tous les objets (schémas drizzle/public, tables) appartiennent à `app`,
       # pour que les migrations DDL passent ensuite en rôle app (REASSIGN OWNED BY postgres est
       # interdit : objets « required by the database system »).
-      docker exec lab-platform-postgres-1 dropdb -U postgres --if-exists "$DBNAME"
+      # --force : termine les connexions ouvertes (re-deploy d'une preview dont les conteneurs
+      # tournent encore) au lieu d'échouer sur « database is being accessed by other users ».
+      docker exec lab-platform-postgres-1 dropdb -U postgres --force --if-exists "$DBNAME"
       docker exec lab-platform-postgres-1 createdb -U postgres -O app "$DBNAME"
-      docker exec -e PGPASSWORD="$APP_DB_PASSWORD" lab-platform-postgres-1 sh -c \
-        "pg_dump -U postgres --no-owner '$SRC' | psql -U app -h 127.0.0.1 -q -d '$DBNAME'"
+      # bash + pipefail + ON_ERROR_STOP : un échec de pg_dump OU une erreur de restore fait sortir
+      # le pipe en non-zéro → `set -e` arrête le deploy. Sans ça, psql sort en 0 sur un flux tronqué
+      # et l'app démarrerait silencieusement sur une base à moitié clonée.
+      docker exec -e PGPASSWORD="$APP_DB_PASSWORD" lab-platform-postgres-1 bash -c \
+        "set -o pipefail; pg_dump -U postgres --no-owner '$SRC' | psql -U app -h 127.0.0.1 -v ON_ERROR_STOP=1 -q -d '$DBNAME'"
       CLONED=1
       echo "✓ base $DBNAME clonée depuis $SRC ($PROVISION)"
     else
@@ -300,6 +313,18 @@ fi
 # --force-recreate : applique les changements de .env (secrets) même quand l'image est identique
 # (sinon une rotation de secret seule ne serait pas prise en compte).
 docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" up -d --force-recreate
+
+# Smoke post-deploy : l'app doit répondre 200 sur /healthz (sonde sans DB) avant qu'on déclare le
+# déploiement bon. Joint le conteneur web par son alias réseau ${UPSTREAM} (exactement ce que Caddy
+# proxie), via un busybox jetable sur le réseau lab — aucune dépendance à l'image applicative ni au
+# DNS public. Échec après ~60s → le deploy échoue plutôt que d'exposer une app qui crash au boot.
+if ! docker run --rm --network lab busybox sh -c \
+  'for i in $(seq 1 30); do wget -q -T 3 -O /dev/null "http://'"$UPSTREAM"':8080/healthz" && exit 0; sleep 2; done; exit 1'; then
+  echo "::error::healthz KO après ~60s (http://${UPSTREAM}:8080/healthz) — l'app n'a pas démarré" >&2
+  docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" logs --tail 50 app >&2 || true
+  exit 1
+fi
+echo "✓ healthz OK ($UPSTREAM)"
 
 mkdir -p /opt/lab/platform/sites
 # Integration = clone complet de la prod → route protégée par basic-auth (jamais publique).

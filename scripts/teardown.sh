@@ -41,9 +41,10 @@ done
 rm -f "/opt/lab/platform/sites/${PROJ}-${ENV}.caddy"
 docker exec lab-platform-caddy-1 caddy reload --config /etc/caddy/Caddyfile || true
 
-# Drop la base preview (jamais prod : garde déjà posée plus haut)
+# Drop la base preview (jamais prod : garde déjà posée plus haut). --force termine les connexions
+# résiduelles (conteneur pas encore tout à fait arrêté) au lieu de laisser une base orpheline.
 DBNAME="${PROJ}_$(printf '%s' "$ENV" | tr '-' '_')"
-docker exec lab-platform-postgres-1 dropdb -U postgres --if-exists "${DBNAME}" || true
+docker exec lab-platform-postgres-1 dropdb -U postgres --force --if-exists "${DBNAME}" || true
 
 rm -rf "$APPDIR"
 echo "✓ teardown ${PROJ}-${ENV} (base ${DBNAME} supprimée)"
