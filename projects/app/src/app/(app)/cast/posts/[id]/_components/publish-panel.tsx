@@ -95,7 +95,7 @@ export function PublishPanel({ postId, publication }: Props) {
             <p className="text-destructive text-sm">
               {failureMessage(publication?.failureKind ?? null)}{' '}
               {publication?.failureKind === 'token_expired' ? (
-                <Link href="/cast/settings/connections" className="underline">
+                <Link href="/account/connections" className="underline">
                   Reconnecte ton compte LinkedIn
                 </Link>
               ) : null}

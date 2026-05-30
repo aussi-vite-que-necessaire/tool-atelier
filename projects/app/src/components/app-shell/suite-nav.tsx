@@ -104,6 +104,17 @@ function UserMenu({ user, preview }: { user?: SessionUser; preview: boolean }) {
             </div>
             <div className="my-1 h-px bg-border" />
             <Menu.Item
+              className="rounded-lg text-sm text-muted-foreground outline-none data-[highlighted]:bg-muted data-[highlighted]:text-foreground"
+              render={
+                <Link
+                  href="/account/connections"
+                  className="flex w-full items-center gap-2 px-2.5 py-1.5"
+                >
+                  Compte
+                </Link>
+              }
+            />
+            <Menu.Item
               closeOnClick={false}
               className="rounded-lg text-sm text-muted-foreground outline-none data-[highlighted]:bg-muted data-[highlighted]:text-foreground"
               render={
