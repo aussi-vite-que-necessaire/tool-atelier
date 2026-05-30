@@ -19,6 +19,8 @@ describe('catalogue de l’endpoint MCP in-app', () => {
     // cast
     expect(names.has('create_post')).toBe(true);
     expect(names.has('publish_post_now')).toBe(true);
+    expect(names.has('create_publication_format')).toBe(true);
+    expect(names.has('create_writing_template')).toBe(false);
     // media
     expect(names.has('generate_image')).toBe(true);
     expect(names.has('render_template')).toBe(true);
