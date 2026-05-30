@@ -36,7 +36,7 @@ function parseInlineArray(v: string): string[] {
 
 export function parseFrontmatter(raw: string): Frontmatter {
   const m = raw.match(/^---\n([\s\S]*?)\n---/);
-  if (!m) throw new Error('Frontmatter absent (bloc --- requis).');
+  if (!m?.[1]) throw new Error('Frontmatter absent (bloc --- requis).');
   const lines = m[1].split('\n');
 
   const top: Record<string, string> = {};
