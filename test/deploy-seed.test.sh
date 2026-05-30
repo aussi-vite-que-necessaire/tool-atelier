@@ -24,10 +24,13 @@ eq "$(db_name app sharp-ride)"  "app_sharp_ride"  "db_name slug (- → _)"
 long="$(db_name app aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)"
 [ "${#long}" -le 63 ] || fail "db_name long doit être ≤63 (obtenu ${#long})"
 
-# scrub_sql
+# scrub_sql — aucune donnée réelle exploitable ne survit au clone.
 scrub="$(scrub_sql)"
-has "$scrub" "access_token = 'scrubbed'" "scrub neutralise les tokens"
+has "$scrub" "access_token = 'scrubbed'" "scrub neutralise les tokens sociaux"
 has "$scrub" "DELETE FROM session"       "scrub vide les sessions"
+has "$scrub" "DELETE FROM verification"  "scrub vide les jetons de vérification"
+has "$scrub" "refresh_token = NULL"      "scrub purge les tokens OAuth d'auth"
+has "$scrub" "password = NULL"           "scrub purge les hashes de mots de passe réels"
 has "$scrub" "op@contentos.test"         "scrub pose l'identité preview connue"
 
 # caddy_site

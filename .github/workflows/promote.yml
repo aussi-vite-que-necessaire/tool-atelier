@@ -4,7 +4,12 @@ name: promote
 # GHCR — la MÊME image, donc exactement ce qui a été validé — puis déploie en prod (deploy.sh
 # régénère le .env prod : APP_URL = contentos.ch via apex, secrets prod).
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Taper PROMOTE pour confirmer la mise en prod'
+        required: true
+        type: string
 
 permissions:
   contents: write   # pousser le tag de promotion
@@ -29,6 +34,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Garde-fou confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          [ "$CONFIRM" = "PROMOTE" ] || { echo "::error::confirmation absente (taper PROMOTE) — promotion annulée"; exit 1; }
       - name: Re-tag :integration → :prod (sans rebuild) + compute IMAGES
         id: images
         run: |
@@ -37,9 +47,13 @@ jobs:
           for role in web worker; do
             src="ghcr.io/$OWNER/atelier-app-$role:integration"
             dst="ghcr.io/$OWNER/atelier-app-$role:prod"
-            echo "::group::re-tag $src → :prod"
+            # Digest de l'artefact d'intégration promu : tracé dans le résumé pour voir exactement
+            # ce qui part en prod (la MÊME image que celle validée sur le palier d'intégration).
+            digest="$(docker buildx imagetools inspect "$src" --format '{{.Manifest.Digest}}' 2>/dev/null || echo '?')"
+            echo "::group::re-tag $src ($digest) → :prod"
             docker buildx imagetools create --tag "$dst" "$src"
             echo "::endgroup::"
+            echo "- \`$role\` : \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
             PARTS="${PARTS:+$PARTS,}$role=$dst"
           done
           echo "param=$PARTS" >> "$GITHUB_OUTPUT"
