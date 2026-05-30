@@ -1,42 +1,59 @@
 ---
 name: contentos
-description: Produire un contenu éditorial de bout en bout avec la suite Contentos. Déclencher quand l'utilisateur veut écrire un post (LinkedIn aujourd'hui), partir d'une idée, ou mettre au propre un brouillon dans sa voix. Contentos est un outil pour agent : toute l'intelligence rédactionnelle est ici, dans l'agent ; Contentos stocke l'état (voix, formats de publication, posts) et l'expose via les outils MCP de la suite.
+description: Rédige un post (LinkedIn) de bout en bout à partir d'une matière fournie par l'humain, via les outils MCP de la suite Contentos. Use when the user asks to "rédige-moi un post", veut transformer une idée/matière en post publiable, ou veut un post cadré par un format et une voix. Orchestre le cadrage (format + voix), le plan, la rédaction dans la voix, la mise en page, puis pose le post dans l'outil.
+metadata:
+  kind: workflow
+  domain: suite
+  version: 2
+  tagline: "Rédiger un post de bout en bout, piloté par l'agent."
+  requires_mcp: [contentos]
 ---
 
-# contentos
+# contentos — rédiger un post
 
-Squelette du workflow de rédaction piloté par l'agent. On ne détaille pas encore chaque
-sous-étape (itération ultérieure) — c'est la **séquence** qui compte.
+Workflow agentique : transformer une **matière fournie par l'humain** en **post posé dans
+l'outil**, prêt à relire/planifier/publier. Toute l'intelligence est ici (agent) ; les outils
+MCP de la suite ne stockent et n'exposent que l'état (formats, voix, posts).
 
-## Outils MCP utilisés
+**Déclencheur :** l'humain demande un post (« rédige-moi un post ») **en donnant la matière**
+(notes, idée, lien, brouillon). Si la matière manque, la demander avant de commencer.
 
-- `list_voices` — voix éditoriales (gérées dans l'espace Compte, partagées dans la suite).
-- `list_publication_formats` — formats de publication : `structure`, `visualIntent`
-  (intention de visuel) et `writingRules` (cosmétique). Liés à une plateforme (`linkedin`).
-- `create_post` / `get_post` / `edit_post` — poser et amender le post.
-- (Plus tard, partie visuel : `generate_image`, `render_template`, `attach_media_to_post`…)
+## Outils
+
+Le catalogue des outils MCP de la suite (par domaine) est dans
+[references/outils-mcp.md](references/outils-mcp.md). Pour ce workflow, l'essentiel :
+`list_publication_formats`, `list_voices`, `create_post`.
 
 ## Séquence
 
-1. **Brainstorm de l'idée** avec l'humain : cerner le sujet, l'angle, la matière.
-2. **Cadre de publication** : choisir la **plateforme**, le **format**
-   (`list_publication_formats`) et la **voix** (`list_voices`). Demander à l'humain si
-   le choix est ambigu.
-3. **Plan / déroulé** : construire le plan du post en respectant la `structure` du format.
-   Faire valider le déroulé à l'humain.
-4. **Fond** : rédiger le contenu selon le plan validé. On vise le fond juste, pas encore
-   le style.
-5. **Voix** : réécrire le texte dans la voix choisie. **Itérer** jusqu'à ce que la voix
-   soit vraiment satisfaisante (aller-retour avec l'humain).
-6. **Cosmétique** : appliquer les `writingRules` du format (emojis, hashtags, puces,
-   règles de mise en page) pour la finalisation.
-7. **Poser le post** : `create_post` → le post est prêt à être publié (l'humain valide,
-   planifie ou publie depuis Contentos).
-8. **Visuel** (étape ultérieure, hors de ce squelette) : à partir du `visualIntent` du
-   format, produire le visuel d'accompagnement avec les outils média.
+Copie cette checklist dans ta réponse et coche au fur et à mesure :
+
+```
+Rédaction du post :
+- [ ] 1. Cadrer — proposer un format et une voix, l'humain choisit (steps/1-cadrer.md)
+- [ ] 2. Plan — bâtir le plan depuis la matière + le format, le faire challenger (steps/2-plan.md)
+- [ ] 3. Voix — rédiger selon le plan dans la voix, sans mise en page (steps/3-voix.md)
+- [ ] 4. Mise en page — appliquer la cosmétique du format (steps/4-mise-en-page.md)
+- [ ] 5. Poser — create_post puis montrer le post à l'humain (steps/5-poser.md)
+```
+
+Chaque étape a son fichier. Lis-le **au moment** d'y arriver (divulgation progressive) :
+
+1. **Cadrer** → [steps/1-cadrer.md](steps/1-cadrer.md)
+2. **Plan** → [steps/2-plan.md](steps/2-plan.md)
+3. **Voix** → [steps/3-voix.md](steps/3-voix.md)
+4. **Mise en page** → [steps/4-mise-en-page.md](steps/4-mise-en-page.md)
+5. **Poser** → [steps/5-poser.md](steps/5-poser.md)
+
+## Sous-agents
+
+L'étape 2 peut faire **challenger le plan** par des sous-agents critiques (angle éditorial,
+marketing…). Le pas de tir est dans [agents/](agents/) — voir
+[agents/critique-editoriale.md](agents/critique-editoriale.md). Squelette pour l'instant :
+à étoffer par itération.
 
 ## Principe
 
-L'agent porte la méthode et le jugement éditorial. Contentos ne « pense » pas : il garde
-la voix, les formats et les posts, et les expose. Les spécificités de format vivent dans
-le format de publication chargé, pas en dur dans ce skill.
+L'agent porte la méthode et le jugement. Les spécificités d'un post (sa **structure**, son
+**intention visuelle**, ses **règles d'écriture**) viennent du **format** chargé, pas en dur
+ici. Le ton vient de la **voix** chargée. On garde le squelette mince ; on l'enrichit à l'usage.
