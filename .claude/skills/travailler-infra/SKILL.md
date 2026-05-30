@@ -1,13 +1,12 @@
 ---
 name: travailler-infra
-description: Travailler sur l'infrastructure de l'atelier lui-même — skills, CLAUDE.md, scripts, hooks, CI. Flow libre. À utiliser pour toute plomberie de l'atelier qui n'est ni du dev d'un projet, ni la création d'un nouveau projet.
+description: Travailler sur l'infrastructure de l'atelier lui-même — skills, CLAUDE.md, scripts, hooks, CI. Flow libre. À utiliser pour toute plomberie de l'atelier qui n'est pas du dev de l'app.
 ---
 
 # /travailler-infra — infrastructure de l'atelier
 
 Travail sur l'atelier lui-même : skills, `CLAUDE.md`, scripts, hooks, CI. **Pas le
-dev d'un projet** (qui passe par le workflow superpowers) ni la création d'un nouveau projet
-(qui passe par `/nouveau-projet`).
+dev de l'app** (qui passe par le workflow superpowers).
 
 ## Cadre
 

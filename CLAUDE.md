@@ -66,10 +66,10 @@ Le skill `content-os-redaction` (cerveau éditorial qui pilote cast et media via
 
 ## Workflow & isolation — RÈGLE ABSOLUE
 
-**Étoile polaire : deux agents ne touchent jamais la même ressource mutable au même instant.** Le code et la branche s'isolent par session ; la prod (singleton) se sérialise par l'entonnoir PR → merge (intégration) → promotion → prod.
+**Étoile polaire : deux agents ne touchent jamais la même ressource mutable au même instant.** Le code et la branche s'isolent par session ; la prod (singleton) ne change que par **promotion explicite** — c'est le seul vrai verrou.
 
 - **Une session = un conteneur isolé = une branche.** Chaque session tourne dans son propre conteneur (un clone frais et jetable du dépôt, sur `claude.ai/code`) sur sa propre branche, fournie par le harness. L'isolation est **structurelle** : un agent est seul dans son conteneur, il peut éditer ce qu'il veut et basculer de branche sans gêner personne. Pas de worktree git, pas de checkout partagé.
-- **On code sur sa branche de session, on ouvre une PR.** Pas de commit direct sur `main` dans le flux normal : `main` est le palier d'intégration, alimenté par les merges de PR.
+- **`main` accepte les commits directs — c'est le palier d'intégration.** Aucun garde-fou ne bloque main (la prod est protégée par la promotion, pas par main). Pour une feature qu'on veut prévisualiser isolément et faire relire, on passe par une **branche → preview → PR** (cf. la surcouche superpowers ci-dessus) ; pour un changement direct, on commit sur main. Dans les deux cas, pousser sur main alimente l'intégration.
 - **Push de branche → preview par-branche** : `https://app-<branche>.preview.contentos.ch` (la suite entière, isolée, base dédiée seedée ; détruite à la suppression de la branche).
 - **Merge de PR → `main` = palier d'intégration** : `https://app.preview.contentos.ch`, base `app_integration` persistante, seed plus riche + e2e. C'est le palier stable où l'on valide avant prod.
 - **Promotion explicite → prod** : `https://contentos.ch` (+ `www.contentos.ch`), via le workflow `promote` (`workflow_dispatch`) qui **re-tague les images `:integration` validées en `:prod` sans rebuild** (on promeut l'artefact exact testé). Prod n'est jamais un envoi auto au merge.

@@ -6,7 +6,7 @@ en place ; ces deux évolutions sont sorties du périmètre de la nuit.
 ## Contexte (30/05/2026)
 
 Tous les outils de la suite (cast + media + ressources, 66 outils + `ping`) sont servis par
-un **endpoint MCP in-app unique**, `/api/mcp` (`projects/app/src/app/api/mcp/route.ts`),
+un **endpoint MCP in-app unique**, `/api/mcp` (`src/app/api/mcp/route.ts`),
 adossé au registre commun `src/lib/mcp/registry.ts`. L'auth (`src/lib/mcp/endpoint-auth.ts`)
 est volontairement simple :
 
