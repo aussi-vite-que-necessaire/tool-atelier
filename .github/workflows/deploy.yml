@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       env: ${{ steps.env.outputs.env }}
+      tag: ${{ steps.env.outputs.tag }}
     steps:
       - id: env
         run: |
@@ -37,11 +38,18 @@ jobs:
           # main = palier d'INTÉGRATION (suite assemblée sur app.preview.contentos.ch). prod n'est
           # pas un envoi auto : c'est une promotion explicite d'artefact (cf. promote.yml). Les
           # autres branches → preview par-branche.
-          if [ "$ref" = "main" ]; then e=integration; else
+          #
+          # Le TAG d'image découple l'artefact de la VALIDATION : sur main, on build sous un tag de
+          # commit (sha-…) immuable et on ne pose `:integration` qu'APRÈS un déploiement d'intégration
+          # vert (cf. job deploy). Ainsi `:integration` — source de la promotion prod — ne pointe
+          # jamais sur une image qui n'a pas passé test + smoke. Les previews gardent le tag = slug.
+          if [ "$ref" = "main" ]; then e=integration; t="sha-${GITHUB_SHA:0:12}"; else
             e="$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g;s/^-*//;s/-*$//')"
+            t="$e"
           fi
           [ -n "$e" ] || { echo "::error::branche sans slug exploitable: $ref"; exit 1; }
           echo "env=$e" >> "$GITHUB_OUTPUT"
+          echo "tag=$t" >> "$GITHUB_OUTPUT"
 
   # Build + push des deux images (web + worker), EN PARALLÈLE du job `test`. Le deploy ne fait
   # que pull ces images, il ne rebuild jamais. Cache buildx GHA scopé par target (web/worker)
@@ -64,7 +72,7 @@ jobs:
       - name: Build + push (target ${{ matrix.target }})
         env:
           TGT: ${{ matrix.target }}
-          ENV_TAG: ${{ needs.detect.outputs.env }}
+          ENV_TAG: ${{ needs.detect.outputs.tag }}
           OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
@@ -135,6 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENV: ${{ needs.detect.outputs.env }}
+      TAG: ${{ needs.detect.outputs.tag }}
       OWNER: ${{ github.repository_owner }}
     steps:
       - uses: actions/checkout@v4
@@ -142,7 +151,7 @@ jobs:
         id: images
         run: |
           set -euo pipefail
-          IMAGES_PARAM="web=ghcr.io/$OWNER/atelier-app-web:$ENV,worker=ghcr.io/$OWNER/atelier-app-worker:$ENV"
+          IMAGES_PARAM="web=ghcr.io/$OWNER/atelier-app-web:$TAG,worker=ghcr.io/$OWNER/atelier-app-worker:$TAG"
           echo "param=$IMAGES_PARAM" >> "$GITHUB_OUTPUT"
           echo "IMAGES=$IMAGES_PARAM"
       - name: Deploy to lab
@@ -177,6 +186,30 @@ jobs:
             $SCP secrets/projects/app.env.age "root@$LAB_HOST:/opt/lab/apps/app-${ENV}/app.env.age"
           fi
           $SSH "bash /opt/lab/deploy.sh 'app' '$ENV' '$IMAGES'"
+      # Le déploiement d'intégration vient de réussir (test + build + smoke web/worker côté lab) :
+      # SEULEMENT MAINTENANT on fait pointer `:integration` sur cet artefact validé. La promotion prod
+      # (promote.yml) re-tague `:integration`→`:prod` : elle ne peut donc promouvoir qu'une image
+      # passée par l'intégration de bout en bout. Sur une preview de branche, étape sautée.
+      - name: Setup buildx (re-tag intégration)
+        if: env.ENV == 'integration'
+        uses: docker/setup-buildx-action@v3
+      - name: Login GHCR (re-tag intégration)
+        if: env.ENV == 'integration'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Re-tag :integration sur l'artefact validé
+        if: env.ENV == 'integration'
+        run: |
+          set -euo pipefail
+          for role in web worker; do
+            docker buildx imagetools create \
+              --tag "ghcr.io/$OWNER/atelier-app-$role:integration" \
+              "ghcr.io/$OWNER/atelier-app-$role:$TAG"
+          done
+          echo "✓ \`:integration\` posé sur \`$TAG\` (validé)" >> "$GITHUB_STEP_SUMMARY"
       - name: Résumé
         run: |
           if [ "$ENV" = "integration" ]; then host="app.preview.contentos.ch"; else host="app-${ENV}.preview.contentos.ch"; fi

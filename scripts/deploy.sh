@@ -87,9 +87,10 @@ db_name() {
 }
 
 # SQL de scrub d'un clone de prod (previews par-branche) : retire toute donnée réelle exploitable
-# (tokens sociaux, tokens OAuth d'auth, hashes de mots de passe, identités), vide les sessions et
-# jetons de vérification, et donne au 1er opérateur l'identité preview connue (op@contentos.test /
-# mot de passe 'password') pour que /preview-login fonctionne.
+# (tokens sociaux, tokens OAuth d'auth, hashes de mots de passe), anonymise les identités et les
+# emails de contacts (utilisateurs + accès du module ressources), vide les sessions et jetons de
+# vérification, et donne au 1er opérateur l'identité preview connue (op@contentos.test / mot de
+# passe 'password') pour que /preview-login fonctionne.
 scrub_sql() {
   cat <<SQL
 -- Tokens de publication sociale neutralisés ; comptes anonymisés et expirés.
@@ -101,9 +102,13 @@ DELETE FROM session;
 DELETE FROM verification;
 -- Emails et noms anonymisés.
 UPDATE "user" SET email = 'op+' || id || '@contentos.test', name = 'Opérateur ' || left(id, 6);
--- 1er opérateur = identité preview connue, connectable via /preview-login.
+-- Emails de contacts du module ressources (accès partagés) anonymisés.
+UPDATE res_access SET email = 'res+' || id || '@contentos.test';
+-- 1er opérateur (à défaut, 1er utilisateur) = identité preview connue, connectable via /preview-login.
 UPDATE "user" SET email = 'op@contentos.test', name = 'Opérateur 1'
-  WHERE id = (SELECT id FROM "user" WHERE role = 'operator' ORDER BY created_at, id LIMIT 1);
+  WHERE id = COALESCE(
+    (SELECT id FROM "user" WHERE role = 'operator' ORDER BY created_at, id LIMIT 1),
+    (SELECT id FROM "user" ORDER BY created_at, id LIMIT 1));
 UPDATE account SET password = '${PREVIEW_PASSWORD_HASH}'
   WHERE provider_id = 'credential'
     AND user_id = (SELECT id FROM "user" WHERE email = 'op@contentos.test');
@@ -310,21 +315,69 @@ elif [ "$CLONED" != "1" ] && [ -n "$SEED" ] && [ "$ENV" != "prod" ]; then
   docker run --rm --network lab --env-file "$APPDIR/.env" "$MIGRATE_IMAGE" sh -c "$SEED"
 fi
 
+# Rollback : images des conteneurs en place AVANT le --force-recreate, relevées par leur ID immuable
+# (valide même quand le tag a glissé). Si un smoke post-deploy échoue, on restaure ce dernier état
+# sain au lieu de laisser un conteneur qui crashe servir la route. Vide au 1er déploiement (rien à
+# restaurer) → l'appelant sort alors en erreur sans avoir publié de route.
+PREV_IMAGES_FILE="$(mktemp)"
+for cid in $(docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" ps -q 2>/dev/null || true); do
+  svc="$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.service" }}' "$cid" 2>/dev/null || true)"
+  iid="$(docker inspect -f '{{.Image}}' "$cid" 2>/dev/null || true)"
+  [ -n "$svc" ] && [ -n "$iid" ] && echo "$svc=$iid" >> "$PREV_IMAGES_FILE"
+done
+
+rollback_deploy() {
+  [ -s "$PREV_IMAGES_FILE" ] || { echo "⟲ aucun état précédent — pas de rollback possible (1er déploiement)" >&2; return 1; }
+  echo "⟲ rollback — restauration des images précédentes (dernier état sain)" >&2
+  while IFS='=' read -r svc iid; do
+    case "$svc" in
+      app)    sed -i "s|^IMAGE_WEB=.*|IMAGE_WEB=${iid}|"       "$APPDIR/.env" ;;
+      worker) sed -i "s|^IMAGE_WORKER=.*|IMAGE_WORKER=${iid}|" "$APPDIR/.env" ;;
+    esac
+  done < "$PREV_IMAGES_FILE"
+  docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" up -d --force-recreate || true
+}
+
+# Échec post-boot : logs + rollback vers le dernier état sain, puis sortie en erreur (route non
+# publiée / inchangée). Une seule porte de sortie pour tous les contrôles post-déploiement.
+fail_after_boot() {
+  echo "::error::$1" >&2
+  docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" logs --tail 50 >&2 || true
+  rollback_deploy || true
+  exit 1
+}
+
 # --force-recreate : applique les changements de .env (secrets) même quand l'image est identique
 # (sinon une rotation de secret seule ne serait pas prise en compte).
 docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" up -d --force-recreate
 
-# Smoke post-deploy : l'app doit répondre 200 sur /healthz (sonde sans DB) avant qu'on déclare le
-# déploiement bon. Joint le conteneur web par son alias réseau ${UPSTREAM} (exactement ce que Caddy
-# proxie), via un busybox jetable sur le réseau lab — aucune dépendance à l'image applicative ni au
-# DNS public. Échec après ~60s → le deploy échoue plutôt que d'exposer une app qui crash au boot.
+# Smoke web : l'app doit répondre 200 sur /healthz (sonde sans DB) avant qu'on déclare le déploiement
+# bon. Joint le conteneur web par son alias réseau ${UPSTREAM} (exactement ce que Caddy proxie), via
+# un busybox jetable sur le réseau lab — aucune dépendance à l'image applicative ni au DNS public.
+# Échec après ~60s → rollback + le deploy échoue plutôt que d'exposer une app qui crash au boot.
 if ! docker run --rm --network lab busybox sh -c \
   'for i in $(seq 1 30); do wget -q -T 3 -O /dev/null "http://'"$UPSTREAM"':8080/healthz" && exit 0; sleep 2; done; exit 1'; then
-  echo "::error::healthz KO après ~60s (http://${UPSTREAM}:8080/healthz) — l'app n'a pas démarré" >&2
-  docker compose -p "${PROJ}-${ENV}" --env-file "$APPDIR/.env" -f "$APPDIR/compose.yml" logs --tail 50 app >&2 || true
-  exit 1
+  fail_after_boot "healthz KO après ~60s (http://${UPSTREAM}:8080/healthz) — l'app n'a pas démarré"
 fi
 echo "✓ healthz OK ($UPSTREAM)"
+
+# Smoke worker : le worker n'expose aucun HTTP. On exige que son conteneur tourne et n'ait pas déjà
+# crashé/redémarré peu après le boot (crash-loop sous restart:unless-stopped → RestartCount>0, ou
+# status restarting/exited). Sans ça, un worker mort (Redis, secret, import cassé) passerait au vert
+# alors qu'aucun job BullMQ ne serait consommé.
+for role in "${ROLES[@]}"; do
+  [ "$role" = "worker" ] || continue
+  wname="${PROJ}-${ENV}-worker-1"
+  sleep 6
+  state="$(docker inspect -f '{{.State.Status}}|{{.State.Restarting}}|{{.RestartCount}}' "$wname" 2>/dev/null || echo 'missing|?|?')"
+  IFS='|' read -r wstatus wrestarting wrcount <<< "$state"
+  if [ "$wstatus" != "running" ] || [ "$wrestarting" = "true" ] || [ "${wrcount:-0}" -gt 0 ]; then
+    fail_after_boot "worker KO ($wname état=$state) — crash au boot"
+  fi
+  echo "✓ worker OK ($wname)"
+done
+
+rm -f "$PREV_IMAGES_FILE"
 
 mkdir -p /opt/lab/platform/sites
 # Integration = clone complet de la prod → route protégée par basic-auth (jamais publique).
