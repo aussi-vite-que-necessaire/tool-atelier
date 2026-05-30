@@ -12,7 +12,7 @@ export default async function VoicesPage() {
   return (
     <SettingsPage
       title="Voix éditoriales"
-      description="Plusieurs voix possibles. La voix est choisie au moment de générer un post."
+      description="Vos voix éditoriales, partagées dans toute la suite. L'agent en choisit une au moment de produire un contenu."
       action={
         <Button nativeButton={false} render={<Link href="/account/voices/new" />}>
           + Nouvelle
