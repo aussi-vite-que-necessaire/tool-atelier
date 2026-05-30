@@ -1,0 +1,12 @@
+{
+  "description": "Contentos — suite unifiée (cast + media + ressources + docs public), une seule app Next.js. Web + worker.",
+  "apex": true,
+  "db": true,
+  "redis": true,
+  "browser": true,
+  "email": true,
+  "migrate": "node scripts/migrate.mjs",
+  "seed": "node scripts/seed-preview.mjs",
+  "worker": "node worker-runner.mjs",
+  "images": ["web", "worker"]
+}

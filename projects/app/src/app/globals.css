@@ -1,0 +1,233 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+body {
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+@theme inline {
+  /* Display = serif éditoriale ; corps = grotesque Geist ; mono = Geist Mono. */
+  --font-display: var(--font-display);
+  --font-heading: var(--font-display);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-signal: var(--signal);
+  --color-signal-foreground: var(--signal-foreground);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Papier chaud + encre profonde + signal vermillon. Une lumière éditoriale. */
+  --background: oklch(0.985 0.005 85);
+  --foreground: oklch(0.18 0.012 65);
+  --card: oklch(0.995 0.004 85);
+  --card-foreground: oklch(0.18 0.012 65);
+  --popover: oklch(0.995 0.004 85);
+  --popover-foreground: oklch(0.18 0.012 65);
+  --primary: oklch(0.2 0.014 60);
+  --primary-foreground: oklch(0.98 0.006 85);
+  --secondary: oklch(0.95 0.008 80);
+  --secondary-foreground: oklch(0.24 0.014 60);
+  --muted: oklch(0.955 0.007 80);
+  --muted-foreground: oklch(0.5 0.012 65);
+  --accent: oklch(0.94 0.012 75);
+  --accent-foreground: oklch(0.24 0.014 60);
+  --destructive: oklch(0.55 0.21 27);
+  --border: oklch(0.9 0.008 75);
+  --input: oklch(0.9 0.008 75);
+  --ring: oklch(0.62 0.18 38);
+  --signal: oklch(0.62 0.2 38);
+  --signal-foreground: oklch(0.985 0.006 85);
+  --chart-1: oklch(0.62 0.2 38);
+  --chart-2: oklch(0.5 0.012 65);
+  --chart-3: oklch(0.4 0.012 65);
+  --chart-4: oklch(0.32 0.013 62);
+  --chart-5: oklch(0.24 0.014 60);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.97 0.006 82);
+  --sidebar-foreground: oklch(0.18 0.012 65);
+  --sidebar-primary: oklch(0.2 0.014 60);
+  --sidebar-primary-foreground: oklch(0.98 0.006 85);
+  --sidebar-accent: oklch(0.94 0.012 75);
+  --sidebar-accent-foreground: oklch(0.24 0.014 60);
+  --sidebar-border: oklch(0.9 0.008 75);
+  --sidebar-ring: oklch(0.62 0.18 38);
+}
+
+.dark {
+  --background: oklch(0.17 0.01 60);
+  --foreground: oklch(0.95 0.006 85);
+  --card: oklch(0.21 0.011 60);
+  --card-foreground: oklch(0.95 0.006 85);
+  --popover: oklch(0.21 0.011 60);
+  --popover-foreground: oklch(0.95 0.006 85);
+  --primary: oklch(0.92 0.008 82);
+  --primary-foreground: oklch(0.2 0.012 60);
+  --secondary: oklch(0.27 0.012 60);
+  --secondary-foreground: oklch(0.95 0.006 85);
+  --muted: oklch(0.27 0.012 60);
+  --muted-foreground: oklch(0.7 0.01 70);
+  --accent: oklch(0.3 0.014 58);
+  --accent-foreground: oklch(0.95 0.006 85);
+  --destructive: oklch(0.7 0.19 22);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.66 0.18 38);
+  --signal: oklch(0.68 0.19 40);
+  --signal-foreground: oklch(0.18 0.012 60);
+  --chart-1: oklch(0.68 0.19 40);
+  --chart-2: oklch(0.7 0.01 70);
+  --chart-3: oklch(0.55 0.012 65);
+  --chart-4: oklch(0.45 0.012 62);
+  --chart-5: oklch(0.35 0.012 60);
+  --sidebar: oklch(0.2 0.011 60);
+  --sidebar-foreground: oklch(0.95 0.006 85);
+  --sidebar-primary: oklch(0.68 0.19 40);
+  --sidebar-primary-foreground: oklch(0.18 0.012 60);
+  --sidebar-accent: oklch(0.3 0.014 58);
+  --sidebar-accent-foreground: oklch(0.95 0.006 85);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: oklch(0.66 0.18 38);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  /* Étiquette « eyebrow » monospace — code typographique de la suite. */
+  .eyebrow {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  /* Titres de display : serif éditoriale, légèrement resserrée. */
+  .font-display {
+    font-family: var(--font-display), Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+
+  /* Grain papier discret — texture appliquée en overlay sur les grandes surfaces. */
+  .paper-grain {
+    position: relative;
+  }
+  .paper-grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+  .dark .paper-grain::after {
+    mix-blend-mode: screen;
+    opacity: 0.04;
+  }
+
+  /* Trame de règles fines — fond technique pour le hero et les sections vides. */
+  .hairline-grid {
+    background-image:
+      linear-gradient(to right, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 6%, transparent) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* Apparition douce, échelonnable via animation-delay inline. */
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .rise-in {
+    animation: rise-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* Coloration syntaxique (Prism) pour l'éditeur de code des visual templates. */
+.code-editor .token.comment,
+.code-editor .token.prolog,
+.code-editor .token.doctype,
+.code-editor .token.cdata {
+  color: #8e8e8e;
+}
+.code-editor .token.punctuation {
+  color: #6b7280;
+}
+.code-editor .token.tag,
+.code-editor .token.selector,
+.code-editor .token.keyword {
+  color: #2563eb;
+}
+.code-editor .token.attr-name,
+.code-editor .token.property {
+  color: #7c3aed;
+}
+.code-editor .token.attr-value,
+.code-editor .token.string {
+  color: #047857;
+}
+.code-editor .token.number,
+.code-editor .token.unit,
+.code-editor .token.hexcode {
+  color: #c2410c;
+}
+.code-editor .token.function {
+  color: #be185d;
+}

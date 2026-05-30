@@ -1,0 +1,231 @@
+/* Espace public docs : design éditorial brutaliste, personnalisable par opérateur.
+   Tout est scopé sous .docs-scope et lit des variables --res-* (injectées par
+   ThemeStyle au runtime), pour ne jamais entrer en conflit avec les tokens de la
+   suite. Valeurs par défaut = preset brutalist. */
+
+.docs-scope {
+  --res-paper: oklch(0.985 0.005 95);
+  --res-paper-2: oklch(0.955 0.008 95);
+  --res-ink: oklch(0.2 0.012 60);
+  --res-ink-soft: oklch(0.46 0.012 60);
+  --res-accent: oklch(0.63 0.22 27);
+  --res-accent-ink: oklch(0.99 0.01 95);
+  --res-accent-soft: oklch(0.93 0.07 40);
+  --res-info: oklch(0.9 0.07 235);
+  --res-success: oklch(0.9 0.11 150);
+  --res-warn: oklch(0.92 0.13 90);
+  --res-radius: 0;
+  --res-font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --res-font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --res-shadow-sm: 2px 2px 0 0 var(--res-ink);
+  --res-shadow: 4px 4px 0 0 var(--res-ink);
+  --res-shadow-lg: 6px 6px 0 0 var(--res-ink);
+  --res-shadow-accent: 4px 4px 0 0 var(--res-accent);
+
+  min-height: 100vh;
+  background: var(--res-paper);
+  color: var(--res-ink);
+  font-family: var(--res-font-sans);
+}
+
+.docs-scope ::selection {
+  background: var(--res-accent);
+  color: var(--res-accent-ink);
+}
+.docs-scope a {
+  text-decoration: none;
+}
+.docs-scope :focus-visible {
+  outline: 2px solid var(--res-accent);
+  outline-offset: 2px;
+}
+
+/* Effet d'appui tactile sur cartes/boutons. */
+.docs-scope .res-press {
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.docs-scope .res-press:hover {
+  transform: translate(2px, 2px);
+  box-shadow: var(--res-shadow-sm) !important;
+}
+.docs-scope .res-press:active {
+  transform: translate(4px, 4px);
+  box-shadow: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .docs-scope .res-press,
+  .docs-scope .res-press:hover,
+  .docs-scope .res-press:active {
+    transition: none;
+    transform: none;
+  }
+}
+
+/* Filet d'accent sous un titre. */
+.docs-scope .res-accent-rule::after {
+  content: "";
+  display: block;
+  width: 3rem;
+  height: 5px;
+  background: var(--res-accent);
+  margin-top: 0.75rem;
+}
+
+/* Rendu markdown du lecteur. */
+.res-prose {
+  line-height: 1.75;
+  font-size: 1.02rem;
+}
+.res-prose > :first-child {
+  margin-top: 0;
+}
+.res-prose h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 2.25rem 0 0.85rem;
+  scroll-margin-top: 6rem;
+}
+.res-prose h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 1.6rem 0 0.5rem;
+  scroll-margin-top: 6rem;
+}
+.res-prose p {
+  margin: 0.85rem 0;
+}
+.res-prose ul,
+.res-prose ol {
+  margin: 0.85rem 0;
+  padding-left: 1.5rem;
+  list-style: revert;
+}
+.res-prose li {
+  margin: 0.3rem 0;
+}
+.res-prose li::marker {
+  color: var(--res-ink-soft);
+  font-weight: 700;
+}
+.res-prose a {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--res-accent);
+  font-weight: 500;
+}
+.res-prose a:hover {
+  background: var(--res-accent);
+  color: var(--res-accent-ink);
+  text-decoration-color: transparent;
+}
+.res-prose strong {
+  font-weight: 800;
+}
+.res-prose code {
+  font-family: var(--res-font-mono);
+  font-size: 0.88em;
+  background: var(--res-paper-2);
+  border: 1px solid color-mix(in oklch, var(--res-ink) 18%, transparent);
+  padding: 0.1rem 0.35rem;
+}
+.res-prose pre {
+  border: 2px solid var(--res-ink);
+  box-shadow: var(--res-shadow);
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  background: var(--res-paper);
+}
+.res-prose pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+.res-prose table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  margin: 1.25rem 0;
+  border: 2px solid var(--res-ink);
+  box-shadow: var(--res-shadow);
+}
+.res-prose th,
+.res-prose td {
+  border-bottom: 2px solid var(--res-ink);
+  border-right: 2px solid var(--res-ink);
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+}
+.res-prose tr > :last-child {
+  border-right: 0;
+}
+.res-prose tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.res-prose th {
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  background: var(--res-ink);
+  color: var(--res-paper);
+}
+.res-prose tbody tr:nth-child(even) {
+  background: var(--res-paper-2);
+}
+.res-prose blockquote {
+  border-left: 5px solid var(--res-accent);
+  padding: 0.25rem 0 0.25rem 1.1rem;
+  margin: 1.25rem 0;
+  font-style: italic;
+  color: var(--res-ink-soft);
+}
+.res-prose hr {
+  border: 0;
+  border-top: 2px solid var(--res-ink);
+  margin: 2rem 0;
+}
+.res-prose img {
+  max-width: 100%;
+  border: 2px solid var(--res-ink);
+}
+
+/* Coloration Prism (thème clair simple sur le fond papier). */
+.res-prose .token.comment,
+.res-prose .token.prolog,
+.res-prose .token.doctype,
+.res-prose .token.cdata {
+  color: var(--res-ink-soft);
+}
+.res-prose .token.punctuation {
+  color: var(--res-ink-soft);
+}
+.res-prose .token.property,
+.res-prose .token.tag,
+.res-prose .token.boolean,
+.res-prose .token.number,
+.res-prose .token.constant,
+.res-prose .token.symbol {
+  color: oklch(0.55 0.18 25);
+}
+.res-prose .token.selector,
+.res-prose .token.attr-name,
+.res-prose .token.string,
+.res-prose .token.char,
+.res-prose .token.builtin {
+  color: oklch(0.5 0.13 150);
+}
+.res-prose .token.keyword,
+.res-prose .token.atrule,
+.res-prose .token.attr-value {
+  color: oklch(0.5 0.18 275);
+}
+.res-prose .token.function {
+  color: oklch(0.55 0.18 50);
+}
