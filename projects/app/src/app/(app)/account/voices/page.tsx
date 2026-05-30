@@ -14,7 +14,7 @@ export default async function VoicesPage() {
       title="Voix éditoriales"
       description="Plusieurs voix possibles. La voix est choisie au moment de générer un post."
       action={
-        <Button nativeButton={false} render={<Link href="/cast/settings/voice/new" />}>
+        <Button nativeButton={false} render={<Link href="/account/voices/new" />}>
           + Nouvelle
         </Button>
       }
@@ -25,7 +25,7 @@ export default async function VoicesPage() {
         <ul className="space-y-3">
           {voices.map((v) => (
             <li key={v.id}>
-              <Link href={`/cast/settings/voice/${v.id}`} className="block">
+              <Link href={`/account/voices/${v.id}`} className="block">
                 <Card className="p-4 transition-shadow hover:shadow-sm">
                   <p className="font-medium">{v.name}</p>
                   <p className="line-clamp-2 text-xs text-neutral-500">{v.content}</p>

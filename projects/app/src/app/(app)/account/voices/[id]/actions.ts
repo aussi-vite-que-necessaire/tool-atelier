@@ -14,12 +14,12 @@ export async function updateVoiceAction(
 ): Promise<VoiceActionState> {
   const userId = await requireUserId();
   const result = await updateVoiceCore(userId, id, formData);
-  if (result.status === 'success') revalidatePath(`/cast/settings/voice/${id}`);
+  if (result.status === 'success') revalidatePath(`/account/voices/${id}`);
   return result;
 }
 
 export async function deleteVoiceAction(id: string): Promise<void> {
   const userId = await requireUserId();
   await deleteVoice(userId, id);
-  redirect('/cast/settings/voice');
+  redirect('/account/voices');
 }

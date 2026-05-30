@@ -13,8 +13,8 @@ export async function createVoiceAction(
   const userId = await requireUserId();
   const result = await createVoiceCore(userId, formData);
   if (result.status === 'success') {
-    revalidatePath('/cast/settings/voice');
-    redirect('/cast/settings/voice');
+    revalidatePath('/account/voices');
+    redirect('/account/voices');
   }
   return result;
 }
